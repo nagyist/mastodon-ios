@@ -83,21 +83,21 @@ public extension AuthenticationServiceProvider {
         return authentications.sorted(by: { $0.activedAt > $1.activedAt })
     }
     
+    @MainActor
     func prepareForUse() {
         if authentications.isEmpty {
             restoreFromKeychain()
         }
     }
 
+    @MainActor
     private func restoreFromKeychain() {
-        DispatchQueue.main.async {
-            self.authentications = Self.keychain.allKeys().compactMap {
-                guard
-                    let encoded = Self.keychain[$0],
-                    let data = Data(base64Encoded: encoded)
-                else { return nil }
-                return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
-            }
+        self.authentications = Self.keychain.allKeys().compactMap {
+            guard
+                let encoded = Self.keychain[$0],
+                let data = Data(base64Encoded: encoded)
+            else { return nil }
+            return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
         }
     }
 

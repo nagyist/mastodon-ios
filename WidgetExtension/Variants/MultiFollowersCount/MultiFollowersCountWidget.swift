@@ -73,7 +73,7 @@ private extension MultiFollowersCountWidgetProvider {
     func loadCurrentEntry(for configuration: MultiFollowersCountIntent, in context: Context, completion: @escaping (MultiFollowersCountEntry) -> Void) {
         Task {
             
-            AuthenticationServiceProvider.shared.prepareForUse()
+            await AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
                 let authBox = WidgetExtension.appContext

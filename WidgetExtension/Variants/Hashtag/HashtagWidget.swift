@@ -24,75 +24,77 @@ struct HashtagWidgetProvider: IntentTimelineProvider {
 
 extension HashtagWidgetProvider {
     func loadMostRecentHashtag(for configuration: HashtagIntent, in context: Context, completion: @escaping (HashtagWidgetTimelineEntry) -> Void ) {
-
-        AuthenticationServiceProvider.shared.prepareForUse()
-
-        guard
-            let authBox = WidgetExtension.appContext
-                .authenticationService
-                .mastodonAuthenticationBoxes
-                .first
-        else {
-            if context.isPreview {
-                return completion(.placeholder)
-            } else {
-                return completion(.unconfigured)
-            }
-        }
-
-        let desiredHashtag: String
-
-        if let hashtag = configuration.hashtag {
-            desiredHashtag = hashtag.replacingOccurrences(of: "#", with: "")
-        } else {
-            return completion(.notFound("hashtag"))
-        }
-
+        
         Task {
-
-            do {
-                let mostRecentStatuses = try await WidgetExtension.appContext
-                    .apiService
-                    .hashtagTimeline(limit: 40, hashtag: desiredHashtag, authenticationBox: authBox)
-                    .value
-
-                let filteredStatuses: [Mastodon.Entity.Status]
-                if configuration.ignoreContentWarnings?.boolValue == true {
-                    filteredStatuses = mostRecentStatuses
-                } else {
-                    filteredStatuses = mostRecentStatuses.filter { $0.sensitive == false }
+            await MainActor.run {
+                
+                AuthenticationServiceProvider.shared.prepareForUse()
+                
+                guard
+                    let authBox = WidgetExtension.appContext
+                        .authenticationService
+                        .mastodonAuthenticationBoxes
+                        .first
+                else {
+                    if context.isPreview {
+                        return completion(.placeholder)
+                    } else {
+                        return completion(.unconfigured)
+                    }
                 }
-
-                if let mostRecentStatus = filteredStatuses.first {
-
-                    let hashtagEntry = HashtagEntry(
-                        accountName: mostRecentStatus.account.displayNameWithFallback,
-                        account: mostRecentStatus.account.acct,
-                        content: mostRecentStatus.content ?? "-",
-                        reblogCount: mostRecentStatus.reblogsCount,
-                        favoriteCount: mostRecentStatus.favouritesCount,
-                        hashtag: "#\(desiredHashtag)",
-                        timestamp: mostRecentStatus.createdAt
-                    )
-
-                    let hashtagTimelineEntry = HashtagWidgetTimelineEntry(
-                        date: mostRecentStatus.createdAt,
-                        hashtag: hashtagEntry
-                    )
-
-                    completion(hashtagTimelineEntry)
+                
+                let desiredHashtag: String
+                
+                if let hashtag = configuration.hashtag {
+                    desiredHashtag = hashtag.replacingOccurrences(of: "#", with: "")
                 } else {
-                    let noStatusFound = HashtagWidgetTimelineEntry.notFound(desiredHashtag)
-
-                    completion(noStatusFound)
+                    return completion(.notFound("hashtag"))
                 }
-            } catch {
-                completion(.notFound(desiredHashtag))
+                
+                Task {
+                    
+                    do {
+                        let mostRecentStatuses = try await WidgetExtension.appContext
+                            .apiService
+                            .hashtagTimeline(limit: 40, hashtag: desiredHashtag, authenticationBox: authBox)
+                            .value
+                        
+                        let filteredStatuses: [Mastodon.Entity.Status]
+                        if configuration.ignoreContentWarnings?.boolValue == true {
+                            filteredStatuses = mostRecentStatuses
+                        } else {
+                            filteredStatuses = mostRecentStatuses.filter { $0.sensitive == false }
+                        }
+                        
+                        if let mostRecentStatus = filteredStatuses.first {
+                            
+                            let hashtagEntry = HashtagEntry(
+                                accountName: mostRecentStatus.account.displayNameWithFallback,
+                                account: mostRecentStatus.account.acct,
+                                content: mostRecentStatus.content ?? "-",
+                                reblogCount: mostRecentStatus.reblogsCount,
+                                favoriteCount: mostRecentStatus.favouritesCount,
+                                hashtag: "#\(desiredHashtag)",
+                                timestamp: mostRecentStatus.createdAt
+                            )
+                            
+                            let hashtagTimelineEntry = HashtagWidgetTimelineEntry(
+                                date: mostRecentStatus.createdAt,
+                                hashtag: hashtagEntry
+                            )
+                            
+                            completion(hashtagTimelineEntry)
+                        } else {
+                            let noStatusFound = HashtagWidgetTimelineEntry.notFound(desiredHashtag)
+                            
+                            completion(noStatusFound)
+                        }
+                    } catch {
+                        completion(.notFound(desiredHashtag))
+                    }
+                }
             }
         }
-
-
-
     }
 }
 
