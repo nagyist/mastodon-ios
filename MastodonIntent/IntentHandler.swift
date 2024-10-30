@@ -11,7 +11,7 @@ import MastodonCore
 class IntentHandler: INExtension {
     
     override func handler(for intent: INIntent) -> Any {
-        AuthenticationServiceProvider.shared.restore()
+        AuthenticationServiceProvider.shared.prepareForUse()
 
         switch intent {
         case is SendPostIntent:

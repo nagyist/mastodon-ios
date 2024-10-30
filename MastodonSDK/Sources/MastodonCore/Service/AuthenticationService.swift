@@ -137,13 +137,13 @@ extension AuthenticationService {
     }
 
     public func signOutMastodonUser(authentication: MastodonAuthentication) async throws {
-        try AuthenticationServiceProvider.shared.delete(authentication: authentication)
+        try await AuthenticationServiceProvider.shared.delete(authentication: authentication)
         _ = try await apiService?.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
     }
 
     public func signOutMastodonUser(authenticationBox: MastodonAuthenticationBox) async throws {
         do {
-            try AuthenticationServiceProvider.shared.delete(authentication: authenticationBox.authentication)
+            try await AuthenticationServiceProvider.shared.delete(authentication: authenticationBox.authentication)
         } catch {
             assertionFailure("Failed to delete Authentication: \(error)")
         }

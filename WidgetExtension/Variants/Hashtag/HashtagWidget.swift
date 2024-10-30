@@ -25,7 +25,7 @@ struct HashtagWidgetProvider: IntentTimelineProvider {
 extension HashtagWidgetProvider {
     func loadMostRecentHashtag(for configuration: HashtagIntent, in context: Context, completion: @escaping (HashtagWidgetTimelineEntry) -> Void ) {
 
-        AuthenticationServiceProvider.shared.restore()
+        AuthenticationServiceProvider.shared.prepareForUse()
 
         guard
             let authBox = WidgetExtension.appContext

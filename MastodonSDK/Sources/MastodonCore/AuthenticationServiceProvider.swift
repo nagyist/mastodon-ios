@@ -19,7 +19,7 @@ public class AuthenticationServiceProvider: ObservableObject {
     
     @Published public var authentications: [MastodonAuthentication] = [] {
         didSet {
-            persist() // todo: Is this too heavy and too often here???
+            persist(authentications)
         }
     }
 
@@ -53,6 +53,7 @@ public class AuthenticationServiceProvider: ObservableObject {
         return self
     }
     
+    @MainActor
     func delete(authentication: MastodonAuthentication) throws {
         try Self.keychain.remove(authentication.persistenceIdentifier)
         authentications.removeAll(where: { $0 == authentication })
@@ -81,14 +82,22 @@ public extension AuthenticationServiceProvider {
     func authenticationSortedByActivation() -> [MastodonAuthentication] { // fixme: why do we need this?
         return authentications.sorted(by: { $0.activedAt > $1.activedAt })
     }
+    
+    func prepareForUse() {
+        if authentications.isEmpty {
+            restoreFromKeychain()
+        }
+    }
 
-    func restore() {
-        authentications = Self.keychain.allKeys().compactMap {
-            guard
-                let encoded = Self.keychain[$0],
-                let data = Data(base64Encoded: encoded)
-            else { return nil }
-            return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
+    private func restoreFromKeychain() {
+        DispatchQueue.main.async {
+            self.authentications = Self.keychain.allKeys().compactMap {
+                guard
+                    let encoded = Self.keychain[$0],
+                    let data = Data(base64Encoded: encoded)
+                else { return nil }
+                return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
+            }
         }
     }
 
@@ -117,8 +126,10 @@ public extension AuthenticationServiceProvider {
                 logger.log(level: .default, "All account authentications were successful.")
             }
 
-            self.authentications = migratedAuthentications
-            userDefaults.didMigrateAuthentications = true
+            DispatchQueue.main.async {
+                self.authentications = migratedAuthentications
+                self.userDefaults.didMigrateAuthentications = true
+            }
         } catch {
             userDefaults.didMigrateAuthentications = false
             logger.log(level: .error, "Could not migrate legacy authentications")
@@ -148,9 +159,11 @@ public extension AuthenticationServiceProvider {
 
 // MARK: - Private
 private extension AuthenticationServiceProvider {
-    func persist() {
-        for authentication in authentications {
-            Self.keychain[authentication.persistenceIdentifier] = try? JSONEncoder().encode(authentication).base64EncodedString()
+    func persist(_ authentications: [MastodonAuthentication]) {
+        DispatchQueue.main.async {
+            for authentication in authentications {
+                Self.keychain[authentication.persistenceIdentifier] = try? JSONEncoder().encode(authentication).base64EncodedString()
+            }
         }
     }
 }
