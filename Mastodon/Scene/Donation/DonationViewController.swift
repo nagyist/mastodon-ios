@@ -68,7 +68,7 @@ struct DonationView: View {
     var body: some View {
         HStack {
             Spacer()
-            VStack(spacing: 30) {
+            VStack(spacing: 25) {
                 topMessage
                 frequencyPicker
                 amountEntry
@@ -81,7 +81,14 @@ struct DonationView: View {
     }
 
     @ViewBuilder var topMessage: some View {
-        Text(campaign.donationMessage)
+        GeometryReader { geom in
+            Text(campaign.donationMessage)
+                .frame(height: geom.size.height)
+                .allowsTightening(true)
+                .lineLimit(3)
+                .scaledToFit()
+                .minimumScaleFactor(0.7)
+        }
     }
 
     @ViewBuilder var frequencyPicker: some View {
