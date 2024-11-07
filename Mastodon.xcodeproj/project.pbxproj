@@ -41,6 +41,9 @@
 		2A631AE82B8C9F6600FE0778 /* LanguagePickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A631AE72B8C9F6600FE0778 /* LanguagePickerViewController.swift */; };
 		2A64515E29642A8A00CD8B8A /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A6451022964223800CD8B8A /* UniformTypeIdentifiers.framework */; };
 		2A64516929642A8B00CD8B8A /* OpenInActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2A64515D29642A8A00CD8B8A /* OpenInActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2A64A2912C92EF0C00E5E913 /* HomeTimelineViewModel+Donation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A64A2902C92EF0C00E5E913 /* HomeTimelineViewModel+Donation.swift */; };
+		2A64A2942C92F71500E5E913 /* DonationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A64A2932C92F71500E5E913 /* DonationViewController.swift */; };
+		2A64A2962C92FD5700E5E913 /* DonationBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A64A2952C92FD5700E5E913 /* DonationBanner.swift */; };
 		2A71F541296DBDA80049F54A /* Media.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A71F53D296DBDA80049F54A /* Media.xcassets */; };
 		2A71F542296DBDA80049F54A /* Action.js in Resources */ = {isa = PBXBuildFile; fileRef = 2A71F53E296DBDA80049F54A /* Action.js */; };
 		2A71F543296DBDA80049F54A /* ActionRequestHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A71F53F296DBDA80049F54A /* ActionRequestHandler.swift */; };
@@ -509,6 +512,10 @@
 		DBFEEC99279BDCDE004F81DD /* ProfileAboutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBFEEC98279BDCDE004F81DD /* ProfileAboutViewModel.swift */; };
 		DBFEEC9B279BDDD9004F81DD /* ProfileAboutViewModel+Diffable.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBFEEC9A279BDDD9004F81DD /* ProfileAboutViewModel+Diffable.swift */; };
 		DBFEEC9D279C12C1004F81DD /* ProfileFieldEditCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBFEEC9C279C12C1004F81DD /* ProfileFieldEditCollectionViewCell.swift */; };
+		FB7C4CC62CD2CAB000F6129A /* DonationCompletionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7C4CC52CD2CAA800F6129A /* DonationCompletionViewController.swift */; };
+		FB7C4CCC2CD55DEB00F6129A /* NavigationFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7C4CCB2CD55DEB00F6129A /* NavigationFlow.swift */; };
+		FB7C4CCE2CD55DFF00F6129A /* NewDonationNavigationFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7C4CCD2CD55DFE00F6129A /* NewDonationNavigationFlow.swift */; };
+		FBD689B52CCBF0AC00CE29F3 /* DonationCampaignViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD689B42CCBF09F00CE29F3 /* DonationCampaignViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -660,6 +667,9 @@
 		2A631AE72B8C9F6600FE0778 /* LanguagePickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerViewController.swift; sourceTree = "<group>"; };
 		2A6451022964223800CD8B8A /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		2A64515D29642A8A00CD8B8A /* OpenInActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenInActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A64A2902C92EF0C00E5E913 /* HomeTimelineViewModel+Donation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "HomeTimelineViewModel+Donation.swift"; sourceTree = "<group>"; };
+		2A64A2932C92F71500E5E913 /* DonationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationViewController.swift; sourceTree = "<group>"; };
+		2A64A2952C92FD5700E5E913 /* DonationBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationBanner.swift; sourceTree = "<group>"; };
 		2A71F53D296DBDA80049F54A /* Media.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Media.xcassets; sourceTree = "<group>"; };
 		2A71F53E296DBDA80049F54A /* Action.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = Action.js; sourceTree = "<group>"; };
 		2A71F53F296DBDA80049F54A /* ActionRequestHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionRequestHandler.swift; sourceTree = "<group>"; };
@@ -1257,6 +1267,10 @@
 		DBFEF06726A58D07006D7ED1 /* ShareActionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareActionExtension.entitlements; sourceTree = "<group>"; };
 		E9AABD3D26B64B8C00E237DA /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Intents.strings; sourceTree = "<group>"; };
 		E9AABD4026B64B8D00E237DA /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		FB7C4CC52CD2CAA800F6129A /* DonationCompletionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationCompletionViewController.swift; sourceTree = "<group>"; };
+		FB7C4CCB2CD55DEB00F6129A /* NavigationFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationFlow.swift; sourceTree = "<group>"; };
+		FB7C4CCD2CD55DFE00F6129A /* NewDonationNavigationFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDonationNavigationFlow.swift; sourceTree = "<group>"; };
+		FBD689B42CCBF09F00CE29F3 /* DonationCampaignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationCampaignViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1436,6 +1450,19 @@
 			path = Language;
 			sourceTree = "<group>";
 		};
+		2A64A2922C92F70700E5E913 /* Donation */ = {
+			isa = PBXGroup;
+			children = (
+				2A64A2952C92FD5700E5E913 /* DonationBanner.swift */,
+				FBD689B42CCBF09F00CE29F3 /* DonationCampaignViewModel.swift */,
+				2A64A2932C92F71500E5E913 /* DonationViewController.swift */,
+				FB7C4CC52CD2CAA800F6129A /* DonationCompletionViewController.swift */,
+				FB7C4CCB2CD55DEB00F6129A /* NavigationFlow.swift */,
+				FB7C4CCD2CD55DFE00F6129A /* NewDonationNavigationFlow.swift */,
+			);
+			path = Donation;
+			sourceTree = "<group>";
+		};
 		2A71F53C296DBDA80049F54A /* OpenInActionExtension */ = {
 			isa = PBXGroup;
 			children = (
@@ -1556,6 +1583,7 @@
 				2D5A3D2725CF8BC9002347D6 /* HomeTimelineViewModel+Diffable.swift */,
 				2D38F1EA25CD477000561493 /* HomeTimelineViewModel+LoadLatestState.swift */,
 				2D38F1F625CD47AC00561493 /* HomeTimelineViewModel+LoadOldestState.swift */,
+				2A64A2902C92EF0C00E5E913 /* HomeTimelineViewModel+Donation.swift */,
 				D84738D32BBD9ABE00ECD52B /* TimelineStatusPill.swift */,
 			);
 			path = HomeTimeline;
@@ -2578,6 +2606,7 @@
 		DB8AF55525C1379F002E6C99 /* Scene */ = {
 			isa = PBXGroup;
 			children = (
+				2A64A2922C92F70700E5E913 /* Donation */,
 				2D7631A425C1532200929FB9 /* Share */,
 				DB6180E426391A500018D199 /* Transition */,
 				DB852D1D26FB021900FC9D81 /* Root */,
@@ -3545,6 +3574,8 @@
 				DB68A06325E905E000CFDF14 /* UIApplication.swift in Sources */,
 				DB02CDAB26256A9500D0A2AF /* ThreadReplyLoaderTableViewCell.swift in Sources */,
 				DBEFCD80282A2AA900C0ABEA /* ReportServerRulesViewModel.swift in Sources */,
+				FB7C4CCE2CD55DFF00F6129A /* NewDonationNavigationFlow.swift in Sources */,
+				FB7C4CCC2CD55DEB00F6129A /* NavigationFlow.swift in Sources */,
 				DB0617FF27855D6C0030EE79 /* MastodonServerRulesViewModel+Diffable.swift in Sources */,
 				DBB5255E2611F07A002F1F29 /* ProfileViewModel.swift in Sources */,
 				DB0FCB982797F6BF006C02E2 /* UserTableViewCell+ViewModel.swift in Sources */,
@@ -3563,6 +3594,7 @@
 				DB6180F226391CF40018D199 /* MediaPreviewImageViewModel.swift in Sources */,
 				62FD27D12893707600B205C5 /* BookmarkViewController.swift in Sources */,
 				DB63F767279A5EB300455B82 /* NotificationTimelineViewModel.swift in Sources */,
+				2A64A2942C92F71500E5E913 /* DonationViewController.swift in Sources */,
 				2D607AD826242FC500B70763 /* NotificationViewModel.swift in Sources */,
 				DB5B54AB2833C12A00DEF8B2 /* RebloggedByViewController.swift in Sources */,
 				D81D12462A4E1861005009D4 /* PolicySelectionViewController.swift in Sources */,
@@ -3603,6 +3635,7 @@
 				DB68586425E619B700F0A850 /* NSKeyValueObservation.swift in Sources */,
 				DBE3CE07261D6A0E00430CC6 /* FavoriteViewModel+Diffable.swift in Sources */,
 				DBA9443E265CFA6400C537E1 /* ProfileFieldCollectionViewCell.swift in Sources */,
+				FBD689B52CCBF0AC00CE29F3 /* DonationCampaignViewModel.swift in Sources */,
 				2D24E1232626ED9D00A59D4F /* UIView+Gesture.swift in Sources */,
 				DBFEEC9D279C12C1004F81DD /* ProfileFieldEditCollectionViewCell.swift in Sources */,
 				DB3E6FEC2806D7F100B035AE /* DiscoveryNewsViewController.swift in Sources */,
@@ -3654,6 +3687,7 @@
 				DBB9759C262462E1004620BD /* ThreadMetaView.swift in Sources */,
 				DB5B729E273113F300081888 /* FollowingListViewModel+State.swift in Sources */,
 				D8B5E4F02A4EB8A00008970C /* NotificationSettingTableViewCell.swift in Sources */,
+				2A64A2912C92EF0C00E5E913 /* HomeTimelineViewModel+Donation.swift in Sources */,
 				DBF9814C265E339500E4BA07 /* ProfileFieldAddEntryCollectionViewCell.swift in Sources */,
 				DB63F76227996B6600455B82 /* SearchHistoryViewController+DataSourceProvider.swift in Sources */,
 				DBA5E7AB263BD3F5004598BB /* TimelineTableViewCellContextMenuConfiguration.swift in Sources */,
@@ -3815,6 +3849,7 @@
 				2A0BF97F2C0622AA004A1E29 /* PrivacySafetyViewController.swift in Sources */,
 				DB3E6FE22806A50100B035AE /* DiscoveryHashtagsViewModel+Diffable.swift in Sources */,
 				DB427DD625BAA00100D1B89D /* AppDelegate.swift in Sources */,
+				FB7C4CC62CD2CAB000F6129A /* DonationCompletionViewController.swift in Sources */,
 				DB0FCB822796AC78006C02E2 /* UserTimelineViewController+DataSourceProvider.swift in Sources */,
 				DB0EF72E26FDB24F00347686 /* SidebarListContentView.swift in Sources */,
 				D85DF96D2C481AF700A01408 /* NotificationPolicyHeaderView.swift in Sources */,
@@ -3893,6 +3928,7 @@
 				DB789A1225F9F2CC0071ACA0 /* ComposeViewModel.swift in Sources */,
 				DBEFCD7D282A2A3B00C0ABEA /* ReportServerRulesViewController.swift in Sources */,
 				DBB525362611ECEB002F1F29 /* UserTimelineViewController.swift in Sources */,
+				2A64A2962C92FD5700E5E913 /* DonationBanner.swift in Sources */,
 				D8F917122A4C6B67008A5370 /* GeneralSettingsViewController.swift in Sources */,
 				D81A94122B07A1BE0067A19D /* ProfileCardTableViewCell.swift in Sources */,
 				DB98EB4927B0F0CD0082E365 /* ReportStatusTableViewCell.swift in Sources */,

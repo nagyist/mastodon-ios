@@ -2,6 +2,7 @@
 
 import UIKit
 import MastodonLocalization
+import MastodonSDK
 
 struct SettingsSection: Hashable {
     let entries: [SettingsEntry]
@@ -13,7 +14,11 @@ enum SettingsEntry: Hashable {
     case privacySafety
     case serverDetails(domain: String)
     case aboutMastodon
+    case makeDonation
+    case manageDonations
     case logout(accountName: String)
+    case toggleTestDonations
+    case clearPreviousDonationCampaigns
 
     var title: String {
         switch self {
@@ -25,10 +30,18 @@ enum SettingsEntry: Hashable {
                 return L10n.Scene.Settings.Overview.privacySafety
             case .serverDetails(_):
                 return L10n.Scene.Settings.Overview.serverDetails
+            case .makeDonation:
+                return L10n.Scene.Settings.Overview.supportMastodon
+            case .manageDonations:
+                return L10n.Scene.Settings.Overview.manageDonations
             case .aboutMastodon:
                 return L10n.Scene.Settings.Overview.aboutMastodon
             case .logout(let accountName):
                 return L10n.Scene.Settings.Overview.logout(accountName)
+            case .toggleTestDonations:
+                return Mastodon.API.isTestingDonations ? "Donations use staging: ON" : "Donations use staging: OFF"
+            case .clearPreviousDonationCampaigns:
+                return "Clear Donation History"
         }
     }
 
@@ -36,15 +49,19 @@ enum SettingsEntry: Hashable {
         switch self {
             case .serverDetails(domain: let domain):
                 return domain
-            case .general, .notifications, .privacySafety, .aboutMastodon, .logout(_):
+            case .general, .notifications, .privacySafety, .makeDonation, .manageDonations, .aboutMastodon, .logout(_):
+                return nil
+            case .toggleTestDonations, .clearPreviousDonationCampaigns:
                 return nil
         }
     }
 
     var accessoryType: UITableViewCell.AccessoryType {
         switch self {
-            case .general, .notifications, .privacySafety, .serverDetails(_), .aboutMastodon, .logout(_):
+            case .general, .notifications, .privacySafety, .serverDetails(_), .makeDonation, .manageDonations, .aboutMastodon, .logout(_):
                 return .disclosureIndicator
+            case .toggleTestDonations, .clearPreviousDonationCampaigns:
+                return .none
         }
     }
 
@@ -58,9 +75,15 @@ enum SettingsEntry: Hashable {
                 return UIImage(systemName: "lock.fill")
             case .serverDetails(_):
                 return UIImage(systemName: "server.rack")
+            case .makeDonation:
+                return UIImage(systemName: "heart.fill")
+            case .manageDonations:
+                return UIImage(systemName: "gear")
             case .aboutMastodon:
                 return UIImage(systemName: "info.circle.fill")
             case .logout(_):
+                return nil
+            case .toggleTestDonations, .clearPreviousDonationCampaigns:
                 return nil
         }
     }
@@ -75,9 +98,13 @@ enum SettingsEntry: Hashable {
                 return .systemBlue
             case .serverDetails(_):
                 return .systemTeal
+            case .makeDonation, .manageDonations:
+                return .systemPurple
             case .aboutMastodon:
                 return .systemPurple
             case .logout(_):
+                return nil
+            case .toggleTestDonations, .clearPreviousDonationCampaigns:
                 return nil
         }
 
@@ -85,10 +112,12 @@ enum SettingsEntry: Hashable {
 
     var textColor: UIColor {
         switch self {
-            case .general, .notifications, .privacySafety, .aboutMastodon, .serverDetails(_):
+        case .general, .notifications, .privacySafety, .makeDonation, .manageDonations, .aboutMastodon, .serverDetails(_):
                 return .label
             case .logout(_):
                 return .red
+            case .toggleTestDonations, .clearPreviousDonationCampaigns:
+                return .systemIndigo
         }
 
     }

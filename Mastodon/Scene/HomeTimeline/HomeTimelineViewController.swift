@@ -29,6 +29,8 @@ final class HomeTimelineViewController: UIViewController, NeedsDependency, Media
 
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
     
+    var navigationFlow: NavigationFlow?
+    
     enum EmptyViewUseCase {
         case timeline, list
     }
@@ -102,7 +104,12 @@ final class HomeTimelineViewController: UIViewController, NeedsDependency, Media
     var timelinePillCenterXAnchor: NSLayoutConstraint?
     var timelinePillVisibleTopAnchor: NSLayoutConstraint?
     var timelinePillHiddenTopAnchor: NSLayoutConstraint?
-
+    
+    /// Donations
+    let donationBanner = DonationBanner()
+    var donationBannerCenterXAnchor: NSLayoutConstraint?
+    var donationBannerVisibleBottomAnchor: NSLayoutConstraint?
+    var donationBannerHiddenBottomAnchor: NSLayoutConstraint?
 
     private func generateTimelineSelectorMenu() -> UIMenu {
         let showFollowingAction = UIAction(title: L10n.Scene.HomeTimeline.TimelineMenu.following, image: .init(systemName: "house")) { [weak self] _ in
@@ -440,6 +447,41 @@ extension HomeTimelineViewController {
             }
         }
         .store(in: &disposeBag)
+        
+        view.addSubview(donationBanner)
+        donationBanner.alpha = 0
+        donationBanner.translatesAutoresizingMaskIntoConstraints = false
+        donationBanner.onClose = { [weak self] campaignID in
+            self?.hideDonationCampaignBanner()
+            if let campaignID {
+                Mastodon.Entity.DonationCampaign.didDismiss(campaignID)
+            }
+        }
+        donationBanner.onShowDonationDialog = { [weak self] campaign in
+            self?.showDonationCampaign(campaign)
+        }
+        
+        let donationBannerCenterXAnchor = donationBanner.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        let donationBannerVisibleBottomAnchor = donationBanner.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        let donationBannerHiddenBottomAnchor = view.safeAreaLayoutGuide.bottomAnchor.constraint(equalTo: donationBanner.topAnchor)
+
+        NSLayoutConstraint.activate([
+            donationBannerHiddenBottomAnchor,
+            donationBannerCenterXAnchor,
+            donationBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            donationBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+        
+        self.donationBannerCenterXAnchor = donationBannerCenterXAnchor
+        self.donationBannerVisibleBottomAnchor = donationBannerVisibleBottomAnchor
+        self.donationBannerHiddenBottomAnchor = donationBannerHiddenBottomAnchor
+        
+        viewModel?.onPresentDonationCampaign
+            .receive(on: DispatchQueue.main)
+            .sink(receiveValue: { [weak self] campaign in
+                self?.showDonationCampaignBanner(campaign)
+            })
+            .store(in: &disposeBag)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -450,6 +492,8 @@ extension HomeTimelineViewController {
         
         // needs trigger manually after onboarding dismiss
         setNeedsStatusBarAppearanceUpdate()
+        
+        viewModel?.askForDonationIfPossible()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -661,7 +705,41 @@ extension HomeTimelineViewController {
             self?.view.layoutIfNeeded()
         })
     }
+    
+    private func showDonationCampaignBanner(_ campaign: Mastodon.Entity.DonationCampaign) {
+        guard let donationBannerHiddenBottomAnchor, let donationBannerVisibleBottomAnchor else { return }
 
+        donationBanner.update(campaign: campaign)
+        donationBanner.setNeedsLayout()
+        donationBanner.layoutIfNeeded()
+        NSLayoutConstraint.deactivate([donationBannerHiddenBottomAnchor])
+        NSLayoutConstraint.activate([donationBannerVisibleBottomAnchor])
+
+        UIView.animate(withDuration: 0.5, delay: 0.0, usingSpringWithDamping: 0.75, initialSpringVelocity: 0.9) { [weak self] in
+            self?.donationBanner.alpha = 1
+            self?.view.layoutIfNeeded()
+        }
+    }
+
+    private func hideDonationCampaignBanner() {
+        guard let donationBannerHiddenBottomAnchor, let donationBannerVisibleBottomAnchor else { return }
+
+        NSLayoutConstraint.deactivate([donationBannerVisibleBottomAnchor])
+        NSLayoutConstraint.activate([donationBannerHiddenBottomAnchor])
+        donationBanner.alpha = 1
+        UIView.animate(withDuration: 0.5, animations: { [weak self] in
+            self?.donationBanner.alpha = 0
+            self?.view.layoutIfNeeded()
+        })
+    }
+    
+    private func showDonationCampaign(_ campaign: Mastodon.Entity.DonationCampaign) {
+        hideDonationCampaignBanner()
+        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, appContext: context, authContext: authContext, sceneCoordinator: coordinator)
+        navigationFlow?.presentFlow { [weak self] in
+            self?.navigationFlow = nil
+        }
+    }
 }
 // MARK: - UIScrollViewDelegate
 extension HomeTimelineViewController {

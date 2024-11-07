@@ -5,6 +5,7 @@ import CoreDataStack
 import MastodonSDK
 
 public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
+    
     public static let fallbackCharactersReservedPerURL = 23
 
     public enum InstanceConfiguration: Codable, Hashable {
@@ -69,6 +70,7 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
     public private(set) var userID: String
 
     public private(set) var instanceConfiguration: InstanceConfiguration?
+    public private(set) var accountCreatedAt: Date
     
     public var persistenceIdentifier: String {
         "\(username)@\(domain)"
@@ -81,7 +83,8 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
         appAccessToken: String,
         userAccessToken: String,
         clientID: String,
-        clientSecret: String
+        clientSecret: String,
+        accountCreatedAt: Date
     ) -> Self {
         let now = Date()
         return MastodonAuthentication(
@@ -96,7 +99,8 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
             updatedAt: now,
             activedAt: now,
             userID: userID,
-            instanceConfiguration: nil
+            instanceConfiguration: nil,
+            accountCreatedAt: accountCreatedAt
         )
     }
     
@@ -126,7 +130,8 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
             updatedAt: updatedAt ?? self.updatedAt,
             activedAt: activedAt ?? self.activedAt,
             userID: userID ?? self.userID,
-            instanceConfiguration: instanceConfiguration ?? self.instanceConfiguration
+            instanceConfiguration: instanceConfiguration ?? self.instanceConfiguration,
+            accountCreatedAt: self.accountCreatedAt
         )
     }
 
