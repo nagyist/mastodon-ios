@@ -53,7 +53,7 @@ public final class StatusMetricRowView: UIButton {
 
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
-        let isVerticalAxis = traitCollection.preferredContentSizeCategory.isAccessibilityCategory
+        let isVerticalAxis = true //traitCollection.preferredContentSizeCategory.isAccessibilityCategory
 
         if isVerticalAxis {
             detailLabel.textAlignment = .natural
