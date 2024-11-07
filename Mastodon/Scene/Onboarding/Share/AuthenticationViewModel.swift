@@ -215,4 +215,35 @@ extension AuthenticationViewModel {
         .eraseToAnyPublisher()
     }
     
+    static func verifyAndSaveAuthentication(
+        context: AppContext,
+        domain: String,
+        clientID: String,
+        clientSecret: String,
+        userToken: String
+    ) async throws -> Mastodon.Entity.Account {
+        let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken)
+        
+        let account = try await context.apiService.accountVerifyCredentials(
+            domain: domain,
+            authorization: authorization
+        )
+        
+        let authentication = MastodonAuthentication.createFrom(domain: domain,
+                                                               userID: account.id,
+                                                               username: account.username,
+                                                               appAccessToken: userToken,  // TODO: swap app token
+                                                               userAccessToken: userToken,
+                                                               clientID: clientID,
+                                                               clientSecret: clientSecret,
+                                                               accountCreatedAt: account.createdAt)
+        
+        AuthenticationServiceProvider.shared
+            .authentications
+            .insert(authentication, at: 0)
+        
+        FileManager.default.store(account: account, forUserID: authentication.userIdentifier())
+        
+        return account
+    }
 }

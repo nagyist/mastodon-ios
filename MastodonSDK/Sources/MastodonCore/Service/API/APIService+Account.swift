@@ -52,6 +52,17 @@ extension APIService {
         )
     }
     
+    public func accountVerifyCredentials(
+        domain: String,
+        authorization: Mastodon.API.OAuth.Authorization
+    ) async throws -> Mastodon.Entity.Account {
+        return try await Mastodon.API.Account.verifyCredentials(
+            session: session,
+            domain: domain,
+            authorization: authorization
+        )
+    }
+    
     public func accountUpdateCredentials(
         domain: String,
         query: Mastodon.API.Account.UpdateCredentialQuery,

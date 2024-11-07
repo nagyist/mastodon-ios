@@ -70,7 +70,7 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
     public private(set) var userID: String
 
     public private(set) var instanceConfiguration: InstanceConfiguration?
-    public private(set) var accountCreatedAt: Date
+    public private(set) var accountCreatedAt: Date?
     
     public var persistenceIdentifier: String {
         "\(username)@\(domain)"

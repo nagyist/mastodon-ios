@@ -109,6 +109,21 @@ extension Mastodon.API.Account {
             .eraseToAnyPublisher()
     }
     
+    public static func verifyCredentials(
+        session: URLSession,
+        domain: String,
+        authorization: Mastodon.API.OAuth.Authorization
+    ) async throws -> Mastodon.Entity.Account {
+        let request = Mastodon.API.get(
+            url: verifyCredentialsEndpointURL(domain: domain),
+            query: nil,
+            authorization: authorization
+        )
+        let (data, response) = try await session.data(for: request)
+        let value = try Mastodon.API.decode(type: Mastodon.Entity.Account.self, from: data, response: response)
+        return value
+    }
+    
     static func updateCredentialsEndpointURL(domain: String) -> URL {
         return Mastodon.API.endpointURL(domain: domain).appendingPathComponent("accounts/update_credentials")
     }
