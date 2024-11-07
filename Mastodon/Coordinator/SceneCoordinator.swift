@@ -248,9 +248,11 @@ extension SceneCoordinator {
 
 extension SceneCoordinator {
     
+    @MainActor
     func setup() {
         let rootViewController: UIViewController
 
+        AuthenticationServiceProvider.shared.prepareForUse()
         let _authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first
         let _authContext = _authentication.flatMap { AuthContext(authentication: $0) }
         self.authContext = _authContext
