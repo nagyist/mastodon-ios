@@ -45,7 +45,12 @@ public final class MediaGridContainerView: UIView {
         return mediaViews
     }()
     
-    let contentWarningOverlay = ContentWarningOverlayView()
+    fileprivate let contentWarningOverlay = ContentWarningOverlayView()
+    fileprivate var contentWarningHeightConstraint: NSLayoutConstraint?
+    public func hideContentWarning(_ hide: Bool) {
+        contentWarningOverlay.isHidden = hide
+        contentWarningHeightConstraint?.isActive = !hide
+    }
     
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -130,6 +135,7 @@ extension MediaGridContainerView {
 extension MediaGridContainerView {
     private func layoutContentWarningOverlay() {
         contentWarningOverlay.translatesAutoresizingMaskIntoConstraints = false
+        contentWarningHeightConstraint = contentWarningOverlay.heightAnchor.constraint(equalToConstant: 100)
         addSubview(contentWarningOverlay)
         contentWarningOverlay.pinToParent()
     }

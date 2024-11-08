@@ -429,7 +429,7 @@ extension StatusView.ViewModel {
         
         $isMediaReveal
             .sink { isMediaReveal in
-                statusView.mediaGridContainerView.contentWarningOverlay.isHidden = isMediaReveal
+                statusView.mediaGridContainerView.hideContentWarning(isMediaReveal)
                 statusView.mediaGridContainerView.viewModel.isSensitiveToggleButtonDisplay = isMediaReveal
             }
             .store(in: &disposeBag)
@@ -756,10 +756,10 @@ extension StatusView.ViewModel {
 
     private func bindFilter(statusView: StatusView) {
         $isFiltered
-            .sink { isFiltered in
-                statusView.containerStackView.isHidden = isFiltered
+            .sink { [weak self] isFiltered in
                 if isFiltered {
-                    statusView.setFilterHintLabelDisplay()                    
+                    self?.isContentSensitive = true
+                    self?.isMediaSensitive = true
                 }
             }
             .store(in: &disposeBag)

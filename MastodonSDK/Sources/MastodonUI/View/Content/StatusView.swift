@@ -513,7 +513,7 @@ extension StatusView.Style {
 
         statusView.containerStackView.addArrangedSubview(statusView.spoilerOverlayView)
         NSLayoutConstraint.activate([
-            statusView.spoilerOverlayView.heightAnchor.constraint(equalToConstant: 128).priority(.defaultHigh)
+            statusView.spoilerOverlayView.heightAnchor.constraint(equalToConstant: 100).priority(.defaultHigh)
         ])
 
         // media container: V - [ mediaGridContainerView ]
