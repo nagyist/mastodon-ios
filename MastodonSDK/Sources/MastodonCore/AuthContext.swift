@@ -16,8 +16,6 @@ public protocol AuthContextProvider {
 
 public class AuthContext {
     
-    var disposeBag = Set<AnyCancellable>()
-    
     // Mastodon
     public private(set) var mastodonAuthenticationBox: MastodonAuthenticationBox
 
