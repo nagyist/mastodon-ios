@@ -3,24 +3,20 @@
 import Combine
 import Foundation
 import MastodonSDK
+import MastodonCore
 
 extension HomeTimelineViewModel {
 
     func askForDonationIfPossible() async {
-        var userAuthentication = authContext.mastodonAuthenticationBox
+        let userAuthentication = authContext.mastodonAuthenticationBox
             .authentication
-        var accountCreatedAt = userAuthentication.accountCreatedAt
-        if accountCreatedAt == nil {
-            do {
-                let updated = try await AuthenticationViewModel.verifyAndSaveAuthentication(context: context, domain: userAuthentication.domain, clientID: userAuthentication.clientID, clientSecret: userAuthentication.clientSecret, userToken: userAuthentication.userAccessToken
-                )
-                accountCreatedAt = updated.createdAt
-            } catch {
-                return
-            }
+        guard let accountCreatedAt = userAuthentication.accountCreatedAt else {
+            let updated = try? await context.apiService.accountVerifyCredentials(domain: userAuthentication.domain, authorization: authContext.mastodonAuthenticationBox.userAuthorization)
+            guard let accountCreatedAt = updated?.createdAt else { return }
+            AuthenticationServiceProvider.shared.updateAccountCreatedAt(accountCreatedAt, forAuthentication: userAuthentication)
+            return
         }
 
-        guard let accountCreatedAt = accountCreatedAt  else { return }
         guard
             Mastodon.Entity.DonationCampaign.isEligibleForDonationsBanner(
                 domain: userAuthentication.domain,

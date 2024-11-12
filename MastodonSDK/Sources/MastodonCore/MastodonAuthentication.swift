@@ -115,6 +115,7 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
         createdAt: Date? = nil,
         updatedAt: Date? = nil,
         activedAt: Date? = nil,
+        accountCreatedAt: Date? = nil,
         userID: String? = nil,
         instanceConfiguration: InstanceConfiguration? = nil
     ) -> Self {
@@ -131,7 +132,7 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
             activedAt: activedAt ?? self.activedAt,
             userID: userID ?? self.userID,
             instanceConfiguration: instanceConfiguration ?? self.instanceConfiguration,
-            accountCreatedAt: self.accountCreatedAt
+            accountCreatedAt: accountCreatedAt ?? self.accountCreatedAt
         )
     }
 
@@ -179,6 +180,10 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
     
     func updating(activatedAt: Date) -> Self {
         copy(activedAt: activatedAt)
+    }
+    
+    func updating(accountCreatedAt: Date) -> Self {
+        copy(accountCreatedAt: accountCreatedAt)
     }
 
     var authorization: Mastodon.API.OAuth.Authorization {

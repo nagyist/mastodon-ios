@@ -100,6 +100,15 @@ public extension AuthenticationServiceProvider {
             return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
         }
     }
+    
+    func updateAccountCreatedAt(_ newCreatedAt: Date, forAuthentication outdated: MastodonAuthentication) {
+        authentications = authentications.map { authentication in
+            guard authentication == outdated else {
+                return authentication
+            }
+            return outdated.updating(accountCreatedAt: newCreatedAt)
+        }
+    }
 
     func migrateLegacyAuthentications(in context: NSManagedObjectContext) {
         do {
