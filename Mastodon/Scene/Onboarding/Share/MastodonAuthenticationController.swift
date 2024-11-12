@@ -66,5 +66,6 @@ extension MastodonAuthenticationController {
             
             self.pinCodePublisher.send(code)
         }
+        authenticationSession?.prefersEphemeralWebBrowserSession = true
     }
 }
