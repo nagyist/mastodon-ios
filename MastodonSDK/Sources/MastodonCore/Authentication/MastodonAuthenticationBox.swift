@@ -43,7 +43,7 @@ extension MastodonAuthenticationBox {
             userID: authentication.userID,
             appAuthorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.appAccessToken),
             userAuthorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.userAccessToken),
-            inMemoryCache: .sharedCache(for: authentication.userID) // todo: make sure this is really unique
+            inMemoryCache: .sharedCache(for: authentication.userID) // TODO: make sure this is really unique
         )
     }
     
