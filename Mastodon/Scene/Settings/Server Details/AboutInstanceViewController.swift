@@ -4,6 +4,7 @@ import UIKit
 import MastodonSDK
 import MastodonCore
 
+@MainActor
 protocol AboutInstanceViewControllerDelegate: AnyObject {
     func showAdminAccount(_ viewController: AboutInstanceViewController, account: Mastodon.Entity.Account)
     func sendEmailToAdmin(_ viewController: AboutInstanceViewController, emailAddress: String)
