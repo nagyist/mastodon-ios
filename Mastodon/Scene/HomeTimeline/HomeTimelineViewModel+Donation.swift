@@ -23,12 +23,12 @@ extension HomeTimelineViewModel {
                 accountCreationDate: accountCreatedAt)
         else { return }
 
+        let seed = Mastodon.Entity.DonationCampaign.donationSeed(
+            username: userAuthentication.username,
+            domain: userAuthentication.domain)
+        
         Task { @MainActor [weak self] in
             guard let self else { return }
-
-            let seed = Mastodon.Entity.DonationCampaign.donationSeed(
-                username: userAuthentication.username,
-                domain: userAuthentication.domain)
 
             do {
                 let campaign = try await self.context.apiService
