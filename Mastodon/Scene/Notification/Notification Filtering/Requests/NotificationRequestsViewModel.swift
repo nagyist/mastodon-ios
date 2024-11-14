@@ -6,14 +6,14 @@ import MastodonCore
 
 struct NotificationRequestsViewModel {
     let appContext: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let coordinator: SceneCoordinator
 
     var requests: [Mastodon.Entity.NotificationRequest]
 
-    init(appContext: AppContext, authContext: AuthContext, coordinator: SceneCoordinator, requests: [Mastodon.Entity.NotificationRequest]) {
+    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator, requests: [Mastodon.Entity.NotificationRequest]) {
         self.appContext = appContext
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.coordinator = coordinator
         self.requests = requests
     }

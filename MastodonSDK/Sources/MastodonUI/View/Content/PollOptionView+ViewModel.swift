@@ -30,7 +30,7 @@ extension PollOptionView {
         
         let layoutDidUpdate = PassthroughSubject<Void, Never>()
 
-        @Published public var authContext: AuthContext?
+        @Published public var authenticationBox: MastodonAuthenticationBox?
 
         @Published public var style: PollOptionView.Style?
 

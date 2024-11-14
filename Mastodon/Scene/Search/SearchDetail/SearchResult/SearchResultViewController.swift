@@ -57,7 +57,7 @@ extension SearchResultViewController {
 
 // MARK: - StatusTableViewCellDelegate
 extension SearchResultViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

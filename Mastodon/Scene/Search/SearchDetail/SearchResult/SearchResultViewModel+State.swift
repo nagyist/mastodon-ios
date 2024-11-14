@@ -115,7 +115,7 @@ extension SearchResultViewModel.State {
                 do {
                     let searchResults = try await viewModel.context.apiService.search(
                         query: query,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     ).value
 
                     // discard result when request not the latest one
@@ -131,7 +131,7 @@ extension SearchResultViewModel.State {
                     if accounts.isNotEmpty {
                         relationships = try await viewModel.context.apiService.relationship(
                             forAccounts: accounts,
-                            authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                            authenticationBox: viewModel.authenticationBox
                         ).value
                     } else {
                         relationships = []

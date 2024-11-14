@@ -14,18 +14,18 @@ class SearchResultOverviewCoordinator: Coordinator {
     let overviewViewController: SearchResultsOverviewTableViewController
     let sceneCoordinator: SceneCoordinator
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
     weak var delegate: SearchResultOverviewCoordinatorDelegate?
 
     var activeTask: Task<Void, Never>?
 
-    init(appContext: AppContext, authContext: AuthContext, sceneCoordinator: SceneCoordinator) {
+    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator) {
         self.sceneCoordinator = sceneCoordinator
         self.context = appContext
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
 
-        overviewViewController = SearchResultsOverviewTableViewController(appContext: appContext, authContext: authContext, sceneCoordinator: sceneCoordinator)
+        overviewViewController = SearchResultsOverviewTableViewController(appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
     }
 
     func start() {
@@ -36,7 +36,7 @@ class SearchResultOverviewCoordinator: Coordinator {
 extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControllerDelegate {
     @MainActor
     func searchForPosts(_ viewController: SearchResultsOverviewTableViewController, withSearchText searchText: String) {
-        let searchResultViewModel = SearchResultViewModel(context: context, authContext: authContext, searchScope: .posts, searchText: searchText)
+        let searchResultViewModel = SearchResultViewModel(context: context, authenticationBox: authenticationBox, searchScope: .posts, searchText: searchText)
 
         sceneCoordinator.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
     }
@@ -55,7 +55,7 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
 
     @MainActor
     func searchForPeople(_ viewController: SearchResultsOverviewTableViewController, withName searchText: String) {
-        let searchResultViewModel = SearchResultViewModel(context: context, authContext: authContext, searchScope: .people, searchText: searchText)
+        let searchResultViewModel = SearchResultViewModel(context: context, authenticationBox: authenticationBox, searchScope: .people, searchText: searchText)
 
         sceneCoordinator.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
     }
@@ -68,12 +68,12 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
             resolve: true
         )
 
-        let authContext = self.authContext
+        let authenticationBox = self.authenticationBox
 
         Task {
             let searchResult = try await context.apiService.search(
                 query: query,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
 
             if let account = searchResult.accounts.first {
@@ -126,7 +126,7 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
         Task {
             let searchResult = try await context.apiService.search(
                 query: query,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
 
             if let account = searchResult.accounts.first(where: { $0.acctWithDomainIfMissing(domain).lowercased() == acct.lowercased() }) {

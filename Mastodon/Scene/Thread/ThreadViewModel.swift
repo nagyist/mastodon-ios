@@ -23,7 +23,7 @@ class ThreadViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let mastodonStatusThreadViewModel: MastodonStatusThreadViewModel
     
     // output
@@ -50,11 +50,11 @@ class ThreadViewModel {
     
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         optionalRoot: StatusItem.Thread?
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.root = optionalRoot
         self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(context: context)
         // end init

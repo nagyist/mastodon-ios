@@ -20,7 +20,7 @@ final class SidebarViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext?
+    let authenticationBox: MastodonAuthenticationBox?
     @Published private var isSidebarDataSourceReady = false
     @Published private var isAvatarButtonDataReady = false
     @Published var currentTab: Tab = .home
@@ -34,9 +34,9 @@ final class SidebarViewModel {
         UIImage.SymbolConfiguration(weight: .bold)
     )
 
-    init(context: AppContext, authContext: AuthContext?) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox?) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         
         Publishers.CombineLatest(
             $isSidebarDataSourceReady,
@@ -45,7 +45,7 @@ final class SidebarViewModel {
         .map { $0 && $1 }
         .assign(to: &$isReadyForWizardAvatarButton)
         
-        self.isAvatarButtonDataReady = authContext != nil
+        self.isAvatarButtonDataReady = authenticationBox != nil
     }
     
 }
@@ -75,7 +75,7 @@ extension SidebarViewModel {
             let imageURL: URL?
             switch item {
             case .me:
-                let account = self.authContext?.mastodonAuthenticationBox.authentication.account()
+                let account = self.authenticationBox?.authentication.account()
                 imageURL = account?.avatarImageURL()
             case .home, .search, .compose, .notifications:
                 // no custom avatar for other tabs
@@ -115,7 +115,7 @@ extension SidebarViewModel {
                         guard let cell = cell else { return }
 
                         let hasUnreadPushNotification: Bool = {
-                            guard let accessToken = self.authContext?.mastodonAuthenticationBox.userAuthorization.accessToken else { return false }
+                            guard let accessToken = self.authenticationBox?.userAuthorization.accessToken else { return false }
                             let count = UserDefaults.shared.getNotificationCountWithAccessToken(accessToken: accessToken)
                             return count > 0
                         }()
@@ -133,7 +133,7 @@ extension SidebarViewModel {
                     }
                     .store(in: &cell.disposeBag)
                 case .me:
-                    guard let account = self.authContext?.mastodonAuthenticationBox.authentication.account() else { return }
+                    guard let account = self.authenticationBox?.authentication.account() else { return }
 
                     let currentUserDisplayName = account.displayNameWithFallback
                     cell.accessibilityHint = L10n.Scene.AccountList.tabBarHint(currentUserDisplayName)

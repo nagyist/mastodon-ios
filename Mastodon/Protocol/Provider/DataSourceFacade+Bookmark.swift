@@ -21,7 +21,7 @@ extension DataSourceFacade {
         
         let updatedStatus = try await provider.context.apiService.bookmark(
             record: status,
-            authenticationBox: provider.authContext.mastodonAuthenticationBox
+            authenticationBox: provider.authenticationBox
         ).value
         
         let newStatus: MastodonStatus = .fromEntity(updatedStatus)

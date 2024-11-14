@@ -12,8 +12,8 @@ extension DataSourceFacade {
         provider.coordinator.showLoading()
 
         do {
-            let notificationRequests = try await provider.context.apiService.notificationRequests(authenticationBox: provider.authContext.mastodonAuthenticationBox).value
-            let viewModel = NotificationRequestsViewModel(appContext: provider.context, authContext: provider.authContext, coordinator: provider.coordinator, requests: notificationRequests)
+            let notificationRequests = try await provider.context.apiService.notificationRequests(authenticationBox: provider.authenticationBox).value
+            let viewModel = NotificationRequestsViewModel(appContext: provider.context, authenticationBox: provider.authenticationBox, coordinator: provider.coordinator, requests: notificationRequests)
 
             provider.coordinator.hideLoading()
 
@@ -39,7 +39,7 @@ extension DataSourceFacade {
     ) async -> AccountNotificationTimelineViewController? {
         provider.coordinator.showLoading()
 
-        let notificationTimelineViewModel = NotificationTimelineViewModel(context: provider.context, authContext: provider.authContext, scope: .fromAccount(request.account))
+        let notificationTimelineViewModel = NotificationTimelineViewModel(context: provider.context, authenticationBox: provider.authenticationBox, scope: .fromAccount(request.account))
 
         provider.coordinator.hideLoading()
         

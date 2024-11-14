@@ -22,7 +22,7 @@ class ReportResultViewModel: ObservableObject {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let account: Mastodon.Entity.Account
     var relationship: Mastodon.Entity.Relationship
     let isReported: Bool
@@ -47,13 +47,13 @@ class ReportResultViewModel: ObservableObject {
     
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         account: Mastodon.Entity.Account,
         relationship: Mastodon.Entity.Relationship,
         isReported: Bool
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.account = account
         self.relationship = relationship
         self.isReported = isReported

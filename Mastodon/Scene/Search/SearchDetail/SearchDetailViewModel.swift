@@ -16,7 +16,7 @@ import MastodonLocalization
 final class SearchDetailViewModel {
     
     // input
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     var needsBecomeFirstResponder = false
     let viewDidAppear = PassthroughSubject<Void, Never>()
     let navigationBarFrame = CurrentValueSubject<CGRect, Never>(.zero)
@@ -27,8 +27,8 @@ final class SearchDetailViewModel {
     let searchText: CurrentValueSubject<String, Never>
     let searchActionPublisher = PassthroughSubject<Void, Never>()
     
-    init(authContext: AuthContext, initialSearchText: String = "") {
-        self.authContext = authContext
+    init(authenticationBox: MastodonAuthenticationBox, initialSearchText: String = "") {
+        self.authenticationBox = authenticationBox
         self.searchText = CurrentValueSubject(initialSearchText)
     }
 }

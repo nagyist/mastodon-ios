@@ -16,7 +16,7 @@ extension DiscoveryNewsViewModel {
         diffableDataSource = DiscoverySection.diffableDataSource(
             tableView: tableView,
             context: context,
-            configuration: DiscoverySection.Configuration(authContext: authContext)
+            configuration: DiscoverySection.Configuration(authenticationBox: authenticationBox)
         )
         
         stateMachine.enter(State.Reloading.self)

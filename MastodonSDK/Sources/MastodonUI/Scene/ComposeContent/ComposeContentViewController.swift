@@ -33,7 +33,7 @@ public final class ComposeContentViewController: UIViewController {
     // auto complete
     private(set) lazy var autoCompleteViewController: AutoCompleteViewController = {
         let viewController = AutoCompleteViewController()
-        viewController.viewModel = AutoCompleteViewModel(context: viewModel.context, authContext: viewModel.authContext)
+        viewController.viewModel = AutoCompleteViewModel(context: viewModel.context, authenticationBox: viewModel.authenticationBox)
         viewController.delegate = self
         // viewController.viewModel.customEmojiViewModel.value = viewModel.customEmojiViewModel
         return viewController
@@ -470,7 +470,7 @@ extension ComposeContentViewController: PHPickerViewControllerDelegate {
         let attachmentViewModels: [AttachmentViewModel] = results.map { result in
             AttachmentViewModel(
                 api: viewModel.context.apiService,
-                authContext: viewModel.authContext,
+                authenticationBox: viewModel.authenticationBox,
                 input: .pickerResult(result),
                 sizeLimit: viewModel.sizeLimit,
                 delegate: viewModel
@@ -489,7 +489,7 @@ extension ComposeContentViewController: UIImagePickerControllerDelegate & UINavi
 
         let attachmentViewModel = AttachmentViewModel(
             api: viewModel.context.apiService,
-            authContext: viewModel.authContext,
+            authenticationBox: viewModel.authenticationBox,
             input: .image(image),
             sizeLimit: viewModel.sizeLimit,
             delegate: viewModel
@@ -509,7 +509,7 @@ extension ComposeContentViewController: UIDocumentPickerDelegate {
 
         let attachmentViewModel = AttachmentViewModel(
             api: viewModel.context.apiService,
-            authContext: viewModel.authContext,
+            authenticationBox: viewModel.authenticationBox,
             input: .url(url),
             sizeLimit: viewModel.sizeLimit,
             delegate: viewModel

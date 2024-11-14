@@ -23,7 +23,7 @@ class ReportStatusViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let account: Mastodon.Entity.Account
     let status: MastodonStatus?
     let dataController: StatusDataController
@@ -50,12 +50,12 @@ class ReportStatusViewModel {
     @MainActor
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         account: Mastodon.Entity.Account,
         status: MastodonStatus?
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.account = account
         self.status = status
         self.dataController = StatusDataController()

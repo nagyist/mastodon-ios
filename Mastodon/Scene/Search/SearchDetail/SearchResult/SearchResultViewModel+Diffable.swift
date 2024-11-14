@@ -19,9 +19,9 @@ extension SearchResultViewModel {
         diffableDataSource = SearchResultSection.tableViewDiffableDataSource(
             tableView: tableView,
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             configuration: .init(
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 statusViewTableViewCellDelegate: statusTableViewCellDelegate,
                 userTableViewCellDelegate: userTableViewCellDelegate
             )

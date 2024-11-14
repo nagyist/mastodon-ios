@@ -50,7 +50,7 @@ extension SearchHistoryViewController {
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        viewModel.items = (try? FileManager.default.searchItems(for: authContext.mastodonAuthenticationBox)) ?? []
+        viewModel.items = (try? FileManager.default.searchItems(for: authenticationBox)) ?? []
     }
 }
 
@@ -93,7 +93,7 @@ extension SearchHistoryViewController: UICollectionViewDelegate {
 
 // MARK: - AuthContextProvider
 extension SearchHistoryViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - SearchHistorySectionHeaderCollectionReusableViewDelegate
@@ -102,7 +102,7 @@ extension SearchHistoryViewController: SearchHistorySectionHeaderCollectionReusa
         _ searchHistorySectionHeaderCollectionReusableView: SearchHistorySectionHeaderCollectionReusableView,
         clearButtonDidPressed button: UIButton
     ) {
-        FileManager.default.removeSearchHistory(for: authContext.mastodonAuthenticationBox)
+        FileManager.default.removeSearchHistory(for: authenticationBox)
         viewModel.items = []
     }
 }
@@ -110,6 +110,6 @@ extension SearchHistoryViewController: SearchHistorySectionHeaderCollectionReusa
 //MARK: - SearchResultOverviewCoordinatorDelegate
 extension SearchHistoryViewController: SearchResultOverviewCoordinatorDelegate {
     func newSearchHistoryItemAdded(_ coordinator: SearchResultOverviewCoordinator) {
-        viewModel.items = (try? FileManager.default.searchItems(for: authContext.mastodonAuthenticationBox)) ?? []
+        viewModel.items = (try? FileManager.default.searchItems(for: authenticationBox)) ?? []
     }
 }

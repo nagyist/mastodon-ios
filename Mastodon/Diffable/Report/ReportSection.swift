@@ -23,7 +23,7 @@ enum ReportSection: Equatable, Hashable {
 extension ReportSection {
     
     struct Configuration {
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
     }
     
     static func diffableDataSource(
@@ -91,12 +91,12 @@ extension ReportSection {
     ) {
         StatusSection.setupStatusPollDataSource(
             context: context,
-            authContext: configuration.authContext,
+            authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
         cell.statusView.viewModel.context = context
-        cell.statusView.viewModel.authContext = configuration.authContext
+        cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
             tableView: tableView,

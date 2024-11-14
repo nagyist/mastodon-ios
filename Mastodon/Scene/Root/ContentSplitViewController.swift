@@ -24,7 +24,7 @@ final class ContentSplitViewController: UIViewController, NeedsDependency {
     weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
     weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
-    var authContext: AuthContext?
+    var authenticationBox: MastodonAuthenticationBox?
     
     weak var delegate: ContentSplitViewControllerDelegate?
     
@@ -32,14 +32,14 @@ final class ContentSplitViewController: UIViewController, NeedsDependency {
         let sidebarViewController = SidebarViewController()
         sidebarViewController.context = context
         sidebarViewController.coordinator = coordinator
-        sidebarViewController.viewModel = SidebarViewModel(context: context, authContext: authContext)
+        sidebarViewController.viewModel = SidebarViewModel(context: context, authenticationBox: authenticationBox)
         sidebarViewController.delegate = self
         return sidebarViewController
     }()
     
     @Published var currentSupplementaryTab: Tab = .home
     private(set) lazy var mainTabBarController: MainTabBarController = {
-        let mainTabBarController = MainTabBarController(context: self.context, coordinator: self.coordinator, authContext: self.authContext)
+        let mainTabBarController = MainTabBarController(context: self.context, coordinator: self.coordinator, authenticationBox: self.authenticationBox)
         if let homeTimelineViewController = mainTabBarController.viewController(of: HomeTimelineViewController.self) {
             homeTimelineViewController.viewModel?.displaySettingBarButtonItem = false
         }
@@ -108,9 +108,9 @@ extension ContentSplitViewController: SidebarViewControllerDelegate {
     
     func sidebarViewController(_ sidebarViewController: SidebarViewController, didLongPressItem item: SidebarViewModel.Item, sourceView: UIView) {
         guard case let .tab(tab) = item, tab == .me else { return }
-        guard let authContext = authContext else { return }
+        guard let authenticationBox else { return }
         
-        let accountListViewModel = AccountListViewModel(context: context, authContext: authContext)
+        let accountListViewModel = AccountListViewModel(context: context, authenticationBox: authenticationBox)
         let accountListViewController = coordinator.present(
             scene: .accountList(viewModel: accountListViewModel),
             from: nil,

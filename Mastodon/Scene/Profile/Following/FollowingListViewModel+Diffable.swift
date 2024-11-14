@@ -19,7 +19,7 @@ extension FollowingListViewModel {
         diffableDataSource = UserSection.diffableDataSource(
             tableView: tableView,
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             userTableViewCellDelegate: userTableViewCellDelegate
         )
         
@@ -54,7 +54,7 @@ extension FollowingListViewModel {
                             snapshot.appendItems([.bottomLoader], toSection: .main)
                         case is State.NoMore:
                             guard let userID = self.userID,
-                                  userID != self.authContext.mastodonAuthenticationBox.userID
+                                  userID != self.authenticationBox.userID
                             else { break }
                             // display footer exclude self
                             let text = L10n.Scene.Following.footer

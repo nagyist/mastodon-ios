@@ -42,7 +42,7 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
 
     // input
     public let api: APIService
-    public let authContext: AuthContext
+    public let authenticationBox: MastodonAuthenticationBox
     public let input: Input
     public let sizeLimit: SizeLimit
     @Published public internal(set) var caption = ""
@@ -73,7 +73,7 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
     
     public init(
         api: APIService,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         input: Input,
         sizeLimit: SizeLimit,
         delegate: AttachmentViewModelDelegate,
@@ -81,7 +81,7 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
         caption: String? = nil
     ) {
         self.api = api
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.input = input
         self.sizeLimit = sizeLimit
         self.delegate = delegate

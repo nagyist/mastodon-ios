@@ -40,7 +40,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
     @Published var viewLayoutFrame = ViewLayoutFrame()
     
     // author (me)
-    @Published var authContext: AuthContext
+    @Published var authenticationBox: MastodonAuthenticationBox
     
     // auto-complete info
     @Published var autoCompleteRetryLayoutTimes = 0
@@ -143,19 +143,19 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
 
     public init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         composeContext: ComposeContext,
         destination: Destination,
         initialContent: String
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.destination = destination
         self.composeContext = composeContext
         self.visibility = {
             // default private when user locked
             var visibility: Mastodon.Entity.Status.Visibility = {
-                guard let author = authContext.mastodonAuthenticationBox.authentication.account() else {
+                guard let author = authenticationBox.authentication.account() else {
                     return .public
                 }
                 return author.locked ? .private : .public
@@ -180,7 +180,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
         }()
         
         self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(
-            for: authContext.mastodonAuthenticationBox.domain
+            for: authenticationBox.domain
         )
                 
         let recentLanguages = context.settingService.currentSetting.value?.recentLanguages ?? []
@@ -194,7 +194,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
         switch destination {
         case .reply(let record):
             let status = record.entity
-            let author = authContext.mastodonAuthenticationBox.authentication.account()
+            let author = authenticationBox.authentication.account()
             
             var mentionAccts: [String] = []
             if author?.id != status.account.id {
@@ -224,7 +224,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
         }
 
         // set limit
-        let authentication = authContext.mastodonAuthenticationBox.authentication
+        let authentication = authenticationBox.authentication
         let configuration = authentication.instanceConfiguration?.instanceConfigLimitingProperties
         
         if let configuration {
@@ -260,7 +260,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
 
                 let attachmentViewModel = AttachmentViewModel(
                     api: context.apiService,
-                    authContext: authContext,
+                    authenticationBox: authenticationBox,
                     input: .mastodonAssetUrl(url: url, attachmentId: $0.id),
                     sizeLimit: sizeLimit,
                     delegate: self,
@@ -278,8 +278,8 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
             }
             Task { @MainActor in
                 if let poll = await status.getPoll(
-                    in: authContext.mastodonAuthenticationBox.domain, 
-                    authorization: authContext.mastodonAuthenticationBox.userAuthorization
+                    in: authenticationBox.domain,
+                    authorization: authenticationBox.userAuthorization
                 ) {
                     isPollActive = !poll.expired
                     pollMultipleConfigurationOption = poll.multiple
@@ -304,9 +304,9 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
 extension ComposeContentViewModel {
     private func bind() {
         // bind author
-        $authContext
-            .sink { [weak self] authContext in
-                guard let self, let account = authContext.mastodonAuthenticationBox.authentication.account() else { return }
+        $authenticationBox
+            .sink { [weak self] authenticationBox in
+                guard let self, let account = authenticationBox.authentication.account() else { return }
 
                 self.avatarURL = account.avatarImageURL()
 
@@ -337,7 +337,7 @@ extension ComposeContentViewModel {
                     let url = input[range]
                     return url.count
                 }).reduce(0, +)
-                let charactersReservedPerURL = authContext.mastodonAuthenticationBox
+                let charactersReservedPerURL = authenticationBox
                     .authentication
                     .instanceConfiguration?
                     .charactersReservedPerURL ?? MastodonAuthentication.fallbackCharactersReservedPerURL
@@ -574,9 +574,8 @@ extension ComposeContentViewModel {
     }
     
     public func statusPublisher() throws -> StatusPublisher {
-        let authContext = self.authContext
-
-        guard authContext.mastodonAuthenticationBox.authentication.account() != nil else {
+       
+        guard authenticationBox.authentication.account() != nil else {
             throw AppError.badAuthentication
         }
         
@@ -622,11 +621,10 @@ extension ComposeContentViewModel {
 
     // MastodonEditStatusPublisher
     public func statusEditPublisher() throws -> StatusPublisher? {
-        let authContext = self.authContext
         guard case let .editStatus(status, _) = composeContext else { return nil }
 
         // author
-        guard let author = authContext.mastodonAuthenticationBox.authentication.account() else {
+        guard let author = authenticationBox.authentication.account() else {
             throw AppError.badAuthentication
         }
 

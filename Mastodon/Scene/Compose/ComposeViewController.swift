@@ -49,7 +49,7 @@ final class ComposeViewController: UIViewController, NeedsDependency {
 
         return ComposeContentViewModel(
             context: context,
-            authContext: viewModel.authContext,
+            authenticationBox: viewModel.authenticationBox,
             composeContext: composeContext,
             destination: viewModel.destination,
             initialContent: initialContent
@@ -247,7 +247,7 @@ extension ComposeViewController {
             let statusPublisher = try composeContentViewModel.statusPublisher()
             viewModel.context.publisherService.enqueue(
                 statusPublisher: statusPublisher,
-                authContext: viewModel.authContext
+                authenticationBox: viewModel.authenticationBox
             )
         } catch {
             let alertController = UIAlertController.standardAlert(of: error)
@@ -296,7 +296,7 @@ extension ComposeViewController {
             guard let editStatusPublisher = try composeContentViewModel.statusEditPublisher() else { return }
             viewModel.context.publisherService.enqueue(
                 statusPublisher: editStatusPublisher,
-                authContext: viewModel.authContext
+                authenticationBox: viewModel.authenticationBox
             )
         } catch {
             let alertController = UIAlertController.standardAlert(of: error)
@@ -326,7 +326,7 @@ extension ComposeViewController {
             let attachmentViewModels = images.map { image in
                 return AttachmentViewModel(
                     api: viewModel.context.apiService,
-                    authContext: viewModel.authContext,
+                    authenticationBox: viewModel.authenticationBox,
                     input: .image(image),
                     sizeLimit: composeContentViewModel.sizeLimit,
                     delegate: composeContentViewModel

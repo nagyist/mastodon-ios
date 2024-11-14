@@ -59,12 +59,12 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
     }
     
     private var appContext: AppContext?
-    private var authContext: AuthContext?
+    private var authenticationBox: MastodonAuthenticationBox?
     private var coordinator: SceneCoordinator?
 
-    init(appContext: AppContext?, authContext: AuthContext?, coordinator: SceneCoordinator?) {
+    init(appContext: AppContext?, authenticationBox: MastodonAuthenticationBox?, coordinator: SceneCoordinator?) {
         self.appContext = appContext
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.coordinator = coordinator
     }
 
@@ -138,12 +138,12 @@ extension PrivacySafetyViewModel {
 
     private func loadSettings() {
         Task { @MainActor in
-            guard let appContext, let authContext else {
+            guard let appContext, let authenticationBox else {
                 return dismiss()
             }
             
-            let domain = authContext.mastodonAuthenticationBox.domain
-            let userAuthorization = authContext.mastodonAuthenticationBox.userAuthorization
+            let domain = authenticationBox.domain
+            let userAuthorization = authenticationBox.userAuthorization
             
             let account = try await appContext.apiService.accountVerifyCredentials(
                 domain: domain,
@@ -165,12 +165,12 @@ extension PrivacySafetyViewModel {
     
     func saveSettings() {
         Task {
-            guard let appContext, let authContext else {
+            guard let appContext, let authenticationBox else {
                 return
             }
     
-            let domain = authContext.mastodonAuthenticationBox.domain
-            let userAuthorization = authContext.mastodonAuthenticationBox.userAuthorization
+            let domain = authenticationBox.domain
+            let userAuthorization = authenticationBox.userAuthorization
             
             let _ = try await appContext.apiService.accountUpdateCredentials(
                 domain: domain,

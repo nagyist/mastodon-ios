@@ -12,12 +12,12 @@ struct StatusEditHistoryViewModel {
     let edits: [Mastodon.Entity.StatusEdit]
     
     let appContext: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
     func prepareCell(_ cell: StatusEditHistoryTableViewCell, in tableView: UITableView) {
         StatusSection.setupStatusPollHistoryDataSource(
             context: appContext,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             statusView: cell.statusHistoryView.statusView
         )
         

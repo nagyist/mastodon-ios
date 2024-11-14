@@ -17,7 +17,7 @@ class ReportSupplementaryViewModel {
 
     // Input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let account: Mastodon.Entity.Account
     let commentContext = ReportItem.CommentContext()
     
@@ -30,11 +30,11 @@ class ReportSupplementaryViewModel {
     
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         account: Mastodon.Entity.Account
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.account = account
         // end init
         

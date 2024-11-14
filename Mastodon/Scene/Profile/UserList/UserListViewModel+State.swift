@@ -121,7 +121,7 @@ extension UserListViewModel.State {
             guard let viewModel else { return }
             
             let maxID = self.maxID
-            let authenticationBox = viewModel.authContext.mastodonAuthenticationBox
+            let authenticationBox = viewModel.authenticationBox
 
             Task {
                 do {
@@ -151,7 +151,7 @@ extension UserListViewModel.State {
 
                     var hasNewAppend = false
 
-                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authContext.mastodonAuthenticationBox)
+                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
 
                     var accounts = viewModel.accounts
 

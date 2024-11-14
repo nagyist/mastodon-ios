@@ -19,7 +19,7 @@ final class DiscoveryPostsViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
     
     // output
@@ -41,9 +41,9 @@ final class DiscoveryPostsViewModel {
     @Published var isServerSupportEndpoint = true
     
     @MainActor
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.dataController = StatusDataController()
         
         Task {
@@ -56,9 +56,9 @@ extension DiscoveryPostsViewModel {
     func checkServerEndpoint() async {
         do {
             _ = try await context.apiService.trendStatuses(
-                domain: authContext.mastodonAuthenticationBox.domain,
+                domain: authenticationBox.domain,
                 query: .init(offset: nil, limit: nil),
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
         } catch let error as Mastodon.API.Error where error.httpResponseStatus.code == 404 {
             isServerSupportEndpoint = false

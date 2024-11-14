@@ -81,7 +81,7 @@ extension ReportViewController: ReportReasonViewControllerDelegate {
         case .dislike:
             let reportResultViewModel = ReportResultViewModel(
                 context: context,
-                authContext: viewModel.authContext,
+                authenticationBox: viewModel.authenticationBox,
                 account: viewModel.account,
                 relationship: viewModel.relationship,
                 isReported: false
@@ -158,7 +158,7 @@ extension ReportViewController: ReportSupplementaryViewControllerDelegate {
 
                 let reportResultViewModel = ReportResultViewModel(
                     context: context,
-                    authContext: viewModel.authContext,
+                    authenticationBox: viewModel.authenticationBox,
                     account: viewModel.account,
                     relationship: viewModel.relationship,
                     isReported: true

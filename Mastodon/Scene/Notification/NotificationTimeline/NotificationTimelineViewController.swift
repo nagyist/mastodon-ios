@@ -126,7 +126,7 @@ extension NotificationTimelineViewController {
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
         Task {
-            let policy = try? await context.apiService.notificationPolicy(authenticationBox: authContext.mastodonAuthenticationBox)
+            let policy = try? await context.apiService.notificationPolicy(authenticationBox: authenticationBox)
             viewModel.notificationPolicy = policy?.value
 
             await viewModel.loadLatest()
@@ -137,7 +137,7 @@ extension NotificationTimelineViewController {
 
 // MARK: - AuthContextProvider
 extension NotificationTimelineViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate
@@ -289,7 +289,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
                 if let status = notification.status {
                     let threadViewModel = ThreadViewModel(
                         context: self.context,
-                        authContext: self.viewModel.authContext,
+                        authenticationBox: self.viewModel.authenticationBox,
                         optionalRoot: .root(context: .init(status: .fromEntity(status)))
                     )
                     _ = self.coordinator.present(

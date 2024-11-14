@@ -9,13 +9,13 @@ import MastodonCore
 import MastodonSDK
 
 extension AppContext {
-    func nextAccount(in authContext: AuthContext) -> MastodonAuthentication? {
+    func nextAccount(in authenticationBox: MastodonAuthenticationBox) -> MastodonAuthentication? {
         let accounts = AuthenticationServiceProvider.shared.authentications
         guard accounts.count > 1 else { return nil }
         
         let nextSelectedAccountIndex: Int? = {
             for (index, account) in accounts.enumerated() {
-                guard account == authContext.mastodonAuthenticationBox
+                guard account == authenticationBox
                     .authentication
                 else { continue }
                 

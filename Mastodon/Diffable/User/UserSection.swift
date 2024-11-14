@@ -22,7 +22,7 @@ extension UserSection {
     static func diffableDataSource(
         tableView: UITableView,
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         userTableViewCellDelegate: UserTableViewCellDelegate?
     ) -> UITableViewDiffableDataSource<UserSection, UserItem> {
         tableView.register(UserTableViewCell.self, forCellReuseIdentifier: String(describing: UserTableViewCell.self))
@@ -37,7 +37,7 @@ extension UserSection {
                 case .account(let account, let relationship):
                     let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: UserTableViewCell.self), for: indexPath) as! UserTableViewCell
 
-                    guard let me = authContext.mastodonAuthenticationBox.authentication.account() else { return cell }
+                    guard let me = authenticationBox.authentication.account() else { return cell }
 
                     cell.userView.setButtonState(.loading)
                     cell.configure(

@@ -124,12 +124,12 @@ extension DiscoveryNewsViewModel.State {
             Task {
                 do {
                     let response = try await viewModel.context.apiService.trendLinks(
-                        domain: viewModel.authContext.mastodonAuthenticationBox.domain,
+                        domain: viewModel.authenticationBox.domain,
                         query: Mastodon.API.Trends.StatusQuery(
                             offset: offset,
                             limit: nil
                         ),
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                     let newOffset: Int? = {
                         guard let offset = response.link?.offset else { return nil }

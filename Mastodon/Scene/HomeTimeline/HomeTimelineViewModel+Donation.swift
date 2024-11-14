@@ -8,10 +8,10 @@ import MastodonCore
 extension HomeTimelineViewModel {
 
     func askForDonationIfPossible() async {
-        let userAuthentication = authContext.mastodonAuthenticationBox
+        let userAuthentication = authenticationBox
             .authentication
         guard let accountCreatedAt = userAuthentication.accountCreatedAt else {
-            let updated = try? await context.apiService.accountVerifyCredentials(domain: userAuthentication.domain, authorization: authContext.mastodonAuthenticationBox.userAuthorization)
+            let updated = try? await context.apiService.accountVerifyCredentials(domain: userAuthentication.domain, authorization: authenticationBox.userAuthorization)
             guard let accountCreatedAt = updated?.createdAt else { return }
             AuthenticationServiceProvider.shared.updateAccountCreatedAt(accountCreatedAt, forAuthentication: userAuthentication)
             return

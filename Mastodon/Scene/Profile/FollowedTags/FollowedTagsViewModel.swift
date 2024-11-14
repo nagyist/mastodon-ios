@@ -17,11 +17,11 @@ final class FollowedTagsViewModel: NSObject {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.followedTags = []
 
         super.init()
@@ -39,9 +39,9 @@ extension FollowedTagsViewModel {
         Task { @MainActor in
             do {
                 followedTags = try await context.apiService.getFollowedTags(
-                    domain: authContext.mastodonAuthenticationBox.domain,
+                    domain: authenticationBox.domain,
                     query: Mastodon.API.Account.FollowedTagsQuery(limit: nil),
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 ).value
 
                 var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
@@ -61,12 +61,12 @@ extension FollowedTagsViewModel {
             if tag.following ?? false {
                 _ = try? await context.apiService.unfollowTag(
                     for: tag.name,
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 )
             } else {
                 _ = try? await context.apiService.followTag(
                     for: tag.name,
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 )
             }
             

@@ -132,7 +132,7 @@ extension AutoCompleteViewModel.State {
             do {
                 let response = try await viewModel.context.apiService.search(
                     query: query,
-                    authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                    authenticationBox: viewModel.authenticationBox
                 )
                 
                 await enter(state: Idle.self)

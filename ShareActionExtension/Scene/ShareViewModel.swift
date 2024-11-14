@@ -23,7 +23,7 @@ final class ShareViewModel {
     
     // input
     let context: AppContext
-    @Published var authContext: AuthContext?
+    @Published var authenticationBox: MastodonAuthenticationBox?
     
     @Published var isPublishing = false
     

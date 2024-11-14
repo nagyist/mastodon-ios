@@ -9,6 +9,10 @@ import Foundation
 import CoreDataStack
 import MastodonSDK
 
+public protocol AuthContextProvider {
+    var authenticationBox: MastodonAuthenticationBox { get }
+}
+
 public struct MastodonAuthenticationBox: UserIdentifier {
     public let authentication: MastodonAuthentication
     public let domain: String
@@ -34,7 +38,7 @@ public struct MastodonAuthenticationBox: UserIdentifier {
     }
 }
 
-extension MastodonAuthenticationBox {
+public extension MastodonAuthenticationBox {
     
     init(authentication: MastodonAuthentication) {
         self = MastodonAuthenticationBox(

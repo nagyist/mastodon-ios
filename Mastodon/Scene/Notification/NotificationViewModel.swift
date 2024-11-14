@@ -19,7 +19,7 @@ final class NotificationViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     var notificationPolicy: Mastodon.Entity.NotificationPolicy?
     let viewDidLoad = PassthroughSubject<Void, Never>()
     
@@ -34,7 +34,7 @@ final class NotificationViewModel {
     private var lastPageIndex: Int {
         get {
             guard let selectedTabName = UserDefaults.shared.getLastSelectedNotificationsTabName(
-                accessToken: authContext.mastodonAuthenticationBox.userAuthorization.accessToken
+                accessToken: authenticationBox.userAuthorization.accessToken
             ), let scope = APIService.MastodonNotificationScope(rawValue: selectedTabName) else {
                 return 0
             }
@@ -43,20 +43,20 @@ final class NotificationViewModel {
         }
         set {
             UserDefaults.shared.setLastSelectedNotificationsTabName(
-                accessToken: authContext.mastodonAuthenticationBox.userAuthorization.accessToken,
+                accessToken: authenticationBox.userAuthorization.accessToken,
                 value: APIService.MastodonNotificationScope.allCases[newValue].rawValue
             )
         }
     }
 
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
 
         // end init
         Task {
             do {
-                let policy = try await context.apiService.notificationPolicy(authenticationBox: authContext.mastodonAuthenticationBox)
+                let policy = try await context.apiService.notificationPolicy(authenticationBox: authenticationBox)
                 self.notificationPolicy = policy.value
             } catch {
                 // we won't show the filtering-options.

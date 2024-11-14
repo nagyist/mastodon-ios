@@ -62,7 +62,7 @@ extension AttachmentViewModel {
     
     struct UploadContext {
         let apiService: APIService
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
     }
     
     public enum UploadResult {
@@ -78,7 +78,7 @@ extension AttachmentViewModel {
             let result = try await upload(
                 context: .init(
                     apiService: self.api,
-                    authContext: self.authContext
+                    authenticationBox: self.authenticationBox
                 ),
                 isRetry: isRetry
             )
@@ -141,9 +141,9 @@ extension AttachmentViewModel {
             do {
                 progress.addChild(query.progress, withPendingUnitCount: uploadTaskCount)
                 return try await context.apiService.uploadMedia(
-                    domain: context.authContext.mastodonAuthenticationBox.domain,
+                    domain: context.authenticationBox.domain,
                     query: query,
-                    mastodonAuthenticationBox: context.authContext.mastodonAuthenticationBox,
+                    mastodonAuthenticationBox: context.authenticationBox,
                     needsFallback: false
                 ).singleOutput()
             } catch {
@@ -154,9 +154,9 @@ extension AttachmentViewModel {
                 
                 progress.addChild(query.progress, withPendingUnitCount: uploadTaskCount)
                 return try await context.apiService.uploadMedia(
-                    domain: context.authContext.mastodonAuthenticationBox.domain,
+                    domain: context.authenticationBox.domain,
                     query: query,
-                    mastodonAuthenticationBox: context.authContext.mastodonAuthenticationBox,
+                    mastodonAuthenticationBox: context.authenticationBox,
                     needsFallback: true
                 ).singleOutput()
             }
@@ -178,7 +178,7 @@ extension AttachmentViewModel {
 
                 let attachmentStatusResponse = try await context.apiService.getMedia(
                     attachmentID: attachmentUploadResponse.value.id,
-                    mastodonAuthenticationBox: context.authContext.mastodonAuthenticationBox
+                    mastodonAuthenticationBox: context.authenticationBox
                 ).singleOutput()
                 progress.completedUnitCount += checkUploadTaskCount
                 

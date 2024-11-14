@@ -20,7 +20,7 @@ extension UserListViewModel {
         diffableDataSource = UserSection.diffableDataSource(
             tableView: tableView,
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             userTableViewCellDelegate: userTableViewCellDelegate
         )
         

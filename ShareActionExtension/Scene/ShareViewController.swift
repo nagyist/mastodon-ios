@@ -79,14 +79,14 @@ extension ShareViewController {
         navigationItem.rightBarButtonItem = publishBarButtonItem
         
         do {
-            guard let authContext = try setupAuthContext() else {
+            guard let authenticationBox = try setupAuthContext() else {
                 setupHintLabel()
                 return
             }
-            viewModel.authContext = authContext
+            viewModel.authenticationBox = authenticationBox
             let composeContentViewModel = ComposeContentViewModel(
                 context: context,
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 composeContext: .composeStatus,
                 destination: .topLevel,
                 initialContent: ""
@@ -135,12 +135,12 @@ extension ShareViewController {
             viewModel.isPublishing = true
             do {
                 guard let statusPublisher = try composeContentViewModel?.statusPublisher(),
-                      let authContext = viewModel.authContext
+                      let authenticationBox = viewModel.authenticationBox
                 else {
                     throw AppError.badRequest
                 }
                 
-                _ = try await statusPublisher.publish(api: context.apiService, authContext: authContext)
+                _ = try await statusPublisher.publish(api: context.apiService, authenticationBox: authenticationBox)
                 
                 self.publishButton.setTitle(L10n.Common.Controls.Actions.done, for: .normal)
                 try await Task.sleep(nanoseconds: 1 * .second)
@@ -159,12 +159,11 @@ extension ShareViewController {
 }
 
 extension ShareViewController {
-    private func setupAuthContext() throws -> AuthContext? {
+    private func setupAuthContext() throws -> MastodonAuthenticationBox? {
         AuthenticationServiceProvider.shared.prepareForUse()
 
-        let authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first
-        let authContext = authentication.flatMap { AuthContext(authentication: $0) }
-        return authContext
+        guard let authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first else { return nil }
+        return MastodonAuthenticationBox(authentication: authentication)
     }
     
     private func setupHintLabel() {
@@ -215,7 +214,7 @@ extension ShareViewController {
     
     private func load(inputItems: [NSExtensionItem]) async {
         guard let composeContentViewModel = self.composeContentViewModel,
-              let authContext = viewModel.authContext
+              let authenticationBox = viewModel.authenticationBox
         else {
             assertionFailure()
             return
@@ -257,7 +256,7 @@ extension ShareViewController {
         if let movieProvider = _movieProvider {
             let attachmentViewModel = AttachmentViewModel(
                 api: context.apiService,
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 input: .itemProvider(movieProvider),
                 sizeLimit: .init(image: nil, video: nil),
                 delegate: composeContentViewModel
@@ -267,7 +266,7 @@ extension ShareViewController {
             let attachmentViewModels = imageProviders.map { provider in
                 AttachmentViewModel(
                     api: context.apiService,
-                    authContext: authContext,
+                    authenticationBox: authenticationBox,
                     input: .itemProvider(provider),
                     sizeLimit: .init(image: nil, video: nil),
                     delegate: composeContentViewModel

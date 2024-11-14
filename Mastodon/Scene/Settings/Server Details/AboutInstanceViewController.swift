@@ -12,7 +12,7 @@ protocol AboutInstanceViewControllerDelegate: AnyObject {
 
 class AboutInstanceViewController: UIViewController, NeedsDependency, AuthContextProvider {
 
-    var authContext: AuthContext
+    var authenticationBox: MastodonAuthenticationBox
     var context: AppContext!
     var coordinator: SceneCoordinator!
 
@@ -25,10 +25,10 @@ class AboutInstanceViewController: UIViewController, NeedsDependency, AuthContex
 
     var instance: Mastodon.Entity.V2.Instance?
 
-    init(context: AppContext, authContext: AuthContext, coordinator: SceneCoordinator) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator) {
 
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.coordinator = coordinator
 
         tableView = UITableView(frame: .zero, style: .insetGrouped)

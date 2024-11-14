@@ -108,7 +108,7 @@ extension NotificationRequestsTableViewController: UITableViewDelegate {
 
 // MARK: - AuthContextProvider
 extension NotificationRequestsTableViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 extension NotificationRequestsTableViewController: NotificationRequestTableViewCellDelegate {
@@ -136,10 +136,10 @@ extension NotificationRequestsTableViewController: NotificationRequestTableViewC
     }
 
     private func acceptNotificationRequest(_ notificationRequest: MastodonSDK.Mastodon.Entity.NotificationRequest) async throws {
-        _ = try await context.apiService.acceptNotificationRequests(authenticationBox: authContext.mastodonAuthenticationBox,
+        _ = try await context.apiService.acceptNotificationRequests(authenticationBox: authenticationBox,
                                                                     id: notificationRequest.id)
 
-        let requests = try await context.apiService.notificationRequests(authenticationBox: authContext.mastodonAuthenticationBox).value
+        let requests = try await context.apiService.notificationRequests(authenticationBox: authenticationBox).value
 
         NotificationCenter.default.post(name: .notificationFilteringChanged, object: nil)
 
@@ -183,10 +183,10 @@ extension NotificationRequestsTableViewController: NotificationRequestTableViewC
     }
     
     private func rejectNotificationRequest(_ notificationRequest: MastodonSDK.Mastodon.Entity.NotificationRequest) async throws {
-        _ = try await context.apiService.rejectNotificationRequests(authenticationBox: authContext.mastodonAuthenticationBox,
+        _ = try await context.apiService.rejectNotificationRequests(authenticationBox: authenticationBox,
                                                                     id: notificationRequest.id)
         
-        let requests = try await context.apiService.notificationRequests(authenticationBox: authContext.mastodonAuthenticationBox).value
+        let requests = try await context.apiService.notificationRequests(authenticationBox: authenticationBox).value
         
         NotificationCenter.default.post(name: .notificationFilteringChanged, object: nil)
         

@@ -70,7 +70,7 @@ extension RebloggedByViewController {
 
 // MARK: - AuthContextProvider
 extension RebloggedByViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

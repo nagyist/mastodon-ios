@@ -15,16 +15,16 @@ final class SearchHistoryViewModel {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     @Published public var items: [Persistence.SearchHistory.Item]
 
     // output
     var diffableDataSource: UICollectionViewDiffableDataSource<SearchHistorySection, SearchHistoryItem>?
 
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
-        self.items = (try? FileManager.default.searchItems(for: authContext.mastodonAuthenticationBox)) ?? []
+        self.authenticationBox = authenticationBox
+        self.items = (try? FileManager.default.searchItems(for: authenticationBox)) ?? []
     }
 
 }

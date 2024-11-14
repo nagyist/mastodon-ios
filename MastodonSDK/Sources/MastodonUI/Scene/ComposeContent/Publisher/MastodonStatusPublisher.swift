@@ -76,7 +76,7 @@ extension MastodonStatusPublisher: StatusPublisher {
 
     public func publish(
         api: APIService,
-        authContext: AuthContext
+        authenticationBox: MastodonAuthenticationBox
     ) async throws -> StatusPublishResult {
         let idempotencyKey = UUID().uuidString
         
@@ -119,7 +119,7 @@ extension MastodonStatusPublisher: StatusPublisher {
                     attachmentIDs.append(attachment.id)
 
                     _ = try await api.updateMedia(
-                        domain: authContext.mastodonAuthenticationBox.domain,
+                        domain: authenticationBox.domain,
                         attachmentID: attachment.id,
                         query: .init(
                             file: nil,
@@ -127,7 +127,7 @@ extension MastodonStatusPublisher: StatusPublisher {
                             description: attachmentViewModel.caption,
                             focus: nil
                         ),
-                        mastodonAuthenticationBox: authContext.mastodonAuthenticationBox
+                        mastodonAuthenticationBox: authenticationBox
                     ).singleOutput()
                     
                     // TODO: allow background upload
@@ -169,10 +169,10 @@ extension MastodonStatusPublisher: StatusPublisher {
         )
         
         let publishResponse = try await api.publishStatus(
-            domain: authContext.mastodonAuthenticationBox.domain,
+            domain: authenticationBox.domain,
             idempotencyKey: idempotencyKey,
             query: query,
-            authenticationBox: authContext.mastodonAuthenticationBox
+            authenticationBox: authenticationBox
         )
         progress.completedUnitCount += publishStatusTaskCount
         _state = .success

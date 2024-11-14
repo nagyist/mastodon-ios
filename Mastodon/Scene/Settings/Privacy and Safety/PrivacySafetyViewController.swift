@@ -12,9 +12,9 @@ final class PrivacySafetyViewController: UIHostingController<PrivacySafetyView> 
     private let viewModel: PrivacySafetyViewModel
     private var disposeBag = [AnyCancellable]()
     
-    init(appContext: AppContext, authContext: AuthContext, coordinator: SceneCoordinator) {
+    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator) {
         self.viewModel = PrivacySafetyViewModel(
-            appContext: appContext, authContext: authContext, coordinator: coordinator
+            appContext: appContext, authenticationBox: authenticationBox, coordinator: coordinator
         )
         super.init(
             rootView: PrivacySafetyView(

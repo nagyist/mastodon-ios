@@ -32,7 +32,7 @@ class ProfileViewModel: NSObject {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
     @Published var me: Mastodon.Entity.Account
     @Published var account: Mastodon.Entity.Account
@@ -55,28 +55,28 @@ class ProfileViewModel: NSObject {
     // let needsPagePinToTop = CurrentValueSubject<Bool, Never>(false)
     
     @MainActor
-    init(context: AppContext, authContext: AuthContext, account: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?, me: Mastodon.Entity.Account) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?, me: Mastodon.Entity.Account) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.account = account
         self.relationship = relationship
         self.me = me
 
         self.postsUserTimelineViewModel = UserTimelineViewModel(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             title: L10n.Scene.Profile.SegmentedControl.posts,
             queryFilter: .init(excludeReplies: true)
         )
         self.repliesUserTimelineViewModel = UserTimelineViewModel(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             title: L10n.Scene.Profile.SegmentedControl.postsAndReplies,
             queryFilter: .init(excludeReplies: false)
         )
         self.mediaUserTimelineViewModel = UserTimelineViewModel(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             title: L10n.Scene.Profile.SegmentedControl.media,
             queryFilter: .init(onlyMedia: true)
         )
@@ -136,7 +136,7 @@ class ProfileViewModel: NSObject {
                 do {
                     let response = try await self.context.apiService.relationship(
                         forAccounts: [account],
-                        authenticationBox: self.authContext.mastodonAuthenticationBox
+                        authenticationBox: self.authenticationBox
                     )
 
                     // there are seconds delay after request follow before requested -> following. Query again when needs
@@ -176,7 +176,7 @@ class ProfileViewModel: NSObject {
             return Fail(error: APIService.APIError.implicit(.authenticationMissing)).eraseToAnyPublisher()
         }
 
-        let mastodonAuthentication = authContext.mastodonAuthenticationBox.authentication
+        let mastodonAuthentication = authenticationBox.authentication
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: mastodonAuthentication.userAccessToken)
         return context.apiService.accountVerifyCredentials(domain: domain, authorization: authorization)
             .tryMap { response in
@@ -191,7 +191,7 @@ extension ProfileViewModel {
         headerProfileInfo: ProfileHeaderViewModel.ProfileInfo,
         aboutProfileInfo: ProfileAboutViewModel.ProfileInfo
     ) async throws -> Mastodon.Response.Content<Mastodon.Entity.Account> {
-        let authenticationBox = authContext.mastodonAuthenticationBox
+        let authenticationBox = authenticationBox
         let domain = authenticationBox.domain
         let authorization = authenticationBox.userAuthorization
 

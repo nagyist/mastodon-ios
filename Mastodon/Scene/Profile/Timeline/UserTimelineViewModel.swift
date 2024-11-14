@@ -19,7 +19,7 @@ final class UserTimelineViewModel {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let title: String
     let dataController: StatusDataController
     @Published var userIdentifier: UserIdentifier?
@@ -51,12 +51,12 @@ final class UserTimelineViewModel {
     @MainActor
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         title: String,
         queryFilter: QueryFilter
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.title = title
         self.dataController = StatusDataController()
         self.queryFilter = queryFilter

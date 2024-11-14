@@ -81,7 +81,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
                         maxID: maxID,
                         accountID: accountID,
                         scope: scope,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                     
                     let notifications = response.value

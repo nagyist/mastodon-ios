@@ -17,7 +17,7 @@ extension DataSourceFacade {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
         let response = try await dependency.context.apiService.toggleMute(
-            authenticationBox: dependency.authContext.mastodonAuthenticationBox,
+            authenticationBox: dependency.authenticationBox,
             account: account
         )
 

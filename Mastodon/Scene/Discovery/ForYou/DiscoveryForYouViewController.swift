@@ -90,7 +90,7 @@ extension DiscoveryForYouViewController {
 
 // MARK: - AuthContextProvider
 extension DiscoveryForYouViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate
@@ -121,7 +121,7 @@ extension DiscoveryForYouViewController: ProfileCardTableViewCellDelegate {
         Task {
             let newRelationship = try await DataSourceFacade.responseToUserFollowAction(dependency: self, account: account)
 
-            let isMe = (account.id == authContext.mastodonAuthenticationBox.userID)
+            let isMe = (account.id == authenticationBox.userID)
 
             await MainActor.run {
                 cell.profileCardView.updateButtonState(with: newRelationship, isMe: isMe)
@@ -145,13 +145,13 @@ extension DiscoveryForYouViewController: ProfileCardTableViewCellDelegate {
             do {
                 let userID = account.id
                 let familiarFollowers = viewModel.familiarFollowers.first(where: { $0.id == userID })?.accounts ?? []
-                let relationships = try await context.apiService.relationship(forAccounts: familiarFollowers, authenticationBox: authContext.mastodonAuthenticationBox).value
+                let relationships = try await context.apiService.relationship(forAccounts: familiarFollowers, authenticationBox: authenticationBox).value
 
                 coordinator.hideLoading()
 
                 let familiarFollowersViewModel = FamiliarFollowersViewModel(
                     context: context,
-                    authContext: authContext,
+                    authenticationBox: authenticationBox,
                     accounts: familiarFollowers,
                     relationships: relationships
                 )

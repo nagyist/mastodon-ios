@@ -19,22 +19,22 @@ final class DiscoveryHashtagsViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let viewDidAppeared = PassthroughSubject<Void, Never>()
 
     // output
     var diffableDataSource: UITableViewDiffableDataSource<DiscoverySection, DiscoveryItem>?
     @Published var hashtags: [Mastodon.Entity.Tag] = []
     
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         // end init
         
         viewDidAppeared
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .asyncMap { _ in
-                let authenticationBox = authContext.mastodonAuthenticationBox
+                let authenticationBox = authenticationBox
                 return try await context.apiService.trendHashtags(domain: authenticationBox.domain,
                                                                   query: nil,
                                                                   authenticationBox: authenticationBox
@@ -62,7 +62,7 @@ extension DiscoveryHashtagsViewModel {
     @MainActor
     func fetch() async throws {
 
-        let authenticationBox = authContext.mastodonAuthenticationBox
+        let authenticationBox = authenticationBox
         let response = try await context.apiService.trendHashtags(domain: authenticationBox.domain,
                                                                   query: nil,
                                                                   authenticationBox: authenticationBox

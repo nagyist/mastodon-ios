@@ -67,23 +67,23 @@ extension HomeTimelineViewModel.LoadOldestState {
                     case .home:
                         response = try await viewModel.context.apiService.homeTimeline(
                             maxID: maxID,
-                            authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                            authenticationBox: viewModel.authenticationBox
                         )
                     case .public:
                         response = try await viewModel.context.apiService.publicTimeline(
                             query: .init(local: true, maxID: maxID),
-                            authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                            authenticationBox: viewModel.authenticationBox
                         )
                     case let .list(id):
                         response = try await viewModel.context.apiService.listTimeline(
                             id: id, 
                             query: .init(local: true, maxID: maxID),
-                            authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                            authenticationBox: viewModel.authenticationBox
                         )
                     case let .hashtag(tag):
                         response = try await viewModel.context.apiService.hashtagTimeline(
                             hashtag: tag,
-                            authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                            authenticationBox: viewModel.authenticationBox
                         )
                     }
 

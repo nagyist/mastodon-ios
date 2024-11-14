@@ -21,7 +21,7 @@ class MainTabBarController: UITabBarController {
     weak var context: AppContext!
     weak var coordinator: SceneCoordinator!
     
-    var authContext: AuthContext?
+    var authenticationBox: MastodonAuthenticationBox?
     
     private let largeContentViewerInteraction = UILargeContentViewerInteraction()
     
@@ -52,11 +52,11 @@ class MainTabBarController: UITabBarController {
     init(
         context: AppContext,
         coordinator: SceneCoordinator,
-        authContext: AuthContext?
+        authenticationBox: MastodonAuthenticationBox?
     ) {
         self.context = context
         self.coordinator = coordinator
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
 
         homeTimelineViewController = HomeTimelineViewController()
         homeTimelineViewController.configureTabBarItem(with: .home)
@@ -81,13 +81,13 @@ class MainTabBarController: UITabBarController {
         meProfileViewController.coordinator = coordinator
         meProfileViewController.configureTabBarItem(with: .me)
 
-        if let authContext {
-            notificationViewController.viewModel = NotificationViewModel(context: context, authContext: authContext)
-            homeTimelineViewController.viewModel = HomeTimelineViewModel(context: context, authContext: authContext)
-            searchViewController.viewModel = SearchViewModel(context: context, authContext: authContext)
+        if let authenticationBox {
+            notificationViewController.viewModel = NotificationViewModel(context: context, authenticationBox: authenticationBox)
+            homeTimelineViewController.viewModel = HomeTimelineViewModel(context: context, authenticationBox: authenticationBox)
+            searchViewController.viewModel = SearchViewModel(context: context, authenticationBox: authenticationBox)
 
-            if let account = authContext.mastodonAuthenticationBox.authentication.account() {
-                meProfileViewController.viewModel = ProfileViewModel(context: context, authContext: authContext, account: account, relationship: nil, me: account)
+            if let account = authenticationBox.authentication.account() {
+                meProfileViewController.viewModel = ProfileViewModel(context: context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
         }
 
@@ -111,9 +111,9 @@ extension MainTabBarController {
     override var selectedViewController: UIViewController? {
         willSet {
             if let profileView = (newValue as? UINavigationController)?.topViewController as? ProfileViewController{
-                guard let authContext = authContext,
-                      let account = authContext.mastodonAuthenticationBox.authentication.account() else { return }
-                profileView.viewModel = ProfileViewModel(context: self.context, authContext: authContext, account: account, relationship: nil, me: account)
+                guard let authenticationBox,
+                      let account = authenticationBox.authentication.account() else { return }
+                profileView.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
         }
     }
@@ -168,7 +168,7 @@ extension MainTabBarController {
         .sink { [weak self] authentication, currentTab in
             guard let self else { return }
 
-            let authentication = self.authContext?.mastodonAuthenticationBox.userAuthorization
+            let authentication = self.authenticationBox?.userAuthorization
             let hasUnreadPushNotification: Bool = authentication.flatMap { authentication in
                 let count = UserDefaults.shared.getNotificationCountWithAccessToken(accessToken: authentication.accessToken)
                 return count > 0
@@ -203,8 +203,8 @@ extension MainTabBarController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self,
-                      let authContext = self.authContext,
-                      let account = authContext.mastodonAuthenticationBox.authentication.account() else { return }
+                      let authenticationBox,
+                      let account = authenticationBox.authentication.account() else { return }
 
                 self.avatarURL = account.avatarImageURL()
 
@@ -219,7 +219,7 @@ extension MainTabBarController {
                     }
                     .store(in: &self.disposeBag)
 
-                self.meProfileViewController.viewModel = ProfileViewModel(context: self.context, authContext: authContext, account: account, relationship: nil, me: account)
+                self.meProfileViewController.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
             .store(in: &disposeBag)
         
@@ -234,7 +234,7 @@ extension MainTabBarController {
         tabBarDoubleTapGestureRecognizer.delaysTouchesEnded = false
         tabBar.addGestureRecognizer(tabBarDoubleTapGestureRecognizer)
         
-        self.isReadyForWizardAvatarButton = authContext != nil
+        self.isReadyForWizardAvatarButton = authenticationBox != nil
         
         $currentTab
             .receive(on: DispatchQueue.main)
@@ -264,10 +264,10 @@ extension MainTabBarController {
     @objc private func composeButtonDidPressed(_ sender: Any) {
 
         feedbackGenerator.generate(.impact(.medium))
-        guard let authContext = self.authContext else { return }
+        guard let authenticationBox else { return }
         let composeViewModel = ComposeViewModel(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel
         )
@@ -309,8 +309,8 @@ extension MainTabBarController {
 
         switch tab {
         case .me:
-            guard let authContext = self.authContext else { return }
-            let accountListViewModel = AccountListViewModel(context: context, authContext: authContext)
+            guard let authenticationBox else { return }
+            let accountListViewModel = AccountListViewModel(context: context, authenticationBox: authenticationBox)
             _ = coordinator.present(scene: .accountList(viewModel: accountListViewModel), from: self, transition: .formSheet)
         default:
             break
@@ -377,11 +377,11 @@ extension MainTabBarController {
     }
     
     private func updateUserAccount() {
-        guard let authContext = authContext else { return }
+        guard let authenticationBox else { return }
         
         Task { @MainActor in
-            let profileResponse = try await context.apiService.authenticatedUserInfo(authenticationBox: authContext.mastodonAuthenticationBox)
-            FileManager.default.store(account: profileResponse.value, forUserID: authContext.mastodonAuthenticationBox.authentication.userIdentifier())
+            let profileResponse = try await context.apiService.authenticatedUserInfo(authenticationBox: authenticationBox)
+            FileManager.default.store(account: profileResponse.value, forUserID: authenticationBox.authentication.userIdentifier())
         }
     }
 }
@@ -556,8 +556,8 @@ extension MainTabBarController {
     }
     
     @objc private func showFavoritesKeyCommandHandler(_ sender: UIKeyCommand) {
-        guard let authContext = self.authContext else { return }
-        let favoriteViewModel = FavoriteViewModel(context: context, authContext: authContext)
+        guard let authenticationBox else { return }
+        let favoriteViewModel = FavoriteViewModel(context: context, authenticationBox: authenticationBox)
         _ = coordinator.present(scene: .favorite(viewModel: favoriteViewModel), from: nil, transition: .show)
     }
     
@@ -568,10 +568,10 @@ extension MainTabBarController {
     }
     
     @objc private func composeNewPostKeyCommandHandler(_ sender: UIKeyCommand) {
-        guard let authContext = self.authContext else { return }
+        guard let authenticationBox else { return }
         let composeViewModel = ComposeViewModel(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel
         )

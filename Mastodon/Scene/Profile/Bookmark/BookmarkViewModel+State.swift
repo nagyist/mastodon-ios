@@ -126,7 +126,7 @@ extension BookmarkViewModel.State {
                 do {
                     let response = try await viewModel.context.apiService.bookmarkedStatuses(
                         maxID: maxID,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                     
                     var hasNewStatusesAppend = false

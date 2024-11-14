@@ -22,7 +22,7 @@ enum RecommendAccountSection: Equatable, Hashable {
 extension RecommendAccountSection {
     
     struct Configuration {
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
         weak var suggestionAccountTableViewCellDelegate: SuggestionAccountTableViewCellDelegate?
     }
 

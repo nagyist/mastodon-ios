@@ -17,7 +17,7 @@ final class UserListViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let kind: Kind
     @Published var accounts: [Mastodon.Entity.Account]
     @Published var relationships: [Mastodon.Entity.Relationship]
@@ -38,11 +38,11 @@ final class UserListViewModel {
 
     public init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         kind: Kind
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.kind = kind
         self.accounts = []
         self.relationships = []

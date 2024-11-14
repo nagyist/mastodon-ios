@@ -36,7 +36,7 @@ class ServerDetailsViewController: UIViewController {
     let instanceRulesViewController: InstanceRulesViewController
     let containerView: UIView
 
-    init(domain: String, appContext: AppContext, authContext: AuthContext, sceneCoordinator: SceneCoordinator) {
+    init(domain: String, appContext: AppContext, authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator) {
         segmentedControl = UISegmentedControl()
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
 
@@ -47,7 +47,7 @@ class ServerDetailsViewController: UIViewController {
         containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
 
-        aboutInstanceViewController = AboutInstanceViewController(context: appContext, authContext: authContext, coordinator: sceneCoordinator)
+        aboutInstanceViewController = AboutInstanceViewController(context: appContext, authenticationBox: authenticationBox, coordinator: sceneCoordinator)
         instanceRulesViewController = InstanceRulesViewController()
 
         pageController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)

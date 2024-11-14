@@ -19,7 +19,7 @@ extension DataSourceFacade {
         switch item {
         case .account(account: let account, relationship: _):
             let now = Date()
-            let userID = provider.authContext.mastodonAuthenticationBox.userID
+            let userID = provider.authenticationBox.userID
             let searchEntry = Persistence.SearchHistory.Item(
                 updatedAt: now,
                 userID: userID,
@@ -27,11 +27,11 @@ extension DataSourceFacade {
                 hashtag: nil
             )
 
-            try? FileManager.default.addSearchItem(searchEntry, for: provider.authContext.mastodonAuthenticationBox)
+            try? FileManager.default.addSearchItem(searchEntry, for: provider.authenticationBox)
         case .hashtag(let tag):
 
             let now = Date()
-            let userID = provider.authContext.mastodonAuthenticationBox.userID
+            let userID = provider.authenticationBox.userID
             let searchEntry = Persistence.SearchHistory.Item(
                 updatedAt: now,
                 userID: userID,
@@ -39,7 +39,7 @@ extension DataSourceFacade {
                 hashtag: tag
             )
 
-            try? FileManager.default.addSearchItem(searchEntry, for: provider.authContext.mastodonAuthenticationBox)
+            try? FileManager.default.addSearchItem(searchEntry, for: provider.authenticationBox)
         case .status, .notification, .notificationBanner(_):
                 break
 

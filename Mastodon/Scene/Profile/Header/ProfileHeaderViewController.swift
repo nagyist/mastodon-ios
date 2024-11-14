@@ -82,10 +82,10 @@ final class ProfileHeaderViewController: UIViewController, NeedsDependency, Medi
         return documentPickerController
     }()
 
-    init(context: AppContext, authContext: AuthContext, coordinator: SceneCoordinator, profileViewModel: ProfileViewModel) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator, profileViewModel: ProfileViewModel) {
         self.context = context
         self.coordinator = coordinator
-        self.viewModel = ProfileHeaderViewModel(context: context, authContext: authContext, account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
+        self.viewModel = ProfileHeaderViewModel(context: context, authenticationBox: authenticationBox, account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
         self.profileHeaderView = ProfileHeaderView(account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
 
         super.init(nibName: nil, bundle: nil)
@@ -342,7 +342,7 @@ extension ProfileHeaderViewController: ProfileHeaderViewDelegate {
             let userID = viewModel.account.id
             let followerListViewModel = FollowerListViewModel(
                 context: context,
-                authContext: viewModel.authContext,
+                authenticationBox: viewModel.authenticationBox,
                 domain: domain,
                 userID: userID
             )
@@ -358,7 +358,7 @@ extension ProfileHeaderViewController: ProfileHeaderViewDelegate {
             let userID = viewModel.account.id
             let followingListViewModel = FollowingListViewModel(
                 context: context,
-                authContext: viewModel.authContext,
+                authenticationBox: viewModel.authenticationBox,
                 domain: domain,
                 userID: userID
             )

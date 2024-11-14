@@ -102,7 +102,7 @@ extension BookmarkViewController: StatusTableViewCellDelegate { }
 
 // MARK: - AuthContextProvider
 extension BookmarkViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 extension BookmarkViewController {

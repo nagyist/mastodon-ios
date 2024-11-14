@@ -18,7 +18,7 @@ extension DataSourceFacade {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
         let apiService = dependency.context.apiService
-        let authBox = dependency.authContext.mastodonAuthenticationBox
+        let authBox = dependency.authenticationBox
 
         let response = try await apiService.toggleBlock(
             account: account,
@@ -41,7 +41,7 @@ extension DataSourceFacade {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
         let apiService = dependency.context.apiService
-        let authBox = dependency.authContext.mastodonAuthenticationBox
+        let authBox = dependency.authenticationBox
 
         let response = try await apiService.toggleDomainBlock(account: account, authenticationBox: authBox)
 

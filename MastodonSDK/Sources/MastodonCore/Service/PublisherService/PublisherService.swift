@@ -75,7 +75,7 @@ public final class PublisherService {
 extension PublisherService {
     
     @MainActor
-    public func enqueue(statusPublisher publisher: StatusPublisher, authContext: AuthContext) {
+    public func enqueue(statusPublisher publisher: StatusPublisher, authenticationBox: MastodonAuthenticationBox) {
         guard !statusPublishers.contains(where: { $0 === publisher }) else {
             assertionFailure()
             return
@@ -84,7 +84,7 @@ extension PublisherService {
         
         Task {
             do {
-                let result = try await publisher.publish(api: apiService, authContext: authContext)
+                let result = try await publisher.publish(api: apiService, authenticationBox: authenticationBox)
                 
                 self.statusPublishResult.send(.success(result))
                 self.statusPublishers.removeAll(where: { $0 === publisher })

@@ -76,7 +76,7 @@ extension UserTimelineViewController: CellFrameCacheContainer {
 
 // MARK: - AuthContextProvider
 extension UserTimelineViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

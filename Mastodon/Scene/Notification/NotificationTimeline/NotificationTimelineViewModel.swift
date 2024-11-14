@@ -19,7 +19,7 @@ final class NotificationTimelineViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let scope: Scope
     var notificationPolicy: Mastodon.Entity.NotificationPolicy?
     let dataController: FeedDataController
@@ -47,23 +47,23 @@ final class NotificationTimelineViewModel {
     @MainActor
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         scope: Scope,
         notificationPolicy: Mastodon.Entity.NotificationPolicy? = nil
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.scope = scope
-        self.dataController = FeedDataController(context: context, authContext: authContext)
+        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox)
         self.notificationPolicy = notificationPolicy
 
         switch scope {
         case .everything:
-            self.dataController.records = (try? FileManager.default.cachedNotificationsAll(for: authContext.mastodonAuthenticationBox))?.map({ notification in
+            self.dataController.records = (try? FileManager.default.cachedNotificationsAll(for: authenticationBox))?.map({ notification in
                 MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationAll)
             }) ?? []
         case .mentions:
-            self.dataController.records = (try? FileManager.default.cachedNotificationsMentions(for: authContext.mastodonAuthenticationBox))?.map({ notification in
+            self.dataController.records = (try? FileManager.default.cachedNotificationsMentions(for: authenticationBox))?.map({ notification in
                 MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationMentions)
             }) ?? []
         case .fromAccount(_):
@@ -80,9 +80,9 @@ final class NotificationTimelineViewModel {
                 }
                 switch self.scope {
                 case .everything:
-                    FileManager.default.cacheNotificationsAll(items: items, for: authContext.mastodonAuthenticationBox)
+                    FileManager.default.cacheNotificationsAll(items: items, for: authenticationBox)
                 case .mentions:
-                    FileManager.default.cacheNotificationsMentions(items: items, for: authContext.mastodonAuthenticationBox)
+                    FileManager.default.cacheNotificationsMentions(items: items, for: authenticationBox)
                 case .fromAccount(_):
                     //NOTE: we don't persist these
                     break
@@ -99,7 +99,7 @@ final class NotificationTimelineViewModel {
         Task { [weak self] in
             guard let self else { return }
 
-            let policy = try await self.context.apiService.notificationPolicy(authenticationBox: self.authContext.mastodonAuthenticationBox)
+            let policy = try await self.context.apiService.notificationPolicy(authenticationBox: self.authenticationBox)
             self.notificationPolicy = policy.value
 
             await self.loadLatest()

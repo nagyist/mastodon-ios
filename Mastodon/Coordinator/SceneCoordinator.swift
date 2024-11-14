@@ -22,7 +22,7 @@ final public class SceneCoordinator {
     private weak var sceneDelegate: SceneDelegate!
     private(set) weak var appContext: AppContext!
     
-    private(set) var authContext: AuthContext?
+    private(set) var authenticationBox: MastodonAuthenticationBox?
     
     let id = UUID().uuidString
     
@@ -52,7 +52,7 @@ final public class SceneCoordinator {
                 [weak self] pushNotification in
                 guard let self else { return }
                 Task { @MainActor in
-                    guard let currentActiveAuthenticationBox = self.authContext?.mastodonAuthenticationBox else { return }
+                    guard let currentActiveAuthenticationBox = self.authenticationBox else { return }
                     let accessToken = pushNotification.accessToken     // use raw accessToken value without normalize
                     if currentActiveAuthenticationBox.userAuthorization.accessToken == accessToken {
                         // do nothing if notification for current account
@@ -92,22 +92,22 @@ final public class SceneCoordinator {
 
                             // show notification related content
                             guard let type = Mastodon.Entity.Notification.NotificationType(rawValue: pushNotification.notificationType) else { return }
-                            guard let authContext = self.authContext else { return }
-                            guard let me = authContext.mastodonAuthenticationBox.authentication.account() else { return }
+                            guard let authenticationBox = self.authenticationBox else { return }
+                            guard let me = authenticationBox.authentication.account() else { return }
                             let notificationID = String(pushNotification.notificationID)
 
                             switch type {
                             case .follow:
                                 let account = try await appContext.apiService.notification(
                                     notificationID: notificationID,
-                                    authenticationBox: authContext.mastodonAuthenticationBox
+                                    authenticationBox: authenticationBox
                                 ).value.account
 
-                                let relationship = try await appContext.apiService.relationship(forAccounts: [account], authenticationBox: authContext.mastodonAuthenticationBox).value.first
+                                let relationship = try await appContext.apiService.relationship(forAccounts: [account], authenticationBox: authenticationBox).value.first
 
                                 let profileViewModel = ProfileViewModel(
                                     context: appContext,
-                                    authContext: authContext,
+                                    authenticationBox: authenticationBox,
                                     account: account,
                                     relationship: relationship,
                                     me: me
@@ -123,7 +123,7 @@ final public class SceneCoordinator {
                             case .mention, .reblog, .favourite, .poll, .status:
                                 let threadViewModel = RemoteThreadViewModel(
                                     context: appContext,
-                                    authContext: authContext,
+                                    authenticationBox: authenticationBox,
                                     notificationID: notificationID
                                 )
                                 _ = self.present(
@@ -253,18 +253,18 @@ extension SceneCoordinator {
         let rootViewController: UIViewController
 
         AuthenticationServiceProvider.shared.prepareForUse()
-        let _authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first
-        let _authContext = _authentication.flatMap { AuthContext(authentication: $0) }
-        self.authContext = _authContext
+        if let _authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first {
+            self.authenticationBox = MastodonAuthenticationBox(authentication: _authentication)
+        }
 
         switch UIDevice.current.userInterfaceIdiom {
             case .phone:
-                let viewController = MainTabBarController(context: appContext, coordinator: self, authContext: _authContext)
+                let viewController = MainTabBarController(context: appContext, coordinator: self, authenticationBox: authenticationBox)
                 self.splitViewController = nil
                 self.tabBarController = viewController
                 rootViewController = viewController
             default:
-                let splitViewController = RootSplitViewController(context: appContext, coordinator: self, authContext: _authContext)
+                let splitViewController = RootSplitViewController(context: appContext, coordinator: self, authenticationBox: authenticationBox)
                 self.splitViewController = splitViewController
                 self.tabBarController = splitViewController.contentSplitViewController.mainTabBarController
                 rootViewController = splitViewController
@@ -273,7 +273,7 @@ extension SceneCoordinator {
         sceneDelegate.window?.rootViewController = rootViewController                   // base: main
         self.rootViewController = rootViewController
 
-        if _authContext == nil {                                                        // entry #1: welcome
+        if authenticationBox == nil {                                                        // entry #1: welcome
             DispatchQueue.main.async {
                 _ = self.present(
                     scene: .welcome,
@@ -434,7 +434,7 @@ private extension SceneCoordinator {
             let _viewController = WebViewController(viewModel)
             viewController = _viewController
         case .searchDetail(let viewModel):
-            let _viewController = SearchDetailViewController(appContext: appContext, sceneCoordinator: self, authContext: viewModel.authContext)
+            let _viewController = SearchDetailViewController(appContext: appContext, sceneCoordinator: self, authenticationBox: viewModel.authenticationBox)
             _viewController.viewModel = viewModel
             viewController = _viewController
         case .searchResult(let viewModel):
@@ -470,9 +470,9 @@ private extension SceneCoordinator {
             _viewController.viewModel = viewModel
             viewController = _viewController
         case .followedTags(let viewModel):
-            guard let authContext else { return nil }
+            guard let authenticationBox else { return nil }
 
-            viewController = FollowedTagsViewController(appContext: appContext, sceneCoordinator: self, authContext: authContext, viewModel: viewModel)
+            viewController = FollowedTagsViewController(appContext: appContext, sceneCoordinator: self, authenticationBox: authenticationBox, viewModel: viewModel)
         case .favorite(let viewModel):
             let _viewController = FavoriteViewController()
             _viewController.viewModel = viewModel
@@ -544,15 +544,15 @@ private extension SceneCoordinator {
             viewController = activityViewController
         case .settings(let setting):
             guard let presentedOn = sender,
-                  let accountName = authContext?.mastodonAuthenticationBox.authentication.username,
-                  let authContext
+                  let accountName = authenticationBox?.authentication.username,
+                  let authenticationBox
             else { return nil }
 
             let settingsCoordinator = SettingsCoordinator(presentedOn: presentedOn,
                                                           accountName: accountName,
                                                           setting: setting,
                                                           appContext: appContext,
-                                                          authContext: authContext,
+                                                          authenticationBox: authenticationBox,
                                                           sceneCoordinator: self
             )
             settingsCoordinator.delegate = self
@@ -643,15 +643,15 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
 
         let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
         let signOutAction = UIAlertAction(title: L10n.Common.Alerts.SignOut.confirm, style: .destructive) { [weak self] _ in
-            guard let self, let authContext = self.authContext else { return }
+            guard let self, let authenticationBox = self.authenticationBox else { return }
 
             self.appContext.notificationService.clearNotificationCountForActiveUser()
 
             Task { @MainActor in
                 try await self.appContext.authenticationService.signOutMastodonUser(
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 )
-                let userIdentifier = authContext.mastodonAuthenticationBox
+                let userIdentifier = authenticationBox
                 FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
                 FileManager.default.invalidateNotificationsAll(for: userIdentifier)
                 FileManager.default.invalidateNotificationsMentions(for: userIdentifier)
@@ -679,9 +679,9 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
 
     @MainActor
     func openPrivacyURL(_ settingsCoordinator: SettingsCoordinator) {
-        guard let authContext else { return }
+        guard let authenticationBox else { return }
 
-        let domain = authContext.mastodonAuthenticationBox.domain
+        let domain = authenticationBox.domain
         let privacyURL = Mastodon.API.privacyURL(domain: domain)
 
         _ = present(scene: .safari(url: privacyURL),
@@ -691,9 +691,9 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
     }
 
     func openProfileSettingsURL(_ settingsCoordinator: SettingsCoordinator) {
-        guard let authContext else { return }
+        guard let authenticationBox else { return }
 
-        let domain = authContext.mastodonAuthenticationBox.domain
+        let domain = authenticationBox.domain
         let profileSettingsURL = Mastodon.API.profileSettingsURL(domain: domain)
 
         let authenticationController = MastodonAuthenticationController(context: appContext, authenticateURL: profileSettingsURL)

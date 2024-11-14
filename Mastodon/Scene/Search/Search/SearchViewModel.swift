@@ -20,15 +20,15 @@ final class SearchViewModel: NSObject {
     
     // input
     let context: AppContext
-    let authContext: AuthContext?
+    let authenticationBox: MastodonAuthenticationBox?
     
     // output
     var diffableDataSource: UICollectionViewDiffableDataSource<SearchSection, SearchItem>?
     @Published var hashtags: [Mastodon.Entity.Tag] = []
     
-    init(context: AppContext, authContext: AuthContext?) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox?) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         super.init()
     }
 }

@@ -208,12 +208,12 @@ extension SidebarViewController: UICollectionViewDelegate {
             guard let diffableDataSource = viewModel.secondaryDiffableDataSource else { return }
             guard let item = diffableDataSource.itemIdentifier(for: indexPath) else { return }
             
-            guard let authContext = viewModel.authContext else { return }
+            guard let authenticationBox = viewModel.authenticationBox else { return }
             switch item {
             case .compose:
                 let composeViewModel = ComposeViewModel(
                     context: context,
-                    authContext: authContext,
+                    authenticationBox: authenticationBox,
                     composeContext: .composeStatus,
                     destination: .topLevel
                 )

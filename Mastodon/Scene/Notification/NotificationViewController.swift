@@ -157,7 +157,7 @@ extension NotificationViewController {
         let viewController = NotificationTimelineViewController(
             viewModel: NotificationTimelineViewModel(
                 context: context,
-                authContext: viewModel.authContext,
+                authenticationBox: viewModel.authenticationBox,
                 scope: scope, notificationPolicy: viewModel.notificationPolicy
             ),
             context: context,

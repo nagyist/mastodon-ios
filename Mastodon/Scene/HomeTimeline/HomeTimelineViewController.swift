@@ -166,8 +166,8 @@ final class HomeTimelineViewController: UIViewController, NeedsDependency, Media
             Task { @MainActor in
                 let lists = (try? await Mastodon.API.Lists.getLists(
                     session: .shared,
-                    domain: self.authContext.mastodonAuthenticationBox.domain,
-                    authorization: self.authContext.mastodonAuthenticationBox.userAuthorization
+                    domain: self.authenticationBox.domain,
+                    authorization: self.authenticationBox.userAuthorization
                 ).singleOutput().value) ?? []
                 
                 var listEntries = lists.map { entry in
@@ -207,9 +207,9 @@ final class HomeTimelineViewController: UIViewController, NeedsDependency, Media
             Task { @MainActor in
                 let lists = (try? await Mastodon.API.Account.followedTags(
                     session: .shared,
-                    domain: self.authContext.mastodonAuthenticationBox.domain,
+                    domain: self.authenticationBox.domain,
                     query: .init(limit: nil),
-                    authorization: self.authContext.mastodonAuthenticationBox.userAuthorization
+                    authorization: self.authenticationBox.userAuthorization
                 ).singleOutput().value) ?? []
                 
                 var listEntries = lists.map { entry in
@@ -354,8 +354,8 @@ extension HomeTimelineViewController {
                 self?.showEmptyView(state)
 
                 let userDoesntFollowPeople: Bool
-                if let authContext = self?.authContext,
-                   let me = authContext.mastodonAuthenticationBox.authentication.account() {
+                if let authenticationBox = self?.authenticationBox,
+                   let me = authenticationBox.authentication.account() {
                     userDoesntFollowPeople = me.followersCount == 0
                 } else {
                     userDoesntFollowPeople = true
@@ -606,9 +606,9 @@ extension HomeTimelineViewController {
 extension HomeTimelineViewController {
     
     @objc private func findPeopleButtonPressed(_ sender: Any?) {
-        guard let authContext = viewModel?.authContext else { return }
+        guard let authenticationBox = viewModel?.authenticationBox else { return }
 
-        let suggestionAccountViewModel = SuggestionAccountViewModel(context: context, authContext: authContext)
+        let suggestionAccountViewModel = SuggestionAccountViewModel(context: context, authenticationBox: authenticationBox)
         suggestionAccountViewModel.delegate = viewModel
         _ = coordinator.present(
             scene: .suggestionAccount(viewModel: suggestionAccountViewModel),
@@ -618,9 +618,9 @@ extension HomeTimelineViewController {
     }
     
     @objc private func manuallySearchButtonPressed(_ sender: UIButton) {
-        guard let authContext = viewModel?.authContext else { return }
+        guard let authenticationBox = viewModel?.authenticationBox else { return }
 
-        let searchDetailViewModel = SearchDetailViewModel(authContext: authContext)
+        let searchDetailViewModel = SearchDetailViewModel(authenticationBox: authenticationBox)
         _ = coordinator.present(scene: .searchDetail(viewModel: searchDetailViewModel), from: self, transition: .modal(animated: true, completion: nil))
     }
     
@@ -638,11 +638,11 @@ extension HomeTimelineViewController {
     }
     
     @objc func signOutAction(_ sender: UIAction) {
-        guard let authContext = viewModel?.authContext else { return }
+        guard let authContext = viewModel?.authenticationBox else { return }
 
         Task { @MainActor in
-            try await context.authenticationService.signOutMastodonUser(authenticationBox: authContext.mastodonAuthenticationBox)
-            let userIdentifier = authContext.mastodonAuthenticationBox
+            try await context.authenticationService.signOutMastodonUser(authenticationBox: authenticationBox)
+            let userIdentifier = authenticationBox
             FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
             FileManager.default.invalidateNotificationsAll(for: userIdentifier)
             FileManager.default.invalidateNotificationsMentions(for: userIdentifier)
@@ -737,7 +737,7 @@ extension HomeTimelineViewController {
     
     private func showDonationCampaign(_ campaign: Mastodon.Entity.DonationCampaign) {
         hideDonationCampaignBanner()
-        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, appContext: context, authContext: authContext, sceneCoordinator: coordinator)
+        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, appContext: context, authenticationBox: authenticationBox, sceneCoordinator: coordinator)
         navigationFlow?.presentFlow { [weak self] in
             self?.navigationFlow = nil
         }
@@ -832,7 +832,7 @@ extension HomeTimelineViewController {
 
 // MARK: - AuthContextProvider
 extension HomeTimelineViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel!.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel!.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

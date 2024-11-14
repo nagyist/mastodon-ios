@@ -125,7 +125,7 @@ extension FavoriteViewModel.State {
                 do {
                     let response = try await viewModel.context.apiService.favoritedStatuses(
                         maxID: maxID,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                     
                     var hasNewStatusesAppend = false

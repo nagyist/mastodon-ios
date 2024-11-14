@@ -129,7 +129,7 @@ extension HashtagTimelineViewModel.State {
                     let response = try await viewModel.context.apiService.hashtagTimeline(
                         maxID: maxID,
                         hashtag: viewModel.hashtag,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                                         
                     let newMaxID: String? = {

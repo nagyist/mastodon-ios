@@ -30,14 +30,14 @@ final class SearchViewController: UIViewController, NeedsDependency {
     let searchBarTapPublisher = PassthroughSubject<String, Never>()
     
     private(set) lazy var discoveryViewController: DiscoveryViewController? = {
-        guard let authContext = viewModel?.authContext else { return nil }
+        guard let authenticationBox = viewModel?.authenticationBox else { return nil }
         let viewController = DiscoveryViewController()
         viewController.context = context
         viewController.coordinator = coordinator
         viewController.viewModel = .init(
             context: context,
             coordinator: coordinator,
-            authContext: authContext
+            authenticationBox: authenticationBox
         )
         viewController.delegate = self
         return viewController
@@ -135,8 +135,8 @@ final class SearchViewController: UIViewController, NeedsDependency {
             .sink { [weak self] initialText in
                 guard let self = self else { return }
                 // push to search detail
-                guard let authContext = self.viewModel?.authContext else { return }
-                let searchDetailViewModel = SearchDetailViewModel(authContext: authContext, initialSearchText: initialText)
+                guard let authenticationBox = self.viewModel?.authenticationBox else { return }
+                let searchDetailViewModel = SearchDetailViewModel(authenticationBox: authenticationBox, initialSearchText: initialText)
                 searchDetailViewModel.needsBecomeFirstResponder = true
                 self.navigationController?.delegate = self.searchTransitionController
                 // FIXME:

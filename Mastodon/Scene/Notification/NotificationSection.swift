@@ -25,7 +25,7 @@ enum NotificationSection: Equatable, Hashable {
 extension NotificationSection {
     
     struct Configuration {
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
         weak var notificationTableViewCellDelegate: NotificationTableViewCellDelegate?
         let filterContext: Mastodon.Entity.Filter.Context?
         let activeFilters: Published<[Mastodon.Entity.Filter]>.Publisher?
@@ -90,13 +90,13 @@ extension NotificationSection {
     ) {
         StatusSection.setupStatusPollDataSource(
             context: context,
-            authContext: configuration.authContext,
+            authenticationBox: configuration.authenticationBox,
             statusView: cell.notificationView.statusView
         )
         
         StatusSection.setupStatusPollDataSource(
             context: context,
-            authContext: configuration.authContext,
+            authenticationBox: configuration.authenticationBox,
             statusView: cell.notificationView.quoteStatusView
         )
         
@@ -104,7 +104,7 @@ extension NotificationSection {
             tableView: tableView,
             viewModel: viewModel,
             delegate: configuration.notificationTableViewCellDelegate,
-            authenticationBox: configuration.authContext.mastodonAuthenticationBox
+            authenticationBox: configuration.authenticationBox
         )
         
         cell.notificationView.statusView.viewModel.filterContext = configuration.filterContext

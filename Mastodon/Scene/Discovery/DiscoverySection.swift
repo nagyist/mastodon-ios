@@ -20,16 +20,16 @@ enum DiscoverySection: CaseIterable {
 extension DiscoverySection {
 
     class Configuration {
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
         weak var profileCardTableViewCellDelegate: ProfileCardTableViewCellDelegate?
         let familiarFollowers: Published<[Mastodon.Entity.FamiliarFollowers]>.Publisher?
 
         public init(
-            authContext: AuthContext,
+            authenticationBox: MastodonAuthenticationBox,
             profileCardTableViewCellDelegate: ProfileCardTableViewCellDelegate? = nil,
             familiarFollowers: Published<[Mastodon.Entity.FamiliarFollowers]>.Publisher? = nil
         ) {
-            self.authContext = authContext
+            self.authenticationBox = authenticationBox
             self.profileCardTableViewCellDelegate = profileCardTableViewCellDelegate
             self.familiarFollowers = familiarFollowers
         }

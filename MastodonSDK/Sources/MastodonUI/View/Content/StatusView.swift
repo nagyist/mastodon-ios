@@ -54,7 +54,7 @@ public final class StatusView: UIView {
     public private(set) var style: Style?
     
     public var domain: String? {
-        viewModel.authContext?.mastodonAuthenticationBox.domain
+        viewModel.authenticationBox?.domain
     }
 
     // accessibility actions

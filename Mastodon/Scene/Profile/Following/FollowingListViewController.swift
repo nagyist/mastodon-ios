@@ -109,7 +109,7 @@ final class FollowingListViewController: UIViewController, NeedsDependency {
 
 // MARK: - AuthContextProvider
 extension FollowingListViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

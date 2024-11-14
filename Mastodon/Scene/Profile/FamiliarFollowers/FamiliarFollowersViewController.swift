@@ -60,8 +60,8 @@ final class FamiliarFollowersViewController: UIViewController, NeedsDependency {
 
 // MARK: - AuthContextProvider
 extension FamiliarFollowersViewController: AuthContextProvider {
-    var authContext: AuthContext {
-        viewModel.authContext
+    var authenticationBox: MastodonAuthenticationBox {
+        viewModel.authenticationBox
     }
 }
 

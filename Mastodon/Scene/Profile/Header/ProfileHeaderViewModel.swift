@@ -24,7 +24,7 @@ final class ProfileHeaderViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     
     @Published var me: Mastodon.Entity.Account
     @Published var account: Mastodon.Entity.Account
@@ -45,9 +45,9 @@ final class ProfileHeaderViewModel {
     @Published var isTitleViewDisplaying = false
     @Published var isTitleViewContentOffsetSet = false    
 
-    init(context: AppContext, authContext: AuthContext, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.account = account
         self.me = me
         self.relationship = relationship

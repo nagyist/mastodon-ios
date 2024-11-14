@@ -133,7 +133,7 @@ extension UserTimelineViewModel.State {
                         excludeReplies: queryFilter.excludeReplies,
                         excludeReblogs: queryFilter.excludeReblogs,
                         onlyMedia: queryFilter.onlyMedia,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                     
                     var hasNewStatusesAppend = false

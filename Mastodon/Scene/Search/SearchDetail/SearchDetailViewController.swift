@@ -81,15 +81,15 @@ final class SearchDetailViewController: UIViewController, NeedsDependency {
 
     //MARK: - init
 
-    init(appContext: AppContext, sceneCoordinator: SceneCoordinator, authContext: AuthContext) {
+    init(appContext: AppContext, sceneCoordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox) {
         self.context = appContext
         self.coordinator = sceneCoordinator
 
-        self.searchResultOverviewCoordinator = SearchResultOverviewCoordinator(appContext: appContext, authContext: authContext, sceneCoordinator: sceneCoordinator)
+        self.searchResultOverviewCoordinator = SearchResultOverviewCoordinator(appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
         self.searchHistoryViewController = SearchHistoryViewController()
         searchHistoryViewController.context = appContext
         searchHistoryViewController.coordinator = sceneCoordinator
-        searchHistoryViewController.viewModel = SearchHistoryViewModel(context: appContext, authContext: authContext)
+        searchHistoryViewController.viewModel = SearchHistoryViewModel(context: appContext, authenticationBox: authenticationBox)
 
         super.init(nibName: nil, bundle: nil)
 
@@ -262,7 +262,7 @@ extension SearchDetailViewController: UISearchBarDelegate {
 
         searchBar.resignFirstResponder()
 
-        let searchResultViewModel = SearchResultViewModel(context: context, authContext: viewModel.authContext, searchScope: .all, searchText: searchText)
+        let searchResultViewModel = SearchResultViewModel(context: context, authenticationBox: viewModel.authenticationBox, searchScope: .all, searchText: searchText)
         coordinator.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
     }
 

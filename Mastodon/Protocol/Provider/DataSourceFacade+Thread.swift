@@ -44,7 +44,7 @@ extension DataSourceFacade {
     ) async {
         let threadViewModel = ThreadViewModel(
             context: provider.context,
-            authContext: provider.authContext,
+            authenticationBox: provider.authenticationBox,
             optionalRoot: root
         )
         _ = provider.coordinator.present(

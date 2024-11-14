@@ -144,7 +144,7 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
     }
     
     private func createProfileHeaderViewController(viewModel: ProfileViewModel) -> ProfileHeaderViewController {
-        let viewController = ProfileHeaderViewController(context: context, authContext: viewModel.authContext, coordinator: coordinator, profileViewModel: viewModel)
+        let viewController = ProfileHeaderViewController(context: context, authenticationBox: viewModel.authenticationBox, coordinator: coordinator, profileViewModel: viewModel)
         return viewController
     }
     
@@ -560,7 +560,7 @@ extension ProfileViewController {
             _ = coordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
         case .hashtag(_, let hashtag, _):
             guard let viewModel = viewModel else { break }
-            let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authContext: viewModel.authContext, hashtag: hashtag)
+            let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: hashtag)
             _ = coordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
         case .email, .emoji:
             break
@@ -602,14 +602,14 @@ extension ProfileViewController {
     @objc private func favoriteBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard let viewModel = viewModel else { return }
         
-        let favoriteViewModel = FavoriteViewModel(context: context, authContext: viewModel.authContext)
+        let favoriteViewModel = FavoriteViewModel(context: context, authenticationBox: viewModel.authenticationBox)
         _ = coordinator.present(scene: .favorite(viewModel: favoriteViewModel), from: self, transition: .show)
     }
     
     @objc private func bookmarkBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard let viewModel = viewModel else { return }
         
-        let bookmarkViewModel = BookmarkViewModel(context: context, authContext: viewModel.authContext)
+        let bookmarkViewModel = BookmarkViewModel(context: context, authenticationBox: viewModel.authenticationBox)
         _ = coordinator.present(scene: .bookmark(viewModel: bookmarkViewModel), from: self, transition: .show)
     }
 
@@ -620,7 +620,7 @@ extension ProfileViewController {
         UITextChecker.learnWord(mention)
         let composeViewModel = ComposeViewModel(
             context: context,
-            authContext: viewModel.authContext,
+            authenticationBox: viewModel.authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel,
             initialContent: mention
@@ -631,7 +631,7 @@ extension ProfileViewController {
     @objc private func followedTagsItemPressed(_ sender: UIBarButtonItem) {
         guard let viewModel = viewModel else { return }
         
-        let followedTagsViewModel = FollowedTagsViewModel(context: context, authContext: viewModel.authContext)
+        let followedTagsViewModel = FollowedTagsViewModel(context: context, authenticationBox: viewModel.authenticationBox)
         _ = coordinator.present(scene: .followedTags(viewModel: followedTagsViewModel), from: self, transition: .show)
     }
 
@@ -645,17 +645,17 @@ extension ProfileViewController {
             
             let account = viewModel.account
             if let domain = account.domain,
-               let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authContext.mastodonAuthenticationBox),
-               let updatedRelationship = try? await context.apiService.relationship(forAccounts: [updatedAccount], authenticationBox: viewModel.authContext.mastodonAuthenticationBox).value.first
+               let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox),
+               let updatedRelationship = try? await context.apiService.relationship(forAccounts: [updatedAccount], authenticationBox: viewModel.authenticationBox).value.first
             {
                 viewModel.account = updatedAccount
                 viewModel.relationship = updatedRelationship
                 viewModel.profileAboutViewModel.fields = updatedAccount.mastodonFields
             }
 
-            if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authContext.mastodonAuthenticationBox).value {
+            if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
                 viewModel.me = updatedMe
-                FileManager.default.store(account: updatedMe, forUserID: viewModel.authContext.mastodonAuthenticationBox.authentication.userIdentifier())
+                FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -763,7 +763,7 @@ extension ProfileViewController: TabBarPagerDataSource {
 
 // MARK: - AuthContextProvider
 extension ProfileViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel!.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel!.authenticationBox }
 }
 
 // MARK: - ProfileHeaderViewControllerDelegate
@@ -916,7 +916,7 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
                 Task {
                     _ = try await DataSourceFacade.responseToDomainBlockAction(dependency: self, account: account)
 
-                    guard let newRelationship = try await self.context.apiService.relationship(forAccounts: [account], authenticationBox: viewModel.authContext.mastodonAuthenticationBox).value.first else { return }
+                    guard let newRelationship = try await self.context.apiService.relationship(forAccounts: [account], authenticationBox: viewModel.authenticationBox).value.first else { return }
 
                     viewModel.isUpdating = false
 
@@ -1044,7 +1044,7 @@ extension ProfileViewController: PagerTabStripNavigateable {
 
 private extension ProfileViewController {
     var currentInstance: MastodonAuthentication.InstanceConfiguration? {
-        authContext.mastodonAuthenticationBox.authentication.instanceConfiguration
+        authenticationBox.authentication.instanceConfiguration
     }
 }
 
@@ -1084,7 +1084,7 @@ extension ProfileViewController {
             Task {
                 let account = viewModel.account
                 if let domain = account.domain,
-                   let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authContext.mastodonAuthenticationBox) {
+                   let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox) {
                     viewModel.account = updatedAccount
 
                     viewModel.relationship = relationship
@@ -1097,10 +1097,10 @@ extension ProfileViewController {
         } else if viewModel.account == viewModel.me {
             // update my profile
             Task {
-                if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authContext.mastodonAuthenticationBox).value {
+                if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
                     viewModel.me = updatedMe
                     viewModel.account = updatedMe
-                    FileManager.default.store(account: updatedMe, forUserID: viewModel.authContext.mastodonAuthenticationBox.authentication.userIdentifier())
+                    FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
                 }
 
                 viewModel.isUpdating = false

@@ -18,7 +18,7 @@ extension FavoriteViewModel {
             context: context,
             configuration: StatusSection.Configuration(
                 context: context,
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: nil,
                 filterContext: .none,

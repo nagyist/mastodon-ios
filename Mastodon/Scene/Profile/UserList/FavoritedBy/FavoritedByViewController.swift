@@ -63,7 +63,7 @@ extension FavoritedByViewController {
 
 // MARK: - AuthContextProvider
 extension FavoritedByViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

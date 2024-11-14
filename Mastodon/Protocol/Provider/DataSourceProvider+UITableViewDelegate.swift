@@ -44,7 +44,7 @@ extension UITableViewDelegate where Self: DataSourceProvider & AuthContextProvid
                         status: status
                     )
                 } else if let accountWarning = notification.entity.accountWarning {
-                    let url = Mastodon.API.disputesEndpoint(domain: authContext.mastodonAuthenticationBox.domain, strikeId: accountWarning.id)
+                    let url = Mastodon.API.disputesEndpoint(domain: authenticationBox.domain, strikeId: accountWarning.id)
                     _ = coordinator.present(
                         scene: .safari(url: url),
                         from: self,

@@ -24,7 +24,7 @@ extension SearchHistorySection {
     static func diffableDataSource(
         viewModel: SearchHistoryViewModel,
         collectionView: UICollectionView,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         context: AppContext,
         configuration: Configuration
     ) -> UICollectionViewDiffableDataSource<SearchHistorySection, SearchHistoryItem> {

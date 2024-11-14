@@ -160,7 +160,7 @@ extension ReportResultViewController {
 
 // MARK: - AuthContextProvider
 extension ReportResultViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - PanPopableViewController

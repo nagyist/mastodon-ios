@@ -76,7 +76,7 @@ extension ReportStatusViewModel.State {
                         excludeReplies: true,
                         excludeReblogs: true,
                         onlyMedia: false,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
                     
                     var hasNewStatusesAppend = false

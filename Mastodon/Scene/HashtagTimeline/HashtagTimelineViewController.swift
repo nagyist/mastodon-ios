@@ -185,7 +185,7 @@ extension HashtagTimelineViewController {
         UITextChecker.learnWord(hashtag)
         let composeViewModel = ComposeViewModel(
             context: context,
-            authContext: viewModel.authContext,
+            authenticationBox: viewModel.authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel,
             initialContent: hashtag
@@ -197,7 +197,7 @@ extension HashtagTimelineViewController {
 
 // MARK: - AuthContextProvider
 extension HashtagTimelineViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

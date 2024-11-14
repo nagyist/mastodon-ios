@@ -16,7 +16,7 @@ extension SearchHistoryViewModel {
         diffableDataSource = SearchHistorySection.diffableDataSource(
             viewModel: self,
             collectionView: collectionView,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             context: context,
             configuration: SearchHistorySection.Configuration(
                 searchHistorySectionHeaderCollectionReusableViewDelegate: searchHistorySectionHeaderCollectionReusableViewDelegate

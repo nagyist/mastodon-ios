@@ -87,7 +87,7 @@ extension StatusView {
 extension StatusView {
     private func configureHeader(status: MastodonStatus) {
         if status.entity.reblogged == true, 
-            let authenticationBox = viewModel.authContext?.mastodonAuthenticationBox,
+            let authenticationBox = viewModel.authenticationBox,
            let account = authenticationBox.authentication.account() {
 
             let name = account.displayNameWithFallback
@@ -149,7 +149,7 @@ extension StatusView {
                 /// we need to initially set an empty header, otherwise the layout gets messed up
                 viewModel.header = createHeader(name: "", emojis: [:])
                 /// finally we can load the status information and display the correct header
-                if let authenticationBox = viewModel.authContext?.mastodonAuthenticationBox {
+                if let authenticationBox = viewModel.authenticationBox {
                     Mastodon.API.Statuses.status(
                         session: .shared,
                         domain: authenticationBox.domain,
@@ -172,7 +172,7 @@ extension StatusView {
                     let header = createHeader(name: nil, emojis: nil)
                     viewModel.header = header
                     
-                    if let authenticationBox = viewModel.authContext?.mastodonAuthenticationBox {
+                    if let authenticationBox = viewModel.authenticationBox {
                         Just(inReplyToAccountID)
                             .asyncMap { userID in
                                 return try await Mastodon.API.Account.accountInfo(
@@ -229,12 +229,12 @@ extension StatusView {
                         
             // isMyself
             viewModel.isMyself = {
-                guard let authContext = viewModel.authContext else { return false }
-                return authContext.mastodonAuthenticationBox.domain == author.domain && authContext.mastodonAuthenticationBox.userID == author.id
+                guard let authenticationBox = viewModel.authenticationBox else { return false }
+                return authenticationBox.domain == author.domain && authenticationBox.userID == author.id
             }()
             
             // isMuting, isBlocking, Following
-            guard viewModel.authContext?.mastodonAuthenticationBox != nil else { return }
+            guard viewModel.authenticationBox != nil else { return }
             guard !viewModel.isMyself else {
                 viewModel.isMuting = false
                 viewModel.isBlocking = false

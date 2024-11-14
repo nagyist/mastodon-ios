@@ -23,7 +23,7 @@ enum SearchResultSection: Hashable {
 extension SearchResultSection {
     
     struct Configuration {
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
         weak var statusViewTableViewCellDelegate: StatusTableViewCellDelegate?
         weak var userTableViewCellDelegate: UserTableViewCellDelegate?
     }
@@ -31,7 +31,7 @@ extension SearchResultSection {
     static func tableViewDiffableDataSource(
         tableView: UITableView,
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<SearchResultSection, SearchResultItem> {
         tableView.register(UserTableViewCell.self, forCellReuseIdentifier: String(describing: UserTableViewCell.self))
@@ -44,7 +44,7 @@ extension SearchResultSection {
                 case .account(let account, let relationship):
                     let cell = tableView.dequeueReusableCell(withIdentifier: UserTableViewCell.reuseIdentifier, for: indexPath) as! UserTableViewCell
 
-                    guard let me = authContext.mastodonAuthenticationBox.authentication.account() else { return cell }
+                    guard let me = authenticationBox.authentication.account() else { return cell }
 
                     cell.userView.setButtonState(.loading)
                     cell.configure(
@@ -97,12 +97,12 @@ extension SearchResultSection {
     ) {
         StatusSection.setupStatusPollDataSource(
             context: context,
-            authContext: configuration.authContext,
+            authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
         cell.statusView.viewModel.context = context
-        cell.statusView.viewModel.authContext = configuration.authContext
+        cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
             tableView: tableView,

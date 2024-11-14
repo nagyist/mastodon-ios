@@ -102,7 +102,7 @@ extension FollowerListViewController {
 
 // MARK: - AuthContextProvider
 extension FollowerListViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 

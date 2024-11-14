@@ -46,7 +46,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                     completion: { (newRelationship: Mastodon.Entity.Relationship) in
                         notification.relationship = newRelationship
                         Task { @MainActor in
-                            notificationView.configure(notification: notification, authenticationBox: self.authContext.mastodonAuthenticationBox)
+                            notificationView.configure(notification: notification, authenticationBox: self.authenticationBox)
                         }
                     }
                 )
@@ -571,7 +571,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 let newPoll = try await context.apiService.vote(
                     poll: poll.entity,
                     choices: choices,
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 ).value
                 
                 guard let entity = poll.status?.entity else { return }

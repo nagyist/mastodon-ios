@@ -23,7 +23,7 @@ final class HomeTimelineViewModel: NSObject {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let dataController: FeedDataController
 
     var presentedSuggestions = false
@@ -90,12 +90,12 @@ final class HomeTimelineViewModel: NSObject {
 
     var cellFrameCache = NSCache<NSNumber, NSValue>()
 
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context  = context
-        self.authContext = authContext
-        self.dataController = FeedDataController(context: context, authContext: authContext)
+        self.authenticationBox = authenticationBox
+        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox)
         super.init()
-        self.dataController.records = (try? FileManager.default.cachedHomeTimeline(for: authContext.mastodonAuthenticationBox).map {
+        self.dataController.records = (try? FileManager.default.cachedHomeTimeline(for: authenticationBox).map {
             MastodonFeed.fromStatus($0, kind: .home)
         }) ?? []
         
@@ -114,7 +114,7 @@ final class HomeTimelineViewModel: NSObject {
                     guard let status = feed.status else { return nil }
                     return status
                 }
-                FileManager.default.cacheHomeTimeline(items: items, for: authContext.mastodonAuthenticationBox)
+                FileManager.default.cacheHomeTimeline(items: items, for: authenticationBox)
             })
             .store(in: &disposeBag)
         
@@ -172,23 +172,23 @@ extension HomeTimelineViewModel {
         case .home:
             response = try? await context.apiService.homeTimeline(
                maxID: status.id,
-               authenticationBox: authContext.mastodonAuthenticationBox
+               authenticationBox: authenticationBox
            )
         case .public:
             response = try? await context.apiService.publicTimeline(
                 query: .init(local: true, maxID: status.id),
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
         case let .list(id):
             response = try? await context.apiService.listTimeline(
                 id: id, 
                 query: .init(local: true, maxID: status.id),
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
         case let .hashtag(tag):
             response = try? await context.apiService.hashtagTimeline(
                 hashtag: tag,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
         }
         

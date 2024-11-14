@@ -30,9 +30,9 @@ extension DataSourceFacade {
         
         let _redirectRecord = try? await Mastodon.API.Account.lookupAccount(
             session: .shared,
-            domain: provider.authContext.mastodonAuthenticationBox.domain,
+            domain: provider.authenticationBox.domain,
             query: .init(acct: acct),
-            authorization: provider.authContext.mastodonAuthenticationBox.userAuthorization
+            authorization: provider.authenticationBox.userAuthorization
         ).singleOutput().value
         
         provider.coordinator.hideLoading()
@@ -60,7 +60,7 @@ extension DataSourceFacade {
             guard let account = try await provider.context.apiService.fetchUser(
                 username: username,
                 domain: domain,
-                authenticationBox: provider.authContext.mastodonAuthenticationBox
+                authenticationBox: provider.authenticationBox
             ) else {
                 return provider.coordinator.hideLoading()
             }
@@ -85,7 +85,7 @@ extension DataSourceFacade {
                 let account = try await provider.context.apiService.accountInfo(
                     domain: domain,
                     userID: accountID,
-                    authorization: provider.authContext.mastodonAuthenticationBox.userAuthorization
+                    authorization: provider.authenticationBox.userAuthorization
                 ).value
 
                 provider.coordinator.hideLoading()
@@ -103,8 +103,8 @@ extension DataSourceFacade {
     ) async {
         provider.coordinator.showLoading()
 
-        guard let me = provider.authContext.mastodonAuthenticationBox.authentication.account(),
-              let relationship = try? await provider.context.apiService.relationship(forAccounts: [account], authenticationBox: provider.authContext.mastodonAuthenticationBox).value.first else {
+        guard let me = provider.authenticationBox.authentication.account(),
+              let relationship = try? await provider.context.apiService.relationship(forAccounts: [account], authenticationBox: provider.authenticationBox).value.first else {
             return provider.coordinator.hideLoading()
         }
 
@@ -112,7 +112,7 @@ extension DataSourceFacade {
 
         let profileViewModel = ProfileViewModel(
             context: provider.context,
-            authContext: provider.authContext,
+            authenticationBox: provider.authenticationBox,
             account: account,
             relationship: relationship,
             me: me
@@ -135,7 +135,7 @@ extension DataSourceFacade {
         mention: String,        // username,
         userInfo: [AnyHashable: Any]?
     ) async {
-        let domain = provider.authContext.mastodonAuthenticationBox.domain
+        let domain = provider.authenticationBox.domain
         
         guard
             let href = userInfo?["href"] as? String,

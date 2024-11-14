@@ -18,7 +18,7 @@ extension DataSourceFacade {
     ) async {
         let hashtagTimelineViewModel = HashtagTimelineViewModel(
             context: provider.context,
-            authContext: provider.authContext,
+            authenticationBox: provider.authenticationBox,
             hashtag: tag.name
         )
         

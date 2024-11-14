@@ -16,7 +16,7 @@ protocol SearchResultsOverviewTableViewControllerDelegate: AnyObject {
 }
 
 class SearchResultsOverviewTableViewController: UIViewController, NeedsDependency, AuthContextProvider {
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     var context: AppContext!
     var coordinator: SceneCoordinator!
 
@@ -27,9 +27,9 @@ class SearchResultsOverviewTableViewController: UIViewController, NeedsDependenc
 
     var activeTask: Task<Void, Never>?
 
-    init(appContext: AppContext, authContext: AuthContext, sceneCoordinator: SceneCoordinator) {
+    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator) {
 
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.context = appContext
         self.coordinator = sceneCoordinator
 
@@ -123,10 +123,10 @@ class SearchResultsOverviewTableViewController: UIViewController, NeedsDependenc
                 if domain.split(separator: ".").count >= 2 {
                     snapshot.appendItems([.default(.showProfile(username: username, domain: domain))], toSection: .default)
                 } else {
-                    snapshot.appendItems([.default(.showProfile(username: username, domain: authContext.mastodonAuthenticationBox.domain))], toSection: .default)
+                    snapshot.appendItems([.default(.showProfile(username: username, domain: authenticationBox.domain))], toSection: .default)
                 }
             } else {
-                snapshot.appendItems([.default(.showProfile(username: searchText, domain: authContext.mastodonAuthenticationBox.domain))], toSection: .default)
+                snapshot.appendItems([.default(.showProfile(username: searchText, domain: authenticationBox.domain))], toSection: .default)
             }
         }
 
@@ -158,7 +158,7 @@ class SearchResultsOverviewTableViewController: UIViewController, NeedsDependenc
             do {
                 let searchResult = try await context.apiService.search(
                     query: query,
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 ).value
                 
                 let firstThreeHashtags = searchResult.hashtags.prefix(3)

@@ -76,7 +76,7 @@ extension MastodonEditStatusPublisher: StatusPublisher {
 
     public func publish(
         api: APIService,
-        authContext: AuthContext
+        authenticationBox: MastodonAuthenticationBox
     ) async throws -> StatusPublishResult {
         let publishStatusTaskStartDelayWeight: Int64 = 20
         let publishStatusTaskStartDelayCount: Int64 = publishStatusTaskStartDelayWeight
@@ -124,7 +124,7 @@ extension MastodonEditStatusPublisher: StatusPublisher {
                     guard !caption.isEmpty else { continue }
 
                     _ = try await api.updateMedia(
-                        domain: authContext.mastodonAuthenticationBox.domain,
+                        domain: authenticationBox.domain,
                         attachmentID: attachment.id,
                         query: .init(
                             file: nil,
@@ -132,7 +132,7 @@ extension MastodonEditStatusPublisher: StatusPublisher {
                             description: caption,
                             focus: nil
                         ),
-                        mastodonAuthenticationBox: authContext.mastodonAuthenticationBox
+                        mastodonAuthenticationBox: authenticationBox
                     ).singleOutput()
 
                     // TODO: allow background upload
@@ -180,7 +180,7 @@ extension MastodonEditStatusPublisher: StatusPublisher {
 
         let editStatusResponse = try await api.publishStatusEdit(forStatusID: statusID,
                                                                  editStatusQuery: query,
-                                                                 authenticationBox: authContext.mastodonAuthenticationBox)
+                                                                 authenticationBox: authenticationBox)
 
         progress.completedUnitCount += publishStatusTaskCount
         _state = .success

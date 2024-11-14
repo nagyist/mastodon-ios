@@ -21,7 +21,7 @@ final class SuggestionAccountViewModel: NSObject {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     @Published var accounts: [Mastodon.Entity.V2.SuggestionAccount]
     var relationships: [Mastodon.Entity.Relationship]
 
@@ -32,10 +32,10 @@ final class SuggestionAccountViewModel: NSObject {
     
     init(
         context: AppContext,
-        authContext: AuthContext
+        authenticationBox: MastodonAuthenticationBox
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
 
         accounts = []
         relationships = []
@@ -52,7 +52,7 @@ final class SuggestionAccountViewModel: NSObject {
             do {
                 let response = try await context.apiService.suggestionAccountV2(
                     query: .init(limit: 5),
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 )
                 suggestedAccounts = response.value
 
@@ -62,7 +62,7 @@ final class SuggestionAccountViewModel: NSObject {
 
                 let relationships = try await context.apiService.relationship(
                     forAccounts: accounts,
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 ).value
 
                 self.relationships = relationships
@@ -82,7 +82,7 @@ final class SuggestionAccountViewModel: NSObject {
             tableView: tableView,
             context: context,
             configuration: RecommendAccountSection.Configuration(
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 suggestionAccountTableViewCellDelegate: suggestionAccountTableViewCellDelegate
             )
         )

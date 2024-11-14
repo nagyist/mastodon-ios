@@ -17,7 +17,7 @@ final class DiscoveryForYouViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
     @MainActor
     @Published var familiarFollowers: [Mastodon.Entity.FamiliarFollowers] = []
@@ -29,9 +29,9 @@ final class DiscoveryForYouViewModel {
     var diffableDataSource: UITableViewDiffableDataSource<DiscoverySection, DiscoveryItem>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
     
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.accounts = []
         self.relationships = []
     }
@@ -50,12 +50,12 @@ extension DiscoveryForYouViewModel {
 
             let familiarFollowersResponse = try? await context.apiService.familiarFollowers(
                 query: .init(ids: suggestedAccounts.compactMap { $0.id }),
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
 
             let relationships = try? await context.apiService.relationship(
                 forAccounts: suggestedAccounts,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
 
             familiarFollowers = familiarFollowersResponse ?? []
@@ -87,14 +87,14 @@ extension DiscoveryForYouViewModel {
         do {
             let response = try await context.apiService.suggestionAccountV2(
                 query: nil,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
             return response.compactMap { $0.account }
         } catch {
             // fallback V1
             let response = try await context.apiService.suggestionAccount(
                 query: nil,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
 
             return response

@@ -19,7 +19,7 @@ extension NotificationTimelineViewModel {
             tableView: tableView,
             context: context,
             configuration: NotificationSection.Configuration(
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 notificationTableViewCellDelegate: notificationTableViewCellDelegate,
                 filterContext: .notifications,
                 activeFilters: context.statusFilterService.$activeFilters

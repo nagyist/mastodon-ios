@@ -46,13 +46,13 @@ extension PollOptionView {
         // isMultiple
         viewModel.isMultiple = poll.multiple
         
-        let authContext = viewModel.authContext
+        let authenticationBox = viewModel.authenticationBox
         
         let authorDomain = status?.entity.account.domain ?? ""
         let authorID = status?.entity.account.id ?? ""
         // isSelect, isPollVoted, isMyPoll
-        let domain = authContext?.mastodonAuthenticationBox.domain ?? ""
-        let userID = authContext?.mastodonAuthenticationBox.userID ?? ""
+        let domain = authenticationBox?.domain ?? ""
+        let userID = authenticationBox?.userID ?? ""
 
         let isMyPoll = authorDomain == domain
                     && authorID == userID

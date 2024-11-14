@@ -116,7 +116,7 @@ extension ThreadViewController {
         guard case let .root(threadContext) = viewModel.root else { return }
         let composeViewModel = ComposeViewModel(
             context: context,
-            authContext: viewModel.authContext,
+            authenticationBox: viewModel.authenticationBox,
             composeContext: .composeStatus,
             destination: .reply(parent: threadContext.status)
         )
@@ -130,7 +130,7 @@ extension ThreadViewController {
 
 // MARK: - AuthContextProvider
 extension ThreadViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UITableViewDelegate

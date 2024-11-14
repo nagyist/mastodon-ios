@@ -113,7 +113,7 @@ extension SuggestionAccountViewController: UITableViewDelegate {
 
 // MARK: - AuthContextProvider
 extension SuggestionAccountViewController: AuthContextProvider {
-    var authContext: AuthContext { viewModel.authContext }
+    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
 }
 
 // MARK: - UserTableViewCellDelegate

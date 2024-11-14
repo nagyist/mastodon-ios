@@ -203,7 +203,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                     self.coordinator.present(
                         scene: .compose(viewModel: ComposeViewModel(
                             context: self.context,
-                            authContext: self.authContext,
+                            authenticationBox: self.authenticationBox,
                             composeContext: .composeStatus,
                             destination: .topLevel,
                             initialContent: L10n.Common.Controls.Status.linkViaUser(url.absoluteString, "@" + (statusView.viewModel.authorUsername ?? ""))
@@ -313,7 +313,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                 let newPoll = try await context.apiService.vote(
                     poll: poll.entity,
                     choices: choices,
-                    authenticationBox: authContext.mastodonAuthenticationBox
+                    authenticationBox: authenticationBox
                 ).value
                 
                 guard let entity = poll.status?.entity else { return }
@@ -536,7 +536,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
             }
             let userListViewModel = UserListViewModel(
                 context: context,
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 kind: .rebloggedBy(status: status)
             )
             _ = await coordinator.present(
@@ -560,7 +560,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
             }
             let userListViewModel = UserListViewModel(
                 context: context,
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 kind: .favoritedBy(status: status)
             )
             _ = await coordinator.present(
@@ -584,11 +584,11 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
             }
                         
             do {
-                let edits = try await context.apiService.getHistory(forStatusID: status.id, authenticationBox: authContext.mastodonAuthenticationBox).value
+                let edits = try await context.apiService.getHistory(forStatusID: status.id, authenticationBox: authenticationBox).value
 
                 await coordinator.hideLoading()
 
-                let viewModel = StatusEditHistoryViewModel(status: status, edits: edits, appContext: context, authContext: authContext)
+                let viewModel = StatusEditHistoryViewModel(status: status, edits: edits, appContext: context, authenticationBox: authenticationBox)
                 _ = await coordinator.present(scene: .editHistory(viewModel: viewModel), from: self, transition: .show)
             } catch {
                 await coordinator.hideLoading()

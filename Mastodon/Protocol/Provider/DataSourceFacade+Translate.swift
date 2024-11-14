@@ -29,7 +29,7 @@ extension DataSourceFacade {
                 .apiService
                 .translateStatus(
                     statusID: status.id,
-                    authenticationBox: provider.authContext.mastodonAuthenticationBox
+                    authenticationBox: provider.authenticationBox
                 ).value
 
             if let content = value.content, content.isNotEmpty {

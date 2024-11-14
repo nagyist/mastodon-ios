@@ -14,7 +14,7 @@ import MastodonLocalization
 final class FollowedTagsViewController: UIViewController, NeedsDependency {
     var context: AppContext!
     var coordinator: SceneCoordinator!
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
     var viewModel: FollowedTagsViewModel
     
@@ -22,10 +22,10 @@ final class FollowedTagsViewController: UIViewController, NeedsDependency {
     let tableView: UITableView
     let refreshControl: UIRefreshControl
 
-    init(appContext: AppContext, sceneCoordinator: SceneCoordinator, authContext: AuthContext, viewModel: FollowedTagsViewModel) {
+    init(appContext: AppContext, sceneCoordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox, viewModel: FollowedTagsViewModel) {
         self.context = appContext
         self.coordinator = sceneCoordinator
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.viewModel = viewModel
 
         refreshControl = UIRefreshControl()
@@ -77,7 +77,7 @@ extension FollowedTagsViewController: UITableViewDelegate {
 
         let hashtagTimelineViewModel = HashtagTimelineViewModel(
             context: self.context,
-            authContext: self.authContext,
+            authenticationBox: self.authenticationBox,
             hashtag: object.name
         )
 

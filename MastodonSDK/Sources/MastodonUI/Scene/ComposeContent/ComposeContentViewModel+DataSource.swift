@@ -100,7 +100,7 @@ extension ComposeContentViewModel {
     ) {
         let diffableDataSource = CustomEmojiPickerSection.collectionViewDiffableDataSource(
             collectionView: collectionView,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             context: context
         )
         self.customEmojiPickerDiffableDataSource = diffableDataSource

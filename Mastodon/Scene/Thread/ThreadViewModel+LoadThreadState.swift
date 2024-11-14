@@ -62,7 +62,7 @@ extension ThreadViewModel.LoadThreadState {
                 do {
                     let response = try await viewModel.context.apiService.statusContext(
                         statusID: threadContext.statusID,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
 
                     enter(state: NoMore.self)
@@ -71,7 +71,7 @@ extension ThreadViewModel.LoadThreadState {
                     // await Task.sleep(1_000_000_000)     // 1s delay to prevent UI render issue
 
                     _ = try await viewModel.context.apiService.getHistory(forStatusID: threadContext.statusID,
-                                                                                          authenticationBox: viewModel.authContext.mastodonAuthenticationBox)
+                                                                                          authenticationBox: viewModel.authenticationBox)
                     
                     viewModel.mastodonStatusThreadViewModel.appendAncestor(
                         nodes: MastodonStatusThreadViewModel.Node.replyToThread(

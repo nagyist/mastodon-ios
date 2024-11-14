@@ -14,19 +14,19 @@ final class RemoteThreadViewModel: ThreadViewModel {
         
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         statusID: Mastodon.Entity.Status.ID
     ) {
         super.init(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             optionalRoot: nil
         )
         
         Task { @MainActor in
             let response = try await context.apiService.status(
                 statusID: statusID,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
             
             let threadContext = StatusItem.Thread.Context(status: .fromEntity(response.value))
@@ -37,19 +37,19 @@ final class RemoteThreadViewModel: ThreadViewModel {
     
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         notificationID: Mastodon.Entity.Notification.ID
     ) {
         super.init(
             context: context,
-            authContext: authContext,
+            authenticationBox: authenticationBox,
             optionalRoot: nil
         )
         
         Task { @MainActor in
             let response = try await context.apiService.notification(
                 notificationID: notificationID,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
             
             guard let status = response.value.status else { return }

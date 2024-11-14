@@ -25,7 +25,7 @@ extension DataSourceFacade {
     ) async throws {
         let deletedStatus = try await dependency.context.apiService.deleteStatus(
             status: status,
-            authenticationBox: dependency.authContext.mastodonAuthenticationBox
+            authenticationBox: dependency.authenticationBox
         ).value.asMastodonStatus
         
         dependency.update(status: deletedStatus, intent: .delete)
@@ -102,7 +102,7 @@ extension DataSourceFacade {
 
             let composeViewModel = ComposeViewModel(
                 context: provider.context,
-                authContext: provider.authContext,
+                authenticationBox: provider.authenticationBox,
                 composeContext: .composeStatus,
                 destination: .reply(parent: _status)
             )
@@ -234,11 +234,11 @@ extension DataSourceFacade {
             alertController.addAction(cancelAction)
             dependency.present(alertController, animated: true)
         case .reportUser:
-            guard let relationship = try? await dependency.context.apiService.relationship(forAccounts: [menuContext.author], authenticationBox: dependency.authContext.mastodonAuthenticationBox).value.first else { return }
+            guard let relationship = try? await dependency.context.apiService.relationship(forAccounts: [menuContext.author], authenticationBox: dependency.authenticationBox).value.first else { return }
 
             let reportViewModel = ReportViewModel(
                 context: dependency.context,
-                authContext: dependency.authContext,
+                authenticationBox: dependency.authenticationBox,
                 account: menuContext.author,
                 relationship: relationship,
                 status: menuContext.statusViewModel?.originalStatus
@@ -335,12 +335,12 @@ extension DataSourceFacade {
 
             let statusSource = try await dependency.context.apiService.getStatusSource(
                 forStatusID: status.id,
-                authenticationBox: dependency.authContext.mastodonAuthenticationBox
+                authenticationBox: dependency.authenticationBox
             ).value
 
             let editStatusViewModel = ComposeViewModel(
                 context: dependency.coordinator.appContext,
-                authContext: dependency.authContext,
+                authenticationBox: dependency.authenticationBox,
                 composeContext: .editStatus(status: status, statusSource: statusSource),
                 destination: .topLevel)
             _ = dependency.coordinator.present(scene: .editStatus(viewModel: editStatusViewModel), transition: .modal(animated: true))

@@ -17,7 +17,7 @@ final class AutoCompleteViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     public let inputText = CurrentValueSubject<String, Never>("")  // contains "@" or "#" prefix
     public let symbolBoundingRect = CurrentValueSubject<CGRect, Never>(.zero)
     public let customEmojiViewModel: EmojiService.CustomEmojiViewModel?
@@ -37,10 +37,10 @@ final class AutoCompleteViewModel {
         return stateMachine
     }()
     
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
-        self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(for: authContext.mastodonAuthenticationBox.domain)
+        self.authenticationBox = authenticationBox
+        self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(for: authenticationBox.domain)
         // end init
         
         autoCompleteItems

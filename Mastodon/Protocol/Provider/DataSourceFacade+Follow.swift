@@ -17,7 +17,7 @@ extension DataSourceFacade {
         dependency: ViewControllerWithDependencies & AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Relationship {
-        let authBox = dependency.authContext.mastodonAuthenticationBox
+        let authBox = dependency.authenticationBox
         let relationship = try await dependency.context.apiService.relationship(
             forAccounts: [account], authenticationBox: authBox
         ).value.first
@@ -29,7 +29,7 @@ extension DataSourceFacade {
 
                     let response = try await dependency.context.apiService.toggleFollow(
                         account: account,
-                        authenticationBox: dependency.authContext.mastodonAuthenticationBox
+                        authenticationBox: dependency.authenticationBox
                     ).value
 
                     dependency.context.authenticationService.fetchFollowingAndBlockedAsync()
@@ -97,13 +97,13 @@ extension DataSourceFacade {
             notification.transientFollowRequestState = .init(state: .isRejecting)
         }
 
-        await notificationView.configure(notification: notification, authenticationBox: dependency.authContext.mastodonAuthenticationBox)
+        await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
 
         do {
             let newRelationship = try await dependency.context.apiService.followRequest(
                 userID: userID,
                 query: query,
-                authenticationBox: dependency.authContext.mastodonAuthenticationBox
+                authenticationBox: dependency.authenticationBox
             ).value
 
             switch query {
@@ -118,11 +118,11 @@ extension DataSourceFacade {
                 UserInfoKey.relationship: newRelationship
             ])
 
-            await notificationView.configure(notification: notification, authenticationBox: dependency.authContext.mastodonAuthenticationBox)
+            await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
         } catch {
             // reset state when failure
             notification.transientFollowRequestState = .init(state: .none)
-            await notificationView.configure(notification: notification, authenticationBox: dependency.authContext.mastodonAuthenticationBox)
+            await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
 
             if let error = error as? Mastodon.API.Error {
                 switch error.httpResponseStatus {
@@ -151,7 +151,7 @@ extension DataSourceFacade {
     ) async throws {
         let newRelationship = try await dependency.context.apiService.toggleShowReblogs(
             for: account,
-            authenticationBox: dependency.authContext.mastodonAuthenticationBox
+            authenticationBox: dependency.authenticationBox
         )
 
         let userInfo = [

@@ -116,7 +116,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
 
-        guard let path = components.path, let authContext = coordinator?.authContext else {
+        guard let path = components.path, let authenticationBox = coordinator?.authenticationBox else {
             return
         }
 
@@ -139,8 +139,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         switch (profile, statusID) {
             case (profile, nil):
                 Task {
-                    let authenticationBox = authContext.mastodonAuthenticationBox
-
                     guard let me = authenticationBox.authentication.account() else { return }
 
                     guard let account = try await AppContext.shared.apiService.search(
@@ -155,7 +153,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
                     let profileViewModel = ProfileViewModel(
                         context: AppContext.shared,
-                        authContext: authContext,
+                        authenticationBox: authenticationBox,
                         account: account,
                         relationship: relationship,
                         me: me
@@ -169,11 +167,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
             case (profile, statusID):
                 Task {
-                    guard let statusOnMyInstance = try await AppContext.shared.apiService.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authContext.mastodonAuthenticationBox).value.statuses.first else { return }
+                    guard let statusOnMyInstance = try await AppContext.shared.apiService.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authenticationBox).value.statuses.first else { return }
 
                     let threadViewModel = RemoteThreadViewModel(
                         context: AppContext.shared,
-                        authContext: authContext,
+                        authenticationBox: authenticationBox,
                         statusID: statusOnMyInstance.id
                     )
                     coordinator?.present(scene: .thread(viewModel: threadViewModel), from: nil, transition: .show)
@@ -249,10 +247,10 @@ extension SceneDelegate {
     private func showComposeViewController() {
         if coordinator?.tabBarController.topMost is ComposeViewController {
         } else {
-            if let authContext = coordinator?.authContext {
+            if let authenticationBox = coordinator?.authenticationBox {
                 let composeViewModel = ComposeViewModel(
                     context: AppContext.shared,
-                    authContext: authContext,
+                    authenticationBox: authenticationBox,
                     composeContext: .composeStatus,
                     destination: .topLevel
                 )
@@ -280,14 +278,12 @@ extension SceneDelegate {
             guard
                 components.count == 2,
                 components[0] == "/",
-                let authContext = coordinator?.authContext
+                let authenticationBox = coordinator?.authenticationBox
             else { return }
             
             Task {
                 do {
-                    let authenticationBox = authContext.mastodonAuthenticationBox
-                    
-                    guard let me = authContext.mastodonAuthenticationBox.authentication.account() else { return }
+                    guard let me = authenticationBox.authentication.account() else { return }
                     
                     guard let account = try await AppContext.shared.apiService.search(
                         query: .init(q: components[1], type: .accounts, resolve: true),
@@ -301,7 +297,7 @@ extension SceneDelegate {
                     
                     let profileViewModel = ProfileViewModel(
                         context: AppContext.shared,
-                        authContext: authContext,
+                        authenticationBox: authenticationBox,
                         account: account,
                         relationship: relationship,
                         me: me
@@ -321,24 +317,24 @@ extension SceneDelegate {
             guard
                 components.count == 2,
                 components[0] == "/",
-                let authContext = coordinator?.authContext
+                let authenticationBox = coordinator?.authenticationBox
             else { return }
             let statusId = components[1]
             // View post from user
             let threadViewModel = RemoteThreadViewModel(
                 context: AppContext.shared,
-                authContext: authContext,
+                authenticationBox: authenticationBox,
                 statusID: statusId
             )
             coordinator?.present(scene: .thread(viewModel: threadViewModel), from: nil, transition: .show)
         case "search":
             let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
             guard
-                let authContext = coordinator?.authContext,
+                let authenticationBox = coordinator?.authenticationBox,
                 let searchQuery = queryItems?.first(where: { $0.name == "query" })?.value
             else { return }
             
-            let viewModel = SearchDetailViewModel(authContext: authContext, initialSearchText: searchQuery)
+            let viewModel = SearchDetailViewModel(authenticationBox: authenticationBox, initialSearchText: searchQuery)
             coordinator?.present(scene: .searchDetail(viewModel: viewModel), from: nil, transition: .show)
         default:
             return

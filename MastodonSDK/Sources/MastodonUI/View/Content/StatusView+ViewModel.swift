@@ -26,7 +26,7 @@ extension StatusView {
         public var managedObjects = Set<NSManagedObject>()
 
         public var context: AppContext?
-        public var authContext: AuthContext?
+        public var authenticationBox: MastodonAuthenticationBox?
         public var originalStatus: MastodonStatus? {
             didSet {
                 originalStatus?.$entity
@@ -151,7 +151,7 @@ extension StatusView {
         }
         
         public func prepareForReuse() {
-            authContext = nil
+            authenticationBox = nil
             
             authorAvatarImageURL = nil
             
@@ -690,15 +690,14 @@ extension StatusView.ViewModel {
                 let (isBookmark, isFavorite, isBoosted) = tupleTwo
                 let (translatedFromLanguage, language) = tupleThree
 
-                guard let name = authorName?.string, let authorId = authorId, let context = self.context, let authContext = self.authContext else {
+                guard let name = authorName?.string, let authorId = authorId, let context = self.context, let authenticationBox = self.authenticationBox else {
                     statusView.authorView.menuButton.menu = nil
                     return
                 }
 
-                let authentication = authContext.mastodonAuthenticationBox.authentication
                 let isTranslationEnabled: Bool = {
                     guard let language, let targetLanguage = Bundle.main.preferredLocalizations.first else { return false }
-                    return authentication.instanceConfiguration?.canTranslateFrom(
+                    return authenticationBox.authentication.instanceConfiguration?.canTranslateFrom(
                         language,
                         to: targetLanguage
                     ) ?? false
@@ -707,14 +706,14 @@ extension StatusView.ViewModel {
                 authorView.menuButton.menu = UIMenu(children: [
                     UIDeferredMenuElement.uncached({ menuElement in
 
-                        let domain = authContext.mastodonAuthenticationBox.domain
+                        let domain = authenticationBox.domain
 
                         Task { @MainActor in
                             if let relationship = try? await Mastodon.API.Account.relationships(
                                 session: .shared,
                                 domain: domain,
                                 query: .init(ids: [authorId]),
-                                authorization: authContext.mastodonAuthenticationBox.userAuthorization
+                                authorization: authenticationBox.userAuthorization
                             ).singleOutput().value {
                                 guard let rel = relationship.first else { return }
                                 DispatchQueue.main.async {

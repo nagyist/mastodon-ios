@@ -27,7 +27,7 @@ class ReportViewModel {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let account: Mastodon.Entity.Account
     let relationship: Mastodon.Entity.Relationship
     let status: MastodonStatus?
@@ -39,20 +39,20 @@ class ReportViewModel {
     @MainActor
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         account: Mastodon.Entity.Account,
         relationship: Mastodon.Entity.Relationship,
         status: MastodonStatus?
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.account = account
         self.relationship = relationship
         self.status = status
         self.reportReasonViewModel = ReportReasonViewModel(context: context)
         self.reportServerRulesViewModel = ReportServerRulesViewModel(context: context)
-        self.reportStatusViewModel = ReportStatusViewModel(context: context, authContext: authContext, account: account, status: status)
-        self.reportSupplementaryViewModel = ReportSupplementaryViewModel(context: context, authContext: authContext, account: account)
+        self.reportStatusViewModel = ReportStatusViewModel(context: context, authenticationBox: authenticationBox, account: account, status: status)
+        self.reportSupplementaryViewModel = ReportSupplementaryViewModel(context: context, authenticationBox: authenticationBox, account: account)
         // end init
         
         // setup reason viewModel
@@ -67,7 +67,7 @@ class ReportViewModel {
         // bind server rules
         Task { @MainActor in
             do {
-                let response = try await context.apiService.instance(domain: authContext.mastodonAuthenticationBox.domain, authenticationBox: authContext.mastodonAuthenticationBox)
+                let response = try await context.apiService.instance(domain: authenticationBox.domain, authenticationBox: authenticationBox)
                     .timeout(3, scheduler: DispatchQueue.main)
                     .singleOutput()
                 let rules = response.value.rules ?? []
@@ -145,7 +145,7 @@ extension ReportViewModel {
             isReporting = true
             let _ = try await context.apiService.report(
                 query: query,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
             isReportSuccess = true
         } catch {

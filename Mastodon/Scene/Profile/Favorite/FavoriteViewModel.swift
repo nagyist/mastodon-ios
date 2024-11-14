@@ -18,7 +18,7 @@ final class FavoriteViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
 
     // output
@@ -37,9 +37,9 @@ final class FavoriteViewModel {
     }()
     
     @MainActor
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.dataController = StatusDataController()
     }
     

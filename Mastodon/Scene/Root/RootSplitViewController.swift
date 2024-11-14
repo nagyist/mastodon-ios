@@ -19,7 +19,7 @@ final class RootSplitViewController: UISplitViewController, NeedsDependency {
     weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
     weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
-    var authContext: AuthContext?
+    var authenticationBox: MastodonAuthenticationBox?
     
     private var isPrimaryDisplay = false
     
@@ -27,7 +27,7 @@ final class RootSplitViewController: UISplitViewController, NeedsDependency {
         let contentSplitViewController = ContentSplitViewController()
         contentSplitViewController.context = context
         contentSplitViewController.coordinator = coordinator
-        contentSplitViewController.authContext = authContext
+        contentSplitViewController.authenticationBox = authenticationBox
         contentSplitViewController.delegate = self
         return contentSplitViewController
     }()
@@ -38,19 +38,19 @@ final class RootSplitViewController: UISplitViewController, NeedsDependency {
         searchViewController.coordinator = coordinator
         searchViewController.viewModel = .init(
             context: context,
-            authContext: authContext
+            authenticationBox: authenticationBox
         )
         return searchViewController
     }()
     
-    lazy var compactMainTabBarViewController = MainTabBarController(context: context, coordinator: coordinator, authContext: authContext)
+    lazy var compactMainTabBarViewController = MainTabBarController(context: context, coordinator: coordinator, authenticationBox: authenticationBox)
     
     let separatorLine = UIView.separatorLine
     
-    init(context: AppContext, coordinator: SceneCoordinator, authContext: AuthContext?) {
+    init(context: AppContext, coordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox?) {
         self.context = context
         self.coordinator = coordinator
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         super.init(style: .doubleColumn)
         
         primaryEdge = .trailing

@@ -19,7 +19,7 @@ final class DiscoveryNewsViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
 
     // output
     @Published var links: [Mastodon.Entity.Link] = []
@@ -40,9 +40,9 @@ final class DiscoveryNewsViewModel {
     let didLoadLatest = PassthroughSubject<Void, Never>()
     @Published var isServerSupportEndpoint = true
 
-    init(context: AppContext, authContext: AuthContext) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         // end init
         
         Task {
@@ -56,9 +56,9 @@ extension DiscoveryNewsViewModel {
     func checkServerEndpoint() async {
         do {
             _ = try await context.apiService.trendLinks(
-                domain: authContext.mastodonAuthenticationBox.domain,
+                domain: authenticationBox.domain,
                 query: .init(offset: nil, limit: nil),
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             )
         } catch let error as Mastodon.API.Error where error.httpResponseStatus.code == 404 {
             isServerSupportEndpoint = false

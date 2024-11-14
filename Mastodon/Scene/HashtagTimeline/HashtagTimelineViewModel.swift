@@ -23,7 +23,7 @@ final class HashtagTimelineViewModel {
 
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
     let isFetchingLatestTimeline = CurrentValueSubject<Bool, Never>(false)
     let timelinePredicate = CurrentValueSubject<NSPredicate?, Never>(nil)
@@ -50,9 +50,9 @@ final class HashtagTimelineViewModel {
     }()
     
     @MainActor
-    init(context: AppContext, authContext: AuthContext, hashtag: String) {
+    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, hashtag: String) {
         self.context  = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.hashtag = hashtag
         self.dataController = StatusDataController()
         updateTagInformation()
@@ -70,7 +70,7 @@ extension HashtagTimelineViewModel {
         Task { @MainActor in
             let tag = try? await context.apiService.followTag(
                 for: hashtag,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
             self.hashtagDetails.send(tag)
         }
@@ -81,7 +81,7 @@ extension HashtagTimelineViewModel {
         Task { @MainActor in
             let tag = try? await context.apiService.unfollowTag(
                 for: hashtag,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
             self.hashtagDetails.send(tag)
         }
@@ -93,7 +93,7 @@ private extension HashtagTimelineViewModel {
         Task { @MainActor in
             let tag = try? await context.apiService.getTagInformation(
                 for: hashtag,
-                authenticationBox: authContext.mastodonAuthenticationBox
+                authenticationBox: authenticationBox
             ).value
             
             self.hashtagDetails.send(tag)

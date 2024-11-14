@@ -88,7 +88,7 @@ extension DiscoveryHashtagsViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard case let .hashtag(tag) = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else { return }
-        let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authContext: viewModel.authContext, hashtag: tag.name)
+        let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: tag.name)
         _ = coordinator.present(
             scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel),
             from: self,
@@ -198,7 +198,7 @@ extension DiscoveryHashtagsViewController: TableViewControllerNavigateable {
         guard let item = diffableDataSource.itemIdentifier(for: indexPathForSelectedRow) else { return }
         
         guard case let .hashtag(tag) = item else { return }
-        let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authContext: viewModel.authContext, hashtag: tag.name)
+        let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: tag.name)
         _ = coordinator.present(
             scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel),
             from: self,

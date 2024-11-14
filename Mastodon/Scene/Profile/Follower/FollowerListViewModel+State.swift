@@ -141,7 +141,7 @@ extension FollowerListViewModel.State {
                     let accountResponse = try await viewModel.context.apiService.followers(
                         userID: userID,
                         maxID: maxID,
-                        authenticationBox: viewModel.authContext.mastodonAuthenticationBox
+                        authenticationBox: viewModel.authenticationBox
                     )
 
                     if accountResponse.value.isEmpty {
@@ -154,7 +154,7 @@ extension FollowerListViewModel.State {
 
                     var hasNewAppend = false
 
-                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authContext.mastodonAuthenticationBox)
+                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
 
                     var accounts = viewModel.accounts
 

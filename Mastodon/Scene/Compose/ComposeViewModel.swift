@@ -30,7 +30,7 @@ final class ComposeViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let composeContext: Context
     let destination: ComposeContentViewModel.Destination
     let initialContent: String
@@ -44,13 +44,13 @@ final class ComposeViewModel {
     
     init(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         composeContext: ComposeViewModel.Context,
         destination: ComposeContentViewModel.Destination,
         initialContent: String = ""
     ) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.destination = destination
         self.initialContent = initialContent
         self.composeContext = composeContext

@@ -25,7 +25,7 @@ extension StatusSection {
 
     struct Configuration {
         let context: AppContext
-        let authContext: AuthContext
+        let authenticationBox: MastodonAuthenticationBox
         weak var statusTableViewCellDelegate: StatusTableViewCellDelegate?
         weak var timelineMiddleLoaderTableViewCellDelegate: TimelineMiddleLoaderTableViewCellDelegate?
         let filterContext: Mastodon.Entity.Filter.Context?
@@ -141,7 +141,7 @@ extension StatusSection {
     
     public static func setupStatusPollDataSource(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         statusView: StatusView
     ) {
         statusView.pollTableViewDiffableDataSource = UITableViewDiffableDataSource<PollSection, PollItem>(tableView: statusView.pollTableView) { tableView, indexPath, item in
@@ -156,7 +156,7 @@ extension StatusSection {
                     return _cell ?? PollOptionTableViewCell()
                 }()
                 
-                cell.pollOptionView.viewModel.authContext = authContext
+                cell.pollOptionView.viewModel.authenticationBox = authenticationBox
 
                 cell.pollOptionView.configure(pollOption: record)
 
@@ -173,7 +173,7 @@ extension StatusSection {
     
     public static func setupStatusPollHistoryDataSource(
         context: AppContext,
-        authContext: AuthContext,
+        authenticationBox: MastodonAuthenticationBox,
         statusView: StatusView
     ) {
         statusView.pollTableViewDiffableDataSource = UITableViewDiffableDataSource<PollSection, PollItem>(tableView: statusView.pollTableView) { tableView, indexPath, item in
@@ -207,12 +207,12 @@ extension StatusSection {
     ) {
         setupStatusPollDataSource(
             context: context,
-            authContext: configuration.authContext,
+            authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
         cell.statusView.viewModel.context = configuration.context
-        cell.statusView.viewModel.authContext = configuration.authContext
+        cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
             tableView: tableView,
@@ -235,12 +235,12 @@ extension StatusSection {
     ) {
         setupStatusPollDataSource(
             context: context,
-            authContext: configuration.authContext,
+            authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
         cell.statusView.viewModel.context = configuration.context
-        cell.statusView.viewModel.authContext = configuration.authContext
+        cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
             tableView: tableView,

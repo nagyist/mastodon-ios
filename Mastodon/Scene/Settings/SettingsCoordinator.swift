@@ -27,25 +27,25 @@ class SettingsCoordinator: NSObject, Coordinator {
 
     let setting: Setting
     let appContext: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     var disposeBag = Set<AnyCancellable>()
     let sceneCoordinator: SceneCoordinator
 
-    init(presentedOn: UIViewController, accountName: String, setting: Setting, appContext: AppContext, authContext: AuthContext, sceneCoordinator: SceneCoordinator) {
+    init(presentedOn: UIViewController, accountName: String, setting: Setting, appContext: AppContext, authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator) {
         self.presentedOn = presentedOn
         navigationController = UINavigationController()
         self.setting = setting
         self.appContext = appContext
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         self.sceneCoordinator = sceneCoordinator
 
-        settingsViewController = SettingsViewController(accountName: accountName, domain: authContext.mastodonAuthenticationBox.domain)
+        settingsViewController = SettingsViewController(accountName: accountName, domain: authenticationBox.domain)
         
         super.init()
         
         Task { [weak self] in
             guard let s = self else { return }
-            let userAuthentication = s.authContext.mastodonAuthenticationBox.authentication
+            let userAuthentication = s.authenticationBox.authentication
             let seed = Mastodon.Entity.DonationCampaign.donationSeed(username: userAuthentication.username, domain: userAuthentication.domain)
             do {
                 let campaign = try await s.appContext.apiService.getDonationCampaign(seed: seed, source: nil).value
@@ -93,15 +93,15 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
             case .privacySafety:
                 let privacySafetyViewController = PrivacySafetyViewController(
                     appContext: appContext,
-                    authContext: authContext,
+                    authenticationBox: authenticationBox,
                     coordinator: sceneCoordinator
                 )
                 navigationController.pushViewController(privacySafetyViewController, animated: true)
             case .serverDetails(let domain):
-                let serverDetailsViewController = ServerDetailsViewController(domain: domain, appContext: appContext, authContext: authContext, sceneCoordinator: sceneCoordinator)
+                let serverDetailsViewController = ServerDetailsViewController(domain: domain, appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
                 serverDetailsViewController.delegate = self
 
-                appContext.apiService.instanceV2(domain: domain, authenticationBox: authContext.mastodonAuthenticationBox)
+                appContext.apiService.instanceV2(domain: domain, authenticationBox: authenticationBox)
                     .sink { _ in
 
                     } receiveValue: { content in
@@ -109,7 +109,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                     }
                     .store(in: &disposeBag)
 
-                appContext.apiService.extendedDescription(domain: domain, authenticationBox: authContext.mastodonAuthenticationBox)
+                appContext.apiService.extendedDescription(domain: domain, authenticationBox: authenticationBox)
                     .sink { _ in
 
                     } receiveValue: { content in
@@ -125,7 +125,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                     await MainActor.run { [weak self] in
                         guard let s = self, let donationCampaign = s.settingsViewController.donationCampaign else { return }
                         
-                        let donationFlow = NewDonationNavigationFlow(flowPresenter: viewController, campaign: donationCampaign, appContext: s.appContext, authContext: s.authContext, sceneCoordinator: s.sceneCoordinator)
+                        let donationFlow = NewDonationNavigationFlow(flowPresenter: viewController, campaign: donationCampaign, appContext: s.appContext, authenticationBox: s.authenticationBox, sceneCoordinator: s.sceneCoordinator)
                         s.navigationFlow = donationFlow
                         donationFlow.presentFlow { [weak self] in
                             self?.navigationFlow = nil
@@ -216,7 +216,6 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
 
         //Show spinner?
 
-        let authenticationBox = authContext.mastodonAuthenticationBox
         guard let subscription = setting.activeSubscription,
               setting.domain == authenticationBox.domain,
               setting.userID == authenticationBox.userID,
@@ -301,7 +300,7 @@ extension SettingsCoordinator: MetaLabelDelegate {
                       let url = URL(string: href) else { return }
                 _ = sceneCoordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
             case .hashtag(_, let hashtag, _):
-                let hashtagTimelineViewModel = HashtagTimelineViewModel(context: appContext, authContext: authContext, hashtag: hashtag)
+                let hashtagTimelineViewModel = HashtagTimelineViewModel(context: appContext, authenticationBox: authenticationBox, hashtag: hashtag)
                 _ = sceneCoordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
             case .email(let email, _):
                 if let emailUrl = URL(string: "mailto:\(email)"), UIApplication.shared.canOpenURL(emailUrl) {

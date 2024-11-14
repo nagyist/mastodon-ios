@@ -17,7 +17,7 @@ final class DiscoveryViewModel {
     
     // input
     let context: AppContext
-    let authContext: AuthContext
+    let authenticationBox: MastodonAuthenticationBox
     let discoveryPostsViewController: DiscoveryPostsViewController
     let discoveryHashtagsViewController: DiscoveryHashtagsViewController
     let discoveryNewsViewController: DiscoveryNewsViewController
@@ -26,9 +26,9 @@ final class DiscoveryViewModel {
     @Published var viewControllers: [ScrollViewContainer]
     
     @MainActor
-    init(context: AppContext, coordinator: SceneCoordinator, authContext: AuthContext) {
+    init(context: AppContext, coordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
-        self.authContext = authContext
+        self.authenticationBox = authenticationBox
         
         func setupDependency(_ needsDependency: NeedsDependency) {
             needsDependency.context = context
@@ -38,25 +38,25 @@ final class DiscoveryViewModel {
         discoveryPostsViewController = {
             let viewController = DiscoveryPostsViewController()
             setupDependency(viewController)
-            viewController.viewModel = DiscoveryPostsViewModel(context: context, authContext: authContext)
+            viewController.viewModel = DiscoveryPostsViewModel(context: context, authenticationBox: authenticationBox)
             return viewController
         }()
         discoveryHashtagsViewController = {
             let viewController = DiscoveryHashtagsViewController()
             setupDependency(viewController)
-            viewController.viewModel = DiscoveryHashtagsViewModel(context: context, authContext: authContext)
+            viewController.viewModel = DiscoveryHashtagsViewModel(context: context, authenticationBox: authenticationBox)
             return viewController
         }()
         discoveryNewsViewController = {
             let viewController = DiscoveryNewsViewController()
             setupDependency(viewController)
-            viewController.viewModel = DiscoveryNewsViewModel(context: context, authContext: authContext)
+            viewController.viewModel = DiscoveryNewsViewModel(context: context, authenticationBox: authenticationBox)
             return viewController
         }()
         discoveryForYouViewController = {
             let viewController = DiscoveryForYouViewController()
             setupDependency(viewController)
-            viewController.viewModel = DiscoveryForYouViewModel(context: context, authContext: authContext)
+            viewController.viewModel = DiscoveryForYouViewModel(context: context, authenticationBox: authenticationBox)
             return viewController
         }()
         self.viewControllers = [
