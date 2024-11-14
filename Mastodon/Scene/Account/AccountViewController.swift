@@ -109,7 +109,7 @@ extension AccountListViewController: UITableViewDelegate {
 
                 Task { @MainActor in
                     do {
-                        try await self.viewModel.context.authenticationService.signOutMastodonUser(authentication: record)
+                        try await AuthenticationServiceProvider.shared.signOutMastodonUser(authentication: record)
 
                         let userIdentifier = record
                         FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
@@ -144,7 +144,7 @@ extension AccountListViewController: UITableViewDelegate {
         case .authentication(let record):
             assert(Thread.isMainThread)
             Task { @MainActor in
-                let isActive = try await context.authenticationService.activeMastodonUser(domain: record.domain, userID: record.userID)
+                let isActive = try await AuthenticationServiceProvider.shared.activeMastodonUser(domain: record.domain, userID: record.userID)
                 guard isActive else { return }
                 self.coordinator.setup()
             }   // end Task
@@ -157,8 +157,8 @@ extension AccountListViewController: UITableViewDelegate {
             let logoutAction = UIAlertAction(title: L10n.Scene.AccountList.logoutAllAccounts, style: .destructive) { _ in
                 Task { @MainActor in
                     self.coordinator.showLoading()
-                    for authenticationBox in self.context.authenticationService.mastodonAuthenticationBoxes {
-                        try? await self.context.authenticationService.signOutMastodonUser(authenticationBox: authenticationBox)
+                    for authenticationBox in AuthenticationServiceProvider.shared.mastodonAuthenticationBoxes {
+                        try? await AuthenticationServiceProvider.shared.signOutMastodonUser(authentication: authenticationBox.authentication)
                     }
                     self.coordinator.hideLoading()
 

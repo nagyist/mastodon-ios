@@ -18,19 +18,16 @@ public final class InstanceService {
     // input
     let backgroundManagedObjectContext: NSManagedObjectContext
     weak var apiService: APIService?
-    weak var authenticationService: AuthenticationService?
     
     // output
 
     init(
-        apiService: APIService,
-        authenticationService: AuthenticationService
+        apiService: APIService
     ) {
         self.backgroundManagedObjectContext = apiService.backgroundManagedObjectContext
         self.apiService = apiService
-        self.authenticationService = authenticationService
         
-        authenticationService.$mastodonAuthenticationBoxes
+        AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .receive(on: DispatchQueue.main)
             .compactMap { $0.first?.domain }
             .removeDuplicates()     // prevent infinity loop
@@ -47,16 +44,16 @@ extension InstanceService {
     func updateInstance(domain: String) async {
         guard let apiService else { return }
         
-       let response = try? await apiService.instance(domain: domain, authenticationBox: authenticationService?.mastodonAuthenticationBoxes.first)
+        let response = try? await apiService.instance(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication)
             .singleOutput()
             
         if response?.value.version?.majorServerVersion(greaterThanOrEquals: 4) == true {
-            guard let instanceV2 = try? await apiService.instanceV2(domain: domain, authenticationBox: authenticationService?.mastodonAuthenticationBoxes.first).singleOutput() else {
+            guard let instanceV2 = try? await apiService.instanceV2(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication).singleOutput() else {
                 return
             }
             
             self.updateInstanceV2(domain: domain, response: instanceV2)
-            if let translationResponse = try? await apiService.translationLanguages(domain: domain, authenticationBox: authenticationService?.mastodonAuthenticationBoxes.first).singleOutput() {
+            if let translationResponse = try? await apiService.translationLanguages(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication).singleOutput() {
                 updateTranslationLanguages(domain: domain, response: translationResponse)
             }
         } else if let response {

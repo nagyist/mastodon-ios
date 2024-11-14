@@ -83,10 +83,7 @@ private extension LatestFollowersWidgetProvider {
             AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
-                let authBox = WidgetExtension.appContext
-                    .authenticationService
-                    .mastodonAuthenticationBoxes
-                    .first
+                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -96,7 +93,7 @@ private extension LatestFollowersWidgetProvider {
 
             var accounts = [LatestFollowersEntryAccountable]()
 
-            let followers = try await WidgetExtension.appContext
+            let followers = try await AppContext.shared
                 .apiService
                 .followers(userID: authBox.userID, maxID: nil, authenticationBox: authBox)
                 .value

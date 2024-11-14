@@ -25,7 +25,7 @@ final class WelcomeViewModel {
     init(context: AppContext) {
         self.context = context
         
-        context.authenticationService.$mastodonAuthenticationBoxes
+        AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .map { !$0.isEmpty }
             .assign(to: &$needsShowDismissEntry)
     }

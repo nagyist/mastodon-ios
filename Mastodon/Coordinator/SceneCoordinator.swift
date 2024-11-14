@@ -65,7 +65,7 @@ final public class SceneCoordinator {
                             }
                             let domain = authentication.domain
                             let userID = authentication.userID
-                            let isSuccess = try await appContext.authenticationService.activeMastodonUser(domain: domain, userID: userID)
+                            let isSuccess = try await AuthenticationServiceProvider.shared.activeMastodonUser(domain: domain, userID: userID)
                             guard isSuccess else { return }
 
                             self.setup()
@@ -648,8 +648,8 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
             self.appContext.notificationService.clearNotificationCountForActiveUser()
 
             Task { @MainActor in
-                try await self.appContext.authenticationService.signOutMastodonUser(
-                    authenticationBox: authenticationBox
+                try await AuthenticationServiceProvider.shared.signOutMastodonUser(
+                    authentication: authenticationBox.authentication
                 )
                 let userIdentifier = authenticationBox
                 FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)

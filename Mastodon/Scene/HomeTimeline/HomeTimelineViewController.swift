@@ -641,7 +641,7 @@ extension HomeTimelineViewController {
         guard let authContext = viewModel?.authenticationBox else { return }
 
         Task { @MainActor in
-            try await context.authenticationService.signOutMastodonUser(authenticationBox: authenticationBox)
+            try await AuthenticationServiceProvider.shared.signOutMastodonUser(authentication: authenticationBox.authentication)
             let userIdentifier = authenticationBox
             FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
             FileManager.default.invalidateNotificationsAll(for: userIdentifier)

@@ -17,17 +17,14 @@ public final class BlockDomainService {
     
     // input
     weak var backgroundManagedObjectContext: NSManagedObjectContext?
-    weak var authenticationService: AuthenticationService?
 
     // output
     let blockedDomains = CurrentValueSubject<[String], Never>([])
 
     init(
-        backgroundManagedObjectContext: NSManagedObjectContext,
-        authenticationService: AuthenticationService
+        backgroundManagedObjectContext: NSManagedObjectContext
     ) {
         self.backgroundManagedObjectContext = backgroundManagedObjectContext
-        self.authenticationService = authenticationService
         
 //        backgroundManagedObjectContext.perform {
 //            let _blockedDomains: [DomainBlock] = {

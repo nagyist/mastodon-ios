@@ -19,7 +19,6 @@ public final class SettingService {
     
     // input
     weak var apiService: APIService?
-    weak var authenticationService: AuthenticationService?
     weak var notificationService: NotificationService?
     
     // output
@@ -28,24 +27,21 @@ public final class SettingService {
     
     init(
         apiService: APIService,
-        authenticationService: AuthenticationService,
         notificationService: NotificationService
     ) {
         self.apiService = apiService
-        self.authenticationService = authenticationService
         self.notificationService = notificationService
         self.settingFetchedResultController = SettingFetchedResultController(
-            managedObjectContext: authenticationService.managedObjectContext,
+            managedObjectContext: AppContext.shared.managedObjectContext,
             additionalPredicate: nil
         )
 
         // create setting (if non-exist) for authenticated users
-        authenticationService.$mastodonAuthenticationBoxes
+        AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .compactMap { [weak self] mastodonAuthenticationBoxes -> AnyPublisher<[MastodonAuthenticationBox], Never>? in
                 guard let self = self else { return nil }
-                guard let authenticationService = self.authenticationService else { return nil }
                 
-                let managedObjectContext = authenticationService.backgroundManagedObjectContext
+                let managedObjectContext = AppContext.shared.backgroundManagedObjectContext
                 return managedObjectContext.performChanges {
                     for authenticationBox in mastodonAuthenticationBoxes {
                         let domain = authenticationBox.domain
@@ -69,7 +65,7 @@ public final class SettingService {
         
         // bind current setting
         Publishers.CombineLatest(
-            authenticationService.$mastodonAuthenticationBoxes,
+            AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes,
             settingFetchedResultController.settings
         )
         .sink { [weak self] mastodonAuthenticationBoxes, settings in
@@ -86,7 +82,7 @@ public final class SettingService {
         Publishers.CombineLatest3(
             notificationService.deviceToken,
             currentSetting.eraseToAnyPublisher(),
-            authenticationService.$mastodonAuthenticationBoxes
+            AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
         )
         .compactMap { [weak self] deviceToken, setting, mastodonAuthenticationBoxes -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Subscription>, Error>? in
             guard let self = self else { return nil }

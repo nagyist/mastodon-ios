@@ -4,6 +4,3 @@ import MastodonCore
 import MastodonSDK
 import MastodonLocalization
 
-enum WidgetExtension {
-    static let appContext = AppContext()
-}

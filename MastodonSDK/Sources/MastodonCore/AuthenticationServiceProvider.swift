@@ -15,7 +15,42 @@ public class AuthenticationServiceProvider: ObservableObject {
     private static let keychain = Keychain(service: "org.joinmastodon.app.authentications", accessGroup: AppName.groupID)
     private let userDefaults: UserDefaults = .shared
 
-    private init() {}
+    var disposeBag = Set<AnyCancellable>()
+    
+    @Published public var mastodonAuthenticationBoxes: [MastodonAuthenticationBox] = []
+    public let updateActiveUserAccountPublisher = PassthroughSubject<Void, Never>()
+    
+    private init() {
+        $mastodonAuthenticationBoxes
+            .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
+            .sink { [weak self] boxes in
+                Task { [weak self] in
+                    for authBox in boxes {
+                        do { try await self?.fetchFollowedBlockedUserIds(authBox) }
+                        catch {}
+                    }
+                }
+            }
+            .store(in: &disposeBag)
+        
+        
+        // TODO: verify credentials for active authentication
+        
+        $authentications
+            .map { authentications -> [MastodonAuthenticationBox] in
+                return authentications
+                    .sorted(by: { $0.activedAt > $1.activedAt })
+                    .compactMap { authentication -> MastodonAuthenticationBox? in
+                        return MastodonAuthenticationBox(authentication: authentication)
+                    }
+            }
+            .assign(to: &$mastodonAuthenticationBoxes)
+        
+        Task {
+            await prepareForUse()
+            authentications = authenticationSortedByActivation()
+        }
+    }
     
     @Published public var authentications: [MastodonAuthentication] = [] {
         didSet {
@@ -81,6 +116,37 @@ public extension AuthenticationServiceProvider {
 
     func authenticationSortedByActivation() -> [MastodonAuthentication] { // fixme: why do we need this?
         return authentications.sorted(by: { $0.activedAt > $1.activedAt })
+    }
+    
+    var activeAuthentication: MastodonAuthenticationBox? {
+        guard let active =  authenticationSortedByActivation().first else { return nil }
+        return MastodonAuthenticationBox(authentication: active)
+    }
+    
+    func fetchFollowingAndBlockedAsync() {
+        /// We're dispatching this as a separate async call to not block the caller
+        /// Also we'll only be updating the current active user as the state will be refreshed upon user-change anyways
+        Task {
+            if let authBox = activeAuthentication {
+                do { try await fetchFollowedBlockedUserIds(authBox) }
+                catch {}
+            }
+        }
+    }
+    
+    func activeMastodonUser(domain: String, userID: String) async throws -> Bool {
+        var isActive = false
+        
+        AuthenticationServiceProvider.shared.activateAuthentication(in: domain, for: userID)
+        
+        isActive = true
+        
+        return isActive
+    }
+    
+    func signOutMastodonUser(authentication: MastodonAuthentication) async throws {
+        try await AuthenticationServiceProvider.shared.delete(authentication: authentication)
+        _ = try await AppContext.shared.apiService.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
     }
     
     @MainActor
@@ -169,6 +235,7 @@ public extension AuthenticationServiceProvider {
 }
 
 // MARK: - Private
+private typealias IterativeResponse = (ids: [String], maxID: String?)
 private extension AuthenticationServiceProvider {
     func persist(_ authentications: [MastodonAuthentication]) {
         DispatchQueue.main.async {
@@ -176,5 +243,49 @@ private extension AuthenticationServiceProvider {
                 Self.keychain[authentication.persistenceIdentifier] = try? JSONEncoder().encode(authentication).base64EncodedString()
             }
         }
+    }
+    
+    func fetchFollowedBlockedUserIds(
+        _ authBox: MastodonAuthenticationBox,
+        _ previousFollowingIDs: [String]? = nil,
+        _ maxID: String? = nil
+    ) async throws {
+        let apiService = AppContext.shared.apiService
+        
+        let followingResponse = try await fetchFollowing(maxID, apiService, authBox)
+        let followingIds = (previousFollowingIDs ?? []) + followingResponse.ids
+        
+        if let nextMaxID = followingResponse.maxID {
+            return try await fetchFollowedBlockedUserIds(authBox, followingIds, nextMaxID)
+        }
+        
+        let blockedIds = try await apiService.getBlocked(
+            authenticationBox: authBox
+        ).value.map { $0.id }
+        
+        let followRequestIds = try await apiService.pendingFollowRequest(userID: authBox.userID,
+                                                                         authenticationBox: authBox)
+            .value.map { $0.id }
+        
+        authBox.inMemoryCache.followRequestedUserIDs = followRequestIds
+        authBox.inMemoryCache.followingUserIds = followingIds
+        authBox.inMemoryCache.blockedUserIds = blockedIds
+    }
+    
+    private func fetchFollowing(
+        _ maxID: String?,
+        _ apiService: APIService,
+        _ mastodonAuthenticationBox: MastodonAuthenticationBox
+    ) async throws -> IterativeResponse {
+        let response = try await apiService.following(
+            userID: mastodonAuthenticationBox.userID,
+            maxID: maxID,
+            authenticationBox: mastodonAuthenticationBox
+        )
+        
+        let ids: [String] = response.value.map { $0.id }
+        let maxID: String? = response.link?.maxID
+        
+        return (ids, maxID)
     }
 }

@@ -13,9 +13,9 @@ import MastodonUI
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
-    let appContext = AppContext()
-
+    
+    var appContext: AppContext { return AppContext.shared }
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         AuthenticationServiceProvider.shared.prepareForUse()
         

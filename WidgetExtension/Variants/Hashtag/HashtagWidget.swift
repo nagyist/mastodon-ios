@@ -31,10 +31,7 @@ extension HashtagWidgetProvider {
                 AuthenticationServiceProvider.shared.prepareForUse()
                 
                 guard
-                    let authBox = WidgetExtension.appContext
-                        .authenticationService
-                        .mastodonAuthenticationBoxes
-                        .first
+                    let authBox = AuthenticationServiceProvider.shared.activeAuthentication
                 else {
                     if context.isPreview {
                         return completion(.placeholder)
@@ -54,7 +51,7 @@ extension HashtagWidgetProvider {
                 Task {
                     
                     do {
-                        let mostRecentStatuses = try await WidgetExtension.appContext
+                        let mostRecentStatuses = try await AppContext.shared
                             .apiService
                             .hashtagTimeline(limit: 40, hashtag: desiredHashtag, authenticationBox: authBox)
                             .value

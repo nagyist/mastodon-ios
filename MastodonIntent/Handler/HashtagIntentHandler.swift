@@ -3,14 +3,12 @@
 import Foundation
 import Intents
 import MastodonSDK
+import MastodonCore
 
 class HashtagIntentHandler: INExtension, HashtagIntentHandling {
     func provideHashtagOptionsCollection(for intent: HashtagIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
 
-        guard let authenticationBox = WidgetExtension.appContext
-            .authenticationService
-            .mastodonAuthenticationBoxes
-            .first
+        guard let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
         else {
             return INObjectCollection(items: [])
         }
@@ -18,8 +16,7 @@ class HashtagIntentHandler: INExtension, HashtagIntentHandling {
         var results: [NSString] = []
 
         if let searchTerm, searchTerm.isEmpty == false {
-            let searchResults = try await WidgetExtension.appContext
-                .apiService
+            let searchResults = try await AppContext.shared.apiService
                 .search(query: .init(q: searchTerm, type: .hashtags), authenticationBox: authenticationBox)
                 .value
                 .hashtags
@@ -28,7 +25,7 @@ class HashtagIntentHandler: INExtension, HashtagIntentHandling {
             results = searchResults
 
         } else {
-            let followedTags = try await WidgetExtension.appContext.apiService.getFollowedTags(
+            let followedTags = try await AppContext.shared.apiService.getFollowedTags(
                 domain: authenticationBox.domain,
                 query: Mastodon.API.Account.FollowedTagsQuery(limit: nil),
                 authenticationBox: authenticationBox)

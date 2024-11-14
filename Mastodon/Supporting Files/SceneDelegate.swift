@@ -95,7 +95,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         AppContext.shared.statusFilterService.filterUpdatePublisher.send()
         
         // trigger authenticated user account update
-        AppContext.shared.authenticationService.updateActiveUserAccountPublisher.send()
+        AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher.send()
 
         if let shortcutItem = savedShortCutItem {
             Task {
@@ -208,7 +208,7 @@ extension SceneDelegate {
                 return false
             }
 
-            let _isActive = try? await coordinator.appContext.authenticationService.activeMastodonUser(
+            let _isActive = try? await AuthenticationServiceProvider.shared.activeMastodonUser(
                 domain: authentication.domain,
                 userID: authentication.userID
             )

@@ -308,6 +308,3 @@ extension ShareViewController {
     }
 }
 
-extension AppContext {
-    static let shared = AppContext()
-}

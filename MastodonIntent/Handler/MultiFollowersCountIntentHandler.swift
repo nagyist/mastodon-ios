@@ -10,15 +10,12 @@ class MultiFollowersCountIntentHandler: INExtension, MultiFollowersCountIntentHa
     func provideAccountsOptionsCollection(for intent: MultiFollowersCountIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
         guard
             let searchTerm = searchTerm,
-            let authenticationBox = WidgetExtension.appContext
-                .authenticationService
-                .mastodonAuthenticationBoxes
-                .first
+            let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
         else {
             return INObjectCollection(items: [])
         }
 
-        let results = try await WidgetExtension.appContext
+        let results = try await AppContext.shared
             .apiService
             .search(query: .init(q: searchTerm), authenticationBox: authenticationBox)
         

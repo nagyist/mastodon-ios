@@ -16,11 +16,6 @@ import MastodonLocalization
 class ActionRequestHandler: NSObject, NSExtensionRequestHandling {
     var extensionContext: NSExtensionContext?
     var cancellables = [AnyCancellable]()
-    
-    /// Capturing a static shared instance of AppContext here as otherwise there
-    /// will be lifecycle issues and we don't want to keep multiple AppContexts around
-    /// in case there another Action Extension process is spawned
-    private static let appContext = AppContext()
         
     func beginRequest(with context: NSExtensionContext) {
         // Do not call super in an Action extension with no user interface
@@ -64,10 +59,7 @@ class ActionRequestHandler: NSObject, NSExtensionRequestHandling {
 private extension ActionRequestHandler {
     func performSearch(for url: String) {
         guard
-            let activeAuthenticationBox = Self.appContext
-                .authenticationService
-                .mastodonAuthenticationBoxes
-                .first
+            let activeAuthenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
         else {
             return doneWithResults(nil)
         }
@@ -111,10 +103,7 @@ private extension ActionRequestHandler {
         guard
             let url = URL(string: query),
             let host = url.host,
-            let activeAuthenticationBox = Self.appContext
-                .authenticationService
-                .mastodonAuthenticationBoxes
-                .first
+            let activeAuthenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
 
         else {
             return doneWithInvalidLink()

@@ -76,10 +76,7 @@ private extension FollowersCountWidgetProvider {
             await AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
-                let authBox = WidgetExtension.appContext
-                    .authenticationService
-                    .mastodonAuthenticationBoxes
-                    .first
+                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -94,7 +91,7 @@ private extension FollowersCountWidgetProvider {
             }
             
             guard
-                let resultingAccount = try await WidgetExtension.appContext
+                let resultingAccount = try await AppContext.shared
                     .apiService
                     .search(query: .init(q: desiredAccount, type: .accounts), authenticationBox: authBox)
                     .value

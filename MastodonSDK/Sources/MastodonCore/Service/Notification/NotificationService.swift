@@ -23,7 +23,6 @@ public final class NotificationService {
     
     // input
     weak var apiService: APIService?
-    weak var authenticationService: AuthenticationService?
     public let isNotificationPermissionGranted = CurrentValueSubject<Bool, Never>(false)
     public let deviceToken = CurrentValueSubject<Data?, Never>(nil)
     public let applicationIconBadgeNeedsUpdate = CurrentValueSubject<Void, Never>(Void())
@@ -35,11 +34,9 @@ public final class NotificationService {
     public let requestRevealNotificationPublisher = PassthroughSubject<MastodonPushNotification, Never>()
     
     init(
-        apiService: APIService,
-        authenticationService: AuthenticationService
+        apiService: APIService
     ) {
         self.apiService = apiService
-        self.authenticationService = authenticationService
         
         AuthenticationServiceProvider.shared.$authentications
             .sink(receiveValue: { [weak self] mastodonAuthentications in
@@ -52,7 +49,7 @@ public final class NotificationService {
             .store(in: &disposeBag)
         
         Publishers.CombineLatest(
-            authenticationService.$mastodonAuthenticationBoxes,
+            AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes,
             applicationIconBadgeNeedsUpdate
         )
         .receive(on: DispatchQueue.main)
@@ -96,7 +93,6 @@ extension NotificationService {
 
 extension NotificationService {
     public func unreadApplicationShortcutItems() async throws -> [UIApplicationShortcutItem] {
-        guard let authenticationService = self.authenticationService else { return [] }
 
         var items: [UIApplicationShortcutItem] = []
         for authentication in AuthenticationServiceProvider.shared.authentications {
@@ -163,8 +159,7 @@ extension NotificationService {
 
 extension NotificationService {
     public func clearNotificationCountForActiveUser() {
-        guard let authenticationService = self.authenticationService else { return }
-        if let accessToken = authenticationService.mastodonAuthenticationBoxes.first?.userAuthorization.accessToken {
+        if let accessToken = AuthenticationServiceProvider.shared.activeAuthentication?.userAuthorization.accessToken {
             UserDefaults.shared.setNotificationCountWithAccessToken(accessToken: accessToken, value: 0)
         }
         
@@ -191,7 +186,7 @@ extension NotificationService {
     ) async throws {
         // Subscription maybe failed to cancel when sign-out
         // Try cancel again if receive that kind push notification
-        guard let managedObjectContext = authenticationService?.managedObjectContext else { return }
+        let managedObjectContext = AppContext.shared.managedObjectContext
         guard let apiService = apiService else { return }
 
         let userAccessToken = pushNotification.accessToken
@@ -218,8 +213,7 @@ extension NotificationService {
     }
     
     private func domain(for pushNotification: MastodonPushNotification) async throws -> String? {
-        guard let authenticationService = self.authenticationService else { return nil }
-        let managedObjectContext = authenticationService.managedObjectContext
+        let managedObjectContext = AppContext.shared.managedObjectContext
         return try await managedObjectContext.perform {
             let subscriptionRequest = NotificationSubscription.sortedFetchRequest
             subscriptionRequest.predicate = NotificationSubscription.predicate(userToken: pushNotification.accessToken)
@@ -235,7 +229,6 @@ extension NotificationService {
     }
     
     private func authenticationBox(for pushNotification: MastodonPushNotification) async throws -> MastodonAuthenticationBox? {
-        guard self.authenticationService != nil else { return nil }
         let results = AuthenticationServiceProvider.shared.authentications.filter { $0.userAccessToken == pushNotification.accessToken }
         guard let authentication = results.first else { return nil }
 

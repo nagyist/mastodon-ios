@@ -13,6 +13,7 @@ import CoreDataStack
 import AlamofireImage
 
 public class AppContext: ObservableObject {
+    public static let shared = AppContext()
     
     public var disposeBag = Set<AnyCancellable>()
     
@@ -21,7 +22,6 @@ public class AppContext: ObservableObject {
     public let backgroundManagedObjectContext: NSManagedObjectContext
     
     public let apiService: APIService
-    public let authenticationService: AuthenticationService
     public let emojiService: EmojiService
 
     public let publisherService: PublisherService
@@ -45,7 +45,7 @@ public class AppContext: ObservableObject {
         .share()
         .eraseToAnyPublisher()
     
-    public init() {
+    private init() {
 
         let authProvider = AuthenticationServiceProvider.shared
         let _coreDataStack = CoreDataStack()
@@ -65,45 +65,39 @@ public class AppContext: ObservableObject {
         let _apiService = APIService(backgroundManagedObjectContext: _backgroundManagedObjectContext)
         apiService = _apiService
         
-        let _authenticationService = AuthenticationService(
-            managedObjectContext: _managedObjectContext,
-            backgroundManagedObjectContext: _backgroundManagedObjectContext,
-            apiService: _apiService
-        )
-        authenticationService = _authenticationService
+//        let _authenticationService = AuthenticationService(
+//            managedObjectContext: _managedObjectContext,
+//            backgroundManagedObjectContext: _backgroundManagedObjectContext,
+//            apiService: _apiService
+//        )
+//        authenticationService = _authenticationService
         
         emojiService = EmojiService(
-            apiService: apiService,
-            authenticationService: _authenticationService
+            apiService: apiService
         )
         
         publisherService = .init(apiService: _apiService)
         
         let _notificationService = NotificationService(
-            apiService: _apiService,
-            authenticationService: _authenticationService
+            apiService: _apiService
         )
         notificationService = _notificationService
         
         settingService = SettingService(
             apiService: _apiService,
-            authenticationService: _authenticationService,
             notificationService: _notificationService
         )
         
         instanceService = InstanceService(
-            apiService: _apiService,
-            authenticationService: _authenticationService
+            apiService: _apiService
         )
         
         blockDomainService = BlockDomainService(
-            backgroundManagedObjectContext: _backgroundManagedObjectContext,
-            authenticationService: _authenticationService
+            backgroundManagedObjectContext: _backgroundManagedObjectContext
         )
 
         statusFilterService = StatusFilterService(
-            apiService: _apiService,
-            authenticationService: _authenticationService
+            apiService: _apiService
         )
         
         documentStore = DocumentStore()

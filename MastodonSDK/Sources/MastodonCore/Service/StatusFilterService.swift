@@ -18,18 +18,15 @@ public final class StatusFilterService {
 
     // input
     weak var apiService: APIService?
-    weak var authenticationService: AuthenticationService?
     public let filterUpdatePublisher = PassthroughSubject<Void, Never>()
 
     // output
     @Published public var activeFilters: [Mastodon.Entity.Filter] = []
 
     init(
-        apiService: APIService,
-        authenticationService: AuthenticationService
+        apiService: APIService
     ) {
         self.apiService = apiService
-        self.authenticationService = authenticationService
 
         // fetch account filters every 300s
         // also trigger fetch when app resume from background
@@ -44,7 +41,7 @@ public final class StatusFilterService {
             .store(in: &disposeBag)
 
         Publishers.CombineLatest(
-            authenticationService.$mastodonAuthenticationBoxes,
+            AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes,
             filterUpdatePublisher
         )
         .flatMap { mastodonAuthenticationBoxes, _ -> AnyPublisher<Result<Mastodon.Response.Content<[Mastodon.Entity.Filter]>, Error>, Never> in
