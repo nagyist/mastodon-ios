@@ -126,6 +126,7 @@ public extension AuthenticationServiceProvider {
                     updatedAt: auth.updatedAt,
                     activedAt: auth.activedAt,
                     userID: auth.userID,
+                    instanceConfiguration: nil,
                     accountCreatedAt: auth.createdAt
                 )
             }

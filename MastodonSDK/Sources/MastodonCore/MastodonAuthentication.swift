@@ -54,23 +54,23 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
     
     public typealias ID = UUID
     
-    public private(set) var identifier: ID
-    public private(set) var domain: String
-    public private(set) var username: String
+    public let identifier: ID
+    public let domain: String
+    public let username: String
 
-    public private(set) var appAccessToken: String
-    public private(set) var userAccessToken: String
-    public private(set) var clientID: String
-    public private(set) var clientSecret: String
+    public let appAccessToken: String
+    public let userAccessToken: String
+    public let clientID: String
+    public let clientSecret: String
     
-    public private(set) var createdAt: Date
-    public private(set) var updatedAt: Date
-    public private(set) var activedAt: Date
+    public let createdAt: Date
+    public let updatedAt: Date
+    public let activedAt: Date
 
-    public private(set) var userID: String
+    public let userID: String
 
-    public private(set) var instanceConfiguration: InstanceConfiguration?
-    public private(set) var accountCreatedAt: Date?
+    public let instanceConfiguration: InstanceConfiguration?
+    public let accountCreatedAt: Date?
     
     public var persistenceIdentifier: String {
         "\(username)@\(domain)"
