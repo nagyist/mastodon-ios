@@ -240,12 +240,7 @@ extension NotificationService {
         guard let authentication = results.first else { return nil }
 
         return MastodonAuthenticationBox(
-            authentication: authentication,
-            domain: authentication.domain,
-            userID: authentication.userID,
-            appAuthorization: .init(accessToken: authentication.appAccessToken),
-            userAuthorization: .init(accessToken: authentication.userAccessToken),
-            inMemoryCache: .sharedCache(for: authentication.userAccessToken)
+            authentication: authentication
         )
     }
     

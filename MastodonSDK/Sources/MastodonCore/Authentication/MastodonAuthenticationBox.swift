@@ -15,42 +15,21 @@ public protocol AuthContextProvider {
 
 public struct MastodonAuthenticationBox: UserIdentifier {
     public let authentication: MastodonAuthentication
-    public let domain: String
-    public let userID: String
-    public let appAuthorization: Mastodon.API.OAuth.Authorization
-    public let userAuthorization: Mastodon.API.OAuth.Authorization
-    public let inMemoryCache: MastodonAccountInMemoryCache
+    public var domain: String { authentication.domain }
+    public var userID: String { authentication.userID }
+    public var appAuthorization: Mastodon.API.OAuth.Authorization {
+        Mastodon.API.OAuth.Authorization(accessToken: authentication.appAccessToken)
+    }
+    public var userAuthorization: Mastodon.API.OAuth.Authorization {
+        Mastodon.API.OAuth.Authorization(accessToken: authentication.userAccessToken)
+    }
+    public var inMemoryCache: MastodonAccountInMemoryCache {
+        .sharedCache(for: authentication.userID) // TODO: make sure this is really unique
+    }
 
-    public init(
-        authentication: MastodonAuthentication,
-        domain: String,
-        userID: String,
-        appAuthorization: Mastodon.API.OAuth.Authorization,
-        userAuthorization: Mastodon.API.OAuth.Authorization,
-        inMemoryCache: MastodonAccountInMemoryCache
-    ) {
+    public init(authentication: MastodonAuthentication) {
         self.authentication = authentication
-        self.domain = domain
-        self.userID = userID
-        self.appAuthorization = appAuthorization
-        self.userAuthorization = userAuthorization
-        self.inMemoryCache = inMemoryCache
     }
-}
-
-public extension MastodonAuthenticationBox {
-    
-    init(authentication: MastodonAuthentication) {
-        self = MastodonAuthenticationBox(
-            authentication: authentication,
-            domain: authentication.domain,
-            userID: authentication.userID,
-            appAuthorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.appAccessToken),
-            userAuthorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.userAccessToken),
-            inMemoryCache: .sharedCache(for: authentication.userID) // TODO: make sure this is really unique
-        )
-    }
-    
 }
 
 public class MastodonAccountInMemoryCache {

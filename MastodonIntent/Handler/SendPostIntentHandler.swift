@@ -64,12 +64,7 @@ extension SendPostIntentHandler: SendPostIntentHandling {
 
             let authenticationBoxes = mastodonAuthentications.map { authentication in
                 MastodonAuthenticationBox(
-                    authentication: authentication,
-                    domain: authentication.domain,
-                    userID: authentication.userID,
-                    appAuthorization: .init(accessToken: authentication.appAccessToken),
-                    userAuthorization: .init(accessToken: authentication.userAccessToken),
-                    inMemoryCache: .sharedCache(for: authentication.userAccessToken)
+                    authentication: authentication
                 )
             }
             
