@@ -15,7 +15,7 @@ import AlamofireImage
 @MainActor
 public class PersistenceManager {
     public static let shared = { PersistenceManager() }()
-    public let coreDataStack: CoreDataStack
+    private let coreDataStack: CoreDataStack
     public let mainActorManagedObjectContext: NSManagedObjectContext
     public let backgroundManagedObjectContext: NSManagedObjectContext
     
@@ -39,6 +39,10 @@ public class PersistenceManager {
                 }
             }
             .store(in: &disposeBag)
+    }
+    
+    func newTaskContext() -> NSManagedObjectContext {
+        return coreDataStack.newTaskContext()
     }
 }
 

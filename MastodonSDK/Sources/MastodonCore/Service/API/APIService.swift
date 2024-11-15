@@ -51,7 +51,7 @@ public final class APIService {
     }
     
     public static func isolatedService() -> APIService {
-        let taskContext = PersistenceManager.shared.coreDataStack.newTaskContext()
+        let taskContext = PersistenceManager.shared.newTaskContext()
         return APIService(backgroundContext: taskContext)
     }
 }
