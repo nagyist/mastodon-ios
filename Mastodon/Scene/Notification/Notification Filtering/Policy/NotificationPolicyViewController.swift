@@ -149,7 +149,7 @@ class NotificationPolicyViewController: UIViewController {
             guard let self else { return }
 
             do {
-                let updatedPolicy = try await viewModel.appContext.apiService.updateNotificationPolicy(
+                let updatedPolicy = try await APIService.shared.updateNotificationPolicy(
                     authenticationBox: authenticationBox,
                     filterNotFollowing: viewModel.notFollowing,
                     filterNotFollowers: viewModel.noFollower,

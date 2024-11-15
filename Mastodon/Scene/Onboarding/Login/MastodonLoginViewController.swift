@@ -137,7 +137,7 @@ class MastodonLoginViewController: UIViewController, NeedsDependency {
             .store(in: &disposeBag)
 
         authenticationViewModel.isAuthenticating.send(true)
-        context.apiService.createApplication(domain: server.domain)
+        APIService.shared.createApplication(domain: server.domain)
             .tryMap { response -> AuthenticationViewModel.AuthenticateInfo in
                 let application = response.value
                 guard let info = AuthenticationViewModel.AuthenticateInfo(

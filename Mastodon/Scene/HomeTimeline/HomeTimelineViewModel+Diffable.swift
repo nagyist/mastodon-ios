@@ -8,6 +8,7 @@
 import UIKit
 import MastodonUI
 import MastodonSDK
+import MastodonCore
 
 extension HomeTimelineViewModel {
     
@@ -25,7 +26,7 @@ extension HomeTimelineViewModel {
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: timelineMiddleLoaderTableViewCellDelegate,
                 filterContext: .home,
-                activeFilters: context.statusFilterService.$activeFilters
+                activeFilters: StatusFilterService.shared.$activeFilters
             )
         )
 

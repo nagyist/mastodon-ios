@@ -18,7 +18,7 @@ extension DataSourceFacade {
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Relationship {
         let authBox = dependency.authenticationBox
-        let relationship = try await dependency.context.apiService.relationship(
+        let relationship = try await APIService.shared.relationship(
             forAccounts: [account], authenticationBox: authBox
         ).value.first
         
@@ -27,7 +27,7 @@ extension DataSourceFacade {
                 let performAction = {
                     FeedbackGenerator.shared.generate(.selectionChanged)
 
-                    let response = try await dependency.context.apiService.toggleFollow(
+                    let response = try await APIService.shared.toggleFollow(
                         account: account,
                         authenticationBox: dependency.authenticationBox
                     ).value
@@ -100,7 +100,7 @@ extension DataSourceFacade {
         await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
 
         do {
-            let newRelationship = try await dependency.context.apiService.followRequest(
+            let newRelationship = try await APIService.shared.followRequest(
                 userID: userID,
                 query: query,
                 authenticationBox: dependency.authenticationBox
@@ -149,7 +149,7 @@ extension DataSourceFacade {
         dependency: NeedsDependency & AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws {
-        let newRelationship = try await dependency.context.apiService.toggleShowReblogs(
+        let newRelationship = try await APIService.shared.toggleShowReblogs(
             for: account,
             authenticationBox: dependency.authenticationBox
         )

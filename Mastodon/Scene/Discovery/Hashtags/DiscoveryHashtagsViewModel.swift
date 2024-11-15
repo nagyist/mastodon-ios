@@ -35,7 +35,7 @@ final class DiscoveryHashtagsViewModel {
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .asyncMap { _ in
                 let authenticationBox = authenticationBox
-                return try await context.apiService.trendHashtags(domain: authenticationBox.domain,
+                return try await APIService.shared.trendHashtags(domain: authenticationBox.domain,
                                                                   query: nil,
                                                                   authenticationBox: authenticationBox
                 )
@@ -63,7 +63,7 @@ extension DiscoveryHashtagsViewModel {
     func fetch() async throws {
 
         let authenticationBox = authenticationBox
-        let response = try await context.apiService.trendHashtags(domain: authenticationBox.domain,
+        let response = try await APIService.shared.trendHashtags(domain: authenticationBox.domain,
                                                                   query: nil,
                                                                   authenticationBox: authenticationBox
         )

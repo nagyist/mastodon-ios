@@ -20,10 +20,7 @@ final class SendPostIntentHandler: NSObject {
     let coreDataStack = CoreDataStack()
     lazy var managedObjectContext = coreDataStack.persistentContainer.viewContext
     lazy var api: APIService = {
-        let backgroundManagedObjectContext = coreDataStack.newTaskContext()
-        return APIService(
-            backgroundManagedObjectContext: backgroundManagedObjectContext
-        )
+        return APIService.isolatedService()
     }()
 }
 

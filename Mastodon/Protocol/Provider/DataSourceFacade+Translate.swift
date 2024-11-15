@@ -25,8 +25,7 @@ extension DataSourceFacade {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
         do {
-            let value = try await provider.context
-                .apiService
+            let value = try await APIService.shared
                 .translateStatus(
                     statusID: status.id,
                     authenticationBox: provider.authenticationBox

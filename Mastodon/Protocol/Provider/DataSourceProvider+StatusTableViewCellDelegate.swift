@@ -310,7 +310,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                 .compactMap { poll.options.firstIndex(of: $0) }
 
             do {
-                let newPoll = try await context.apiService.vote(
+                let newPoll = try await APIService.shared.vote(
                     poll: poll.entity,
                     choices: choices,
                     authenticationBox: authenticationBox
@@ -584,7 +584,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
             }
                         
             do {
-                let edits = try await context.apiService.getHistory(forStatusID: status.id, authenticationBox: authenticationBox).value
+                let edits = try await APIService.shared.getHistory(forStatusID: status.id, authenticationBox: authenticationBox).value
 
                 await coordinator.hideLoading()
 

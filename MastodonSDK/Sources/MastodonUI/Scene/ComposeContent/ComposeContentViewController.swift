@@ -469,7 +469,6 @@ extension ComposeContentViewController: PHPickerViewControllerDelegate {
 
         let attachmentViewModels: [AttachmentViewModel] = results.map { result in
             AttachmentViewModel(
-                api: viewModel.context.apiService,
                 authenticationBox: viewModel.authenticationBox,
                 input: .pickerResult(result),
                 sizeLimit: viewModel.sizeLimit,
@@ -488,7 +487,6 @@ extension ComposeContentViewController: UIImagePickerControllerDelegate & UINavi
         guard let image = info[.originalImage] as? UIImage else { return }
 
         let attachmentViewModel = AttachmentViewModel(
-            api: viewModel.context.apiService,
             authenticationBox: viewModel.authenticationBox,
             input: .image(image),
             sizeLimit: viewModel.sizeLimit,
@@ -508,7 +506,6 @@ extension ComposeContentViewController: UIDocumentPickerDelegate {
         guard let url = urls.first else { return }
 
         let attachmentViewModel = AttachmentViewModel(
-            api: viewModel.context.apiService,
             authenticationBox: viewModel.authenticationBox,
             input: .url(url),
             sizeLimit: viewModel.sizeLimit,

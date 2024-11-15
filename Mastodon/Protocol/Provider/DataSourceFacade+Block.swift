@@ -17,7 +17,7 @@ extension DataSourceFacade {
     ) async throws -> Mastodon.Entity.Relationship {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
-        let apiService = dependency.context.apiService
+        let apiService = APIService.shared
         let authBox = dependency.authenticationBox
 
         let response = try await apiService.toggleBlock(
@@ -40,7 +40,7 @@ extension DataSourceFacade {
     ) async throws -> Mastodon.Entity.Empty {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
-        let apiService = dependency.context.apiService
+        let apiService = APIService.shared
         let authBox = dependency.authenticationBox
 
         let response = try await apiService.toggleDomainBlock(account: account, authenticationBox: authBox)

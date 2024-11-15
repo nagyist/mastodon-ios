@@ -110,7 +110,7 @@ final class MastodonRegisterViewModel: ObservableObject {
             .compactMap { [weak self] text -> AnyPublisher<Result<Mastodon.Response.Content<Mastodon.Entity.Account>, Error>, Never>? in
                 guard let self = self else { return nil }
                 let query = Mastodon.API.Account.AccountLookupQuery(acct: text)
-                return context.apiService.accountLookup(domain: domain, query: query, authorization: self.applicationAuthorization)
+                return APIService.shared.accountLookup(domain: domain, query: query, authorization: self.applicationAuthorization)
                     .map {
                         response -> Result<Mastodon.Response.Content<Mastodon.Entity.Account>, Error> in
                         Result.success(response)

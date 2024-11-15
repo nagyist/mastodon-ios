@@ -107,7 +107,7 @@ extension SidebarViewModel {
             switch item {
                 case .notifications:
                     Publishers.CombineLatest(
-                        self.context.notificationService.unreadNotificationCountDidUpdate,
+                        NotificationService.shared.unreadNotificationCountDidUpdate,
                         self.$currentTab
                     )
                     .receive(on: DispatchQueue.main)

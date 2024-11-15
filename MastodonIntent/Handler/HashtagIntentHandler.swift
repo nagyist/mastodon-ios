@@ -16,7 +16,7 @@ class HashtagIntentHandler: INExtension, HashtagIntentHandling {
         var results: [NSString] = []
 
         if let searchTerm, searchTerm.isEmpty == false {
-            let searchResults = try await AppContext.shared.apiService
+            let searchResults = try await APIService.shared
                 .search(query: .init(q: searchTerm, type: .hashtags), authenticationBox: authenticationBox)
                 .value
                 .hashtags
@@ -25,7 +25,7 @@ class HashtagIntentHandler: INExtension, HashtagIntentHandling {
             results = searchResults
 
         } else {
-            let followedTags = try await AppContext.shared.apiService.getFollowedTags(
+            let followedTags = try await APIService.shared.getFollowedTags(
                 domain: authenticationBox.domain,
                 query: Mastodon.API.Account.FollowedTagsQuery(limit: nil),
                 authenticationBox: authenticationBox)

@@ -85,7 +85,7 @@ extension MastodonPickServerViewModel {
     
     private func configure() {
 
-        context.apiService.languages().sink { completion in
+        APIService.shared.languages().sink { completion in
             
         } receiveValue: { response in
             self.allLanguages.value = response.value
@@ -165,9 +165,9 @@ extension MastodonPickServerViewModel {
                     return Just(Result.failure(APIService.APIError.implicit(.badRequest))).eraseToAnyPublisher()
                 }
                 self.unindexedServers.value = nil
-                return self.context.apiService.webFinger(domain: domain)
+                return APIService.shared.webFinger(domain: domain)
                     .flatMap { domain -> AnyPublisher<Result<Mastodon.Response.Content<[Mastodon.Entity.Server]>, Error>, Never> in
-                        return self.context.apiService.instance(domain: domain, authenticationBox: nil)
+                        return APIService.shared.instance(domain: domain, authenticationBox: nil)
                             .map { response -> Result<Mastodon.Response.Content<[Mastodon.Entity.Server]>, Error>in
                                 let newResponse = response.map { [Mastodon.Entity.Server(domain: domain, instance: $0)] }
                                 return Result.success(newResponse)

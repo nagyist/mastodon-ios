@@ -405,7 +405,7 @@ extension ProfileViewController {
             }
             .store(in: &disposeBag)
 
-        context.publisherService.statusPublishResult.sink { [weak self] result in
+        PublisherService.shared.statusPublishResult.sink { [weak self] result in
             if case .success(.edit(let status)) = result {
                 self?.updateViewModelsWithDataControllers(status: .fromEntity(status.value), intent: .edit)
             }
@@ -576,7 +576,7 @@ extension ProfileViewController {
     }
 
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let setting = context.settingService.currentSetting.value else { return }
+        guard let setting = SettingService.shared.currentSetting.value else { return }
 
         _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
@@ -645,15 +645,15 @@ extension ProfileViewController {
             
             let account = viewModel.account
             if let domain = account.domain,
-               let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox),
-               let updatedRelationship = try? await context.apiService.relationship(forAccounts: [updatedAccount], authenticationBox: viewModel.authenticationBox).value.first
+               let updatedAccount = try? await APIService.shared.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox),
+               let updatedRelationship = try? await APIService.shared.relationship(forAccounts: [updatedAccount], authenticationBox: viewModel.authenticationBox).value.first
             {
                 viewModel.account = updatedAccount
                 viewModel.relationship = updatedRelationship
                 viewModel.profileAboutViewModel.fields = updatedAccount.mastodonFields
             }
 
-            if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
+            if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
                 viewModel.me = updatedMe
                 FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
             }
@@ -916,7 +916,7 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
                 Task {
                     _ = try await DataSourceFacade.responseToDomainBlockAction(dependency: self, account: account)
 
-                    guard let newRelationship = try await self.context.apiService.relationship(forAccounts: [account], authenticationBox: viewModel.authenticationBox).value.first else { return }
+                    guard let newRelationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: viewModel.authenticationBox).value.first else { return }
 
                     viewModel.isUpdating = false
 
@@ -1084,7 +1084,7 @@ extension ProfileViewController {
             Task {
                 let account = viewModel.account
                 if let domain = account.domain,
-                   let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox) {
+                   let updatedAccount = try? await APIService.shared.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox) {
                     viewModel.account = updatedAccount
 
                     viewModel.relationship = relationship
@@ -1097,7 +1097,7 @@ extension ProfileViewController {
         } else if viewModel.account == viewModel.me {
             // update my profile
             Task {
-                if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
+                if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
                     viewModel.me = updatedMe
                     viewModel.account = updatedMe
                     FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())

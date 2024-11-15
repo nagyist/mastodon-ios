@@ -138,7 +138,7 @@ extension FollowerListViewModel.State {
 
             Task {
                 do {
-                    let accountResponse = try await viewModel.context.apiService.followers(
+                    let accountResponse = try await APIService.shared.followers(
                         userID: userID,
                         maxID: maxID,
                         authenticationBox: viewModel.authenticationBox
@@ -154,7 +154,7 @@ extension FollowerListViewModel.State {
 
                     var hasNewAppend = false
 
-                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
+                    let newRelationships = try await APIService.shared.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
 
                     var accounts = viewModel.accounts
 

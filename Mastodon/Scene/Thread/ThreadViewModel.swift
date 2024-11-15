@@ -81,7 +81,7 @@ class ThreadViewModel {
             }
             .store(in: &disposeBag)
         
-        context.publisherService
+        PublisherService.shared
             .statusPublishResult
             .sink { [weak self] value in
                 guard let self else { return }

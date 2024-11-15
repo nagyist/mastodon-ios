@@ -136,10 +136,10 @@ extension NotificationRequestsTableViewController: NotificationRequestTableViewC
     }
 
     private func acceptNotificationRequest(_ notificationRequest: MastodonSDK.Mastodon.Entity.NotificationRequest) async throws {
-        _ = try await context.apiService.acceptNotificationRequests(authenticationBox: authenticationBox,
+        _ = try await APIService.shared.acceptNotificationRequests(authenticationBox: authenticationBox,
                                                                     id: notificationRequest.id)
 
-        let requests = try await context.apiService.notificationRequests(authenticationBox: authenticationBox).value
+        let requests = try await APIService.shared.notificationRequests(authenticationBox: authenticationBox).value
 
         NotificationCenter.default.post(name: .notificationFilteringChanged, object: nil)
 
@@ -183,10 +183,10 @@ extension NotificationRequestsTableViewController: NotificationRequestTableViewC
     }
     
     private func rejectNotificationRequest(_ notificationRequest: MastodonSDK.Mastodon.Entity.NotificationRequest) async throws {
-        _ = try await context.apiService.rejectNotificationRequests(authenticationBox: authenticationBox,
+        _ = try await APIService.shared.rejectNotificationRequests(authenticationBox: authenticationBox,
                                                                     id: notificationRequest.id)
         
-        let requests = try await context.apiService.notificationRequests(authenticationBox: authenticationBox).value
+        let requests = try await APIService.shared.notificationRequests(authenticationBox: authenticationBox).value
         
         NotificationCenter.default.post(name: .notificationFilteringChanged, object: nil)
         

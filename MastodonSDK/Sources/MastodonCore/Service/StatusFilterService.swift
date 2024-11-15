@@ -13,21 +13,17 @@ import MastodonSDK
 import MastodonMeta
 
 public final class StatusFilterService {
+    public static let shared = { StatusFilterService() }()
 
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    weak var apiService: APIService?
     public let filterUpdatePublisher = PassthroughSubject<Void, Never>()
 
     // output
     @Published public var activeFilters: [Mastodon.Entity.Filter] = []
 
-    init(
-        apiService: APIService
-    ) {
-        self.apiService = apiService
-
+    private init() {
         // fetch account filters every 300s
         // also trigger fetch when app resume from background
         let filterUpdateTimerPublisher = Timer.publish(every: 300.0, on: .main, in: .common)
@@ -48,7 +44,7 @@ public final class StatusFilterService {
             guard let box = mastodonAuthenticationBoxes.first else {
                 return Just(Result { throw APIService.APIError.implicit(.authenticationMissing) }).eraseToAnyPublisher()
             }
-            return apiService.filters(mastodonAuthenticationBox: box)
+            return APIService.shared.filters(mastodonAuthenticationBox: box)
                 .map { response in
                     let now = Date()
                     let newResponse = response.map { filters in

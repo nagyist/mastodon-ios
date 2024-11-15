@@ -55,7 +55,7 @@ final class DiscoveryPostsViewModel {
 extension DiscoveryPostsViewModel {
     func checkServerEndpoint() async {
         do {
-            _ = try await context.apiService.trendStatuses(
+            _ = try await APIService.shared.trendStatuses(
                 domain: authenticationBox.domain,
                 query: .init(offset: nil, limit: nil),
                 authenticationBox: authenticationBox

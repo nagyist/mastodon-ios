@@ -29,7 +29,7 @@ extension ThreadViewModel {
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: nil,
                 filterContext: .thread,
-                activeFilters: context.statusFilterService.$activeFilters
+                activeFilters: StatusFilterService.shared.$activeFilters
             )
         )
         
@@ -78,7 +78,7 @@ extension ThreadViewModel {
                 newSnapshot.appendSections([.main])
 
                 // top loader
-                let _hasReplyTo: Bool? = try? await self.context.managedObjectContext.perform {
+                let _hasReplyTo: Bool? = try? await PersistenceManager.shared.managedObjectContext.perform {
                     guard case let .root(threadContext) = root else { return nil }
                     return threadContext.status.entity.inReplyToID != nil
                 }

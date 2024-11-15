@@ -93,8 +93,7 @@ private extension LatestFollowersWidgetProvider {
 
             var accounts = [LatestFollowersEntryAccountable]()
 
-            let followers = try await AppContext.shared
-                .apiService
+            let followers = try await APIService.shared
                 .followers(userID: authBox.userID, maxID: nil, authenticationBox: authBox)
                 .value
                 .prefix(2) // X most recent followers

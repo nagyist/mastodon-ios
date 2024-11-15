@@ -151,7 +151,7 @@ extension MastodonStatusPublisher: StatusPublisher {
             guard pollOptions != nil else { return nil }
             return self.pollExpireConfigurationOption.seconds
         }()
-        let inReplyToID: Mastodon.Entity.Status.ID? = try await api.backgroundManagedObjectContext.perform {
+        let inReplyToID: Mastodon.Entity.Status.ID? = try await PersistenceManager.shared.backgroundManagedObjectContext.perform {
             guard let replyTo = self.replyTo else { return nil }
             return replyTo.id
         }

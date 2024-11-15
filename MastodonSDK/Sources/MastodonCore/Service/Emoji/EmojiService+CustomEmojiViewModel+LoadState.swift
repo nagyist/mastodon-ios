@@ -37,7 +37,7 @@ extension EmojiService.CustomEmojiViewModel.LoadState {
                   let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication,
                   let stateMachine else { return }
 
-            let apiService = viewModel.service.apiService
+            let apiService = APIService.shared
 
             apiService.customEmoji(domain: viewModel.domain, authenticationBox: authenticationBox)
                 // .receive(on: DispatchQueue.main)

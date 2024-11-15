@@ -126,7 +126,7 @@ extension UserTimelineViewModel.State {
                 let queryFilter = viewModel.queryFilter
 
                 do {
-                    let response = try await viewModel.context.apiService.userTimeline(
+                    let response = try await APIService.shared.userTimeline(
                         accountID: userID,
                         maxID: maxID,
                         sinceID: nil,

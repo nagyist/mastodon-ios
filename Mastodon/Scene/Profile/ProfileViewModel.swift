@@ -134,7 +134,7 @@ class ProfileViewModel: NSObject {
 
             Task {
                 do {
-                    let response = try await self.context.apiService.relationship(
+                    let response = try await APIService.shared.relationship(
                         forAccounts: [account],
                         authenticationBox: self.authenticationBox
                     )
@@ -178,7 +178,7 @@ class ProfileViewModel: NSObject {
 
         let mastodonAuthentication = authenticationBox.authentication
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: mastodonAuthentication.userAccessToken)
-        return context.apiService.accountVerifyCredentials(domain: domain, authorization: authorization)
+        return APIService.shared.accountVerifyCredentials(domain: domain, authorization: authorization)
             .tryMap { response in
                 FileManager.default.store(account: response.value, forUserID: mastodonAuthentication.userIdentifier())
                 return response
@@ -227,7 +227,7 @@ extension ProfileViewModel {
             source: nil,
             fieldsAttributes: fieldsAttributes
         )
-        let response = try await context.apiService.accountUpdateCredentials(
+        let response = try await APIService.shared.accountUpdateCredentials(
             domain: domain,
             query: query,
             authorization: authorization

@@ -156,7 +156,7 @@ class SearchResultsOverviewTableViewController: UIViewController, NeedsDependenc
 
         let searchTask = Task {
             do {
-                let searchResult = try await context.apiService.search(
+                let searchResult = try await APIService.shared.search(
                     query: query,
                     authenticationBox: authenticationBox
                 ).value

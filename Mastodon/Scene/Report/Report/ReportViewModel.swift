@@ -67,7 +67,7 @@ class ReportViewModel {
         // bind server rules
         Task { @MainActor in
             do {
-                let response = try await context.apiService.instance(domain: authenticationBox.domain, authenticationBox: authenticationBox)
+                let response = try await APIService.shared.instance(domain: authenticationBox.domain, authenticationBox: authenticationBox)
                     .timeout(3, scheduler: DispatchQueue.main)
                     .singleOutput()
                 let rules = response.value.rules ?? []
@@ -143,7 +143,7 @@ extension ReportViewModel {
 
         do {
             isReporting = true
-            let _ = try await context.apiService.report(
+            let _ = try await APIService.shared.report(
                 query: query,
                 authenticationBox: authenticationBox
             )

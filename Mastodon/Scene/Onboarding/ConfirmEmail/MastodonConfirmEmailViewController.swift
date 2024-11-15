@@ -109,7 +109,7 @@ extension MastodonConfirmEmailViewController {
                             // upload avatar and set display name in the background
                             Just(self.viewModel.userToken.accessToken)
                                 .asyncMap { token in
-                                    try await self.context.apiService.accountUpdateCredentials(
+                                    try await APIService.shared.accountUpdateCredentials(
                                         domain: self.viewModel.authenticateInfo.domain,
                                         query: self.viewModel.updateCredentialQuery,
                                         authorization: Mastodon.API.OAuth.Authorization(accessToken: token)

@@ -100,14 +100,14 @@ extension NotificationViewController {
         super.viewDidAppear(animated)
 
         // reset notification count
-        context.notificationService.clearNotificationCountForActiveUser()
+        NotificationService.shared.clearNotificationCountForActiveUser()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
         // reset notification count
-        context.notificationService.clearNotificationCountForActiveUser()
+        NotificationService.shared.clearNotificationCountForActiveUser()
     }
     
     override func viewDidDisappear(_ animated: Bool) {

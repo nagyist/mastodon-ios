@@ -143,7 +143,7 @@ extension AuthenticationViewModel {
             })
             .compactMap { [weak self] code -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Account>, Error>? in
                 guard let self = self else { return nil }
-                return self.context.apiService
+                return APIService.shared
                     .userAccessToken(
                         domain: info.domain,
                         clientID: info.clientID,
@@ -188,7 +188,7 @@ extension AuthenticationViewModel {
     ) -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Account>, Error> {
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken.accessToken)
 
-        return context.apiService.accountVerifyCredentials(
+        return APIService.shared.accountVerifyCredentials(
             domain: info.domain,
             authorization: authorization
         )
@@ -224,7 +224,7 @@ extension AuthenticationViewModel {
     ) async throws -> Mastodon.Entity.Account {
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken)
         
-        let account = try await context.apiService.accountVerifyCredentials(
+        let account = try await APIService.shared.accountVerifyCredentials(
             domain: domain,
             authorization: authorization
         )

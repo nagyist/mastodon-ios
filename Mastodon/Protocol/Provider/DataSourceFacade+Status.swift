@@ -23,7 +23,7 @@ extension DataSourceFacade {
         dependency: NeedsDependency & AuthContextProvider & DataSourceProvider,
         status: MastodonStatus
     ) async throws {
-        let deletedStatus = try await dependency.context.apiService.deleteStatus(
+        let deletedStatus = try await APIService.shared.deleteStatus(
             status: status,
             authenticationBox: dependency.authenticationBox
         ).value.asMastodonStatus
@@ -234,7 +234,7 @@ extension DataSourceFacade {
             alertController.addAction(cancelAction)
             dependency.present(alertController, animated: true)
         case .reportUser:
-            guard let relationship = try? await dependency.context.apiService.relationship(forAccounts: [menuContext.author], authenticationBox: dependency.authenticationBox).value.first else { return }
+            guard let relationship = try? await APIService.shared.relationship(forAccounts: [menuContext.author], authenticationBox: dependency.authenticationBox).value.first else { return }
 
             let reportViewModel = ReportViewModel(
                 context: dependency.context,
@@ -333,7 +333,7 @@ extension DataSourceFacade {
 
             guard let status = menuContext.statusViewModel?.originalStatus else { return }
 
-            let statusSource = try await dependency.context.apiService.getStatusSource(
+            let statusSource = try await APIService.shared.getStatusSource(
                 forStatusID: status.id,
                 authenticationBox: dependency.authenticationBox
             ).value

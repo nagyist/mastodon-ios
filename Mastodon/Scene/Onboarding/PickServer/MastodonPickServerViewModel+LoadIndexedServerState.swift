@@ -8,6 +8,7 @@
 import Foundation
 import GameplayKit
 import MastodonSDK
+import MastodonCore
 
 extension MastodonPickServerViewModel {
     class LoadIndexedServerState: GKState {
@@ -37,7 +38,7 @@ extension MastodonPickServerViewModel.LoadIndexedServerState {
             
             guard let viewModel = self.viewModel, let stateMachine = self.stateMachine else { return }
             viewModel.isLoadingIndexedServers.value = true
-            viewModel.context.apiService.servers(language: nil, category: nil)
+            APIService.shared.servers(language: nil, category: nil)
                 .sink { completion in
                     switch completion {
                     case .failure(let error):

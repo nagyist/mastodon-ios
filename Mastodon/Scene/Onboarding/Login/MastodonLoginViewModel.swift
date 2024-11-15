@@ -28,7 +28,7 @@ class MastodonLoginViewModel {
   }
 
   func updateServers() {
-    appContext?.apiService.servers(registrations: "all").sink(receiveCompletion: { [weak self] completion in
+      APIService.shared.servers(registrations: "all").sink(receiveCompletion: { [weak self] completion in
       switch completion {
         case .finished:
           guard let self = self else { return }

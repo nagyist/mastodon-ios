@@ -10,11 +10,10 @@ import Combine
 
 public final class PublisherService {
     
+    public static let shared = { PublisherService() }()
+    
     var disposeBag = Set<AnyCancellable>()
     
-    // input
-    let apiService: APIService
-
     @Published public private(set) var statusPublishers: [StatusPublisher] = []
     
     // output
@@ -23,11 +22,7 @@ public final class PublisherService {
     var currentPublishProgressObservation: NSKeyValueObservation?
     @Published public var currentPublishProgress: Double = 0
     
-    public init(
-        apiService: APIService
-    ) {
-        self.apiService = apiService
-        
+    private init() {
         $statusPublishers
             .receive(on: DispatchQueue.main)
             .sink { [weak self] publishers in
@@ -84,7 +79,7 @@ extension PublisherService {
         
         Task {
             do {
-                let result = try await publisher.publish(api: apiService, authenticationBox: authenticationBox)
+                let result = try await publisher.publish(api: APIService.shared, authenticationBox: authenticationBox)
                 
                 self.statusPublishResult.send(.success(result))
                 self.statusPublishers.removeAll(where: { $0 === publisher })

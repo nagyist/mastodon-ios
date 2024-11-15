@@ -124,7 +124,7 @@ extension UITableViewDelegate where Self: DataSourceProvider & MediaPreviewableV
                             guard let self = self else { return }
                             Task { @MainActor in
                                 do {
-                                    try await self.context.photoLibraryService.save(
+                                    try await PhotoLibraryService.shared.save(
                                         imageSource: .url(assetURL)
                                     ).singleOutput()
                                 } catch {
@@ -153,7 +153,7 @@ extension UITableViewDelegate where Self: DataSourceProvider & MediaPreviewableV
                         ) { [weak self] _ in
                             guard let self = self else { return }
                             Task {
-                                try await self.context.photoLibraryService.copy(
+                                try await PhotoLibraryService.shared.copy(
                                     imageSource: .url(assetURL)
                                 ).singleOutput()
                             }

@@ -15,6 +15,8 @@ import MastodonLocalization
 
 public final class NotificationService {
     
+    public static let shared = { NotificationService() }()
+    
     public static let unreadShortcutItemIdentifier = "org.joinmastodon.app.NotificationService.unread-shortcut"
     
     var disposeBag = Set<AnyCancellable>()
@@ -22,7 +24,6 @@ public final class NotificationService {
     let workingQueue = DispatchQueue(label: "org.joinmastodon.app.NotificationService.working-queue")
     
     // input
-    weak var apiService: APIService?
     public let isNotificationPermissionGranted = CurrentValueSubject<Bool, Never>(false)
     public let deviceToken = CurrentValueSubject<Data?, Never>(nil)
     public let applicationIconBadgeNeedsUpdate = CurrentValueSubject<Void, Never>(Void())
@@ -33,11 +34,7 @@ public final class NotificationService {
     public let unreadNotificationCountDidUpdate = CurrentValueSubject<Void, Never>(Void())
     public let requestRevealNotificationPublisher = PassthroughSubject<MastodonPushNotification, Never>()
     
-    init(
-        apiService: APIService
-    ) {
-        self.apiService = apiService
-        
+    private init() {
         AuthenticationServiceProvider.shared.$authentications
             .sink(receiveValue: { [weak self] mastodonAuthentications in
                 guard let self = self else { return }
@@ -171,10 +168,9 @@ extension NotificationService {
     private func fetchLatestNotifications(
         pushNotification: MastodonPushNotification
     ) async throws {
-        guard let apiService = apiService else { return }
         guard let authenticationBox = try await authenticationBox(for: pushNotification) else { return }
         
-        _ = try await apiService.notifications(
+        _ = try await APIService.shared.notifications(
             maxID: nil,
             scope: .everything,
             authenticationBox: authenticationBox
@@ -186,8 +182,7 @@ extension NotificationService {
     ) async throws {
         // Subscription maybe failed to cancel when sign-out
         // Try cancel again if receive that kind push notification
-        let managedObjectContext = AppContext.shared.managedObjectContext
-        guard let apiService = apiService else { return }
+        let managedObjectContext = PersistenceManager.shared.managedObjectContext
 
         let userAccessToken = pushNotification.accessToken
 
@@ -204,7 +199,7 @@ extension NotificationService {
         guard let domain = try await domain(for: pushNotification) else { return }
         
         do {
-            _ = try await apiService.cancelSubscription(
+            _ = try await APIService.shared.cancelSubscription(
                 domain: domain,
                 authorization: .init(accessToken: userAccessToken)
             )
@@ -213,7 +208,7 @@ extension NotificationService {
     }
     
     private func domain(for pushNotification: MastodonPushNotification) async throws -> String? {
-        let managedObjectContext = AppContext.shared.managedObjectContext
+        let managedObjectContext = PersistenceManager.shared.managedObjectContext
         return try await managedObjectContext.perform {
             let subscriptionRequest = NotificationSubscription.sortedFetchRequest
             subscriptionRequest.predicate = NotificationSubscription.predicate(userToken: pushNotification.accessToken)

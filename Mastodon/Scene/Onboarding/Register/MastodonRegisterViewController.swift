@@ -197,7 +197,7 @@ extension MastodonRegisterViewController {
         var retryCount = 0
 
         // register without show server rules
-        context.apiService.accountRegister(
+        APIService.shared.accountRegister(
             domain: viewModel.domain,
             query: query,
             authorization: viewModel.applicationAuthorization
@@ -222,7 +222,7 @@ extension MastodonRegisterViewController {
                 locale: self.viewModel.instance.languages?.first ?? "en"
             )
             retryCount += 1
-            return self.context.apiService.accountRegister(
+            return APIService.shared.accountRegister(
                 domain: self.viewModel.domain,
                 query: retryQuery,
                 authorization: self.viewModel.applicationAuthorization

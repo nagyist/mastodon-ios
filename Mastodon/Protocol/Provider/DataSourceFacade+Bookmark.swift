@@ -19,7 +19,7 @@ extension DataSourceFacade {
     ) async throws {
         FeedbackGenerator.shared.generate(.selectionChanged)
         
-        let updatedStatus = try await provider.context.apiService.bookmark(
+        let updatedStatus = try await APIService.shared.bookmark(
             record: status,
             authenticationBox: provider.authenticationBox
         ).value

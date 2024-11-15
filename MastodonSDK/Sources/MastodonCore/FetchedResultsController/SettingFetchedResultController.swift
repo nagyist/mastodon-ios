@@ -22,7 +22,7 @@ public final class SettingFetchedResultController: NSObject {
     // output
     public let settings = CurrentValueSubject<[Setting], Never>([])
     
-    public init(managedObjectContext: NSManagedObjectContext, additionalPredicate: NSPredicate?) {
+    public init(additionalPredicate: NSPredicate?) {
         self.fetchedResultsController = {
             let fetchRequest = Setting.sortedFetchRequest
             fetchRequest.returnsObjectsAsFaults = false
@@ -32,7 +32,7 @@ public final class SettingFetchedResultController: NSObject {
             fetchRequest.fetchBatchSize = 20
             let controller = NSFetchedResultsController(
                 fetchRequest: fetchRequest,
-                managedObjectContext: managedObjectContext,
+                managedObjectContext: PersistenceManager.shared.managedObjectContext,
                 sectionNameKeyPath: nil,
                 cacheName: nil
             )

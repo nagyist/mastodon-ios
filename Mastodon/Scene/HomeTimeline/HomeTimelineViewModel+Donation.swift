@@ -11,7 +11,7 @@ extension HomeTimelineViewModel {
         let userAuthentication = authenticationBox
             .authentication
         guard let accountCreatedAt = userAuthentication.accountCreatedAt else {
-            let updated = try? await context.apiService.accountVerifyCredentials(domain: userAuthentication.domain, authorization: authenticationBox.userAuthorization)
+            let updated = try? await APIService.shared.accountVerifyCredentials(domain: userAuthentication.domain, authorization: authenticationBox.userAuthorization)
             guard let accountCreatedAt = updated?.createdAt else { return }
             AuthenticationServiceProvider.shared.updateAccountCreatedAt(accountCreatedAt, forAuthentication: userAuthentication)
             return
@@ -31,7 +31,7 @@ extension HomeTimelineViewModel {
             guard let self else { return }
 
             do {
-                let campaign = try await self.context.apiService
+                let campaign = try await APIService.shared
                     .getDonationCampaign(seed: seed, source: nil).value
                 guard !Mastodon.Entity.DonationCampaign.hasPreviouslyDismissed(campaign.id) && !Mastodon.Entity.DonationCampaign.hasPreviouslyContributed(campaign.id) else { return }
                 onPresentDonationCampaign.send(campaign)

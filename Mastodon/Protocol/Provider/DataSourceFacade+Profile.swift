@@ -57,7 +57,7 @@ extension DataSourceFacade {
         provider.coordinator.showLoading()
 
         do {
-            guard let account = try await provider.context.apiService.fetchUser(
+            guard let account = try await APIService.shared.fetchUser(
                 username: username,
                 domain: domain,
                 authenticationBox: provider.authenticationBox
@@ -82,7 +82,7 @@ extension DataSourceFacade {
         provider.coordinator.showLoading()
 
             do {
-                let account = try await provider.context.apiService.accountInfo(
+                let account = try await APIService.shared.accountInfo(
                     domain: domain,
                     userID: accountID,
                     authorization: provider.authenticationBox.userAuthorization
@@ -104,7 +104,7 @@ extension DataSourceFacade {
         provider.coordinator.showLoading()
 
         guard let me = provider.authenticationBox.authentication.account(),
-              let relationship = try? await provider.context.apiService.relationship(forAccounts: [account], authenticationBox: provider.authenticationBox).value.first else {
+              let relationship = try? await APIService.shared.relationship(forAccounts: [account], authenticationBox: provider.authenticationBox).value.first else {
             return provider.coordinator.hideLoading()
         }
 

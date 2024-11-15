@@ -77,7 +77,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
                 }
                 
                 do {
-                    let response = try await viewModel.context.apiService.notifications(
+                    let response = try await APIService.shared.notifications(
                         maxID: maxID,
                         accountID: accountID,
                         scope: scope,

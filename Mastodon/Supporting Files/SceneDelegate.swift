@@ -89,10 +89,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
 
         // update application badge
-        AppContext.shared.notificationService.applicationIconBadgeNeedsUpdate.send()
+        NotificationService.shared.applicationIconBadgeNeedsUpdate.send()
 
         // trigger status filter update
-        AppContext.shared.statusFilterService.filterUpdatePublisher.send()
+        StatusFilterService.shared.filterUpdatePublisher.send()
         
         // trigger authenticated user account update
         AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher.send()
@@ -141,12 +141,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 Task {
                     guard let me = authenticationBox.authentication.account() else { return }
 
-                    guard let account = try await AppContext.shared.apiService.search(
+                    guard let account = try await APIService.shared.search(
                         query: .init(q: incomingURL.absoluteString, type: .accounts, resolve: true),
                         authenticationBox: authenticationBox
                     ).value.accounts.first else { return }
 
-                    guard let relationship = try await AppContext.shared.apiService.relationship(
+                    guard let relationship = try await APIService.shared.relationship(
                         forAccounts: [account],
                         authenticationBox: authenticationBox
                     ).value.first else { return }
@@ -167,7 +167,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
             case (profile, statusID):
                 Task {
-                    guard let statusOnMyInstance = try await AppContext.shared.apiService.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authenticationBox).value.statuses.first else { return }
+                    guard let statusOnMyInstance = try await APIService.shared.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authenticationBox).value.statuses.first else { return }
 
                     let threadViewModel = RemoteThreadViewModel(
                         context: AppContext.shared,
@@ -285,12 +285,12 @@ extension SceneDelegate {
                 do {
                     guard let me = authenticationBox.authentication.account() else { return }
                     
-                    guard let account = try await AppContext.shared.apiService.search(
+                    guard let account = try await APIService.shared.search(
                         query: .init(q: components[1], type: .accounts, resolve: true),
                         authenticationBox: authenticationBox
                     ).value.accounts.first else { return }
                     
-                    guard let relationship = try await AppContext.shared.apiService.relationship(
+                    guard let relationship = try await APIService.shared.relationship(
                         forAccounts: [account],
                         authenticationBox: authenticationBox
                     ).value.first else { return }

@@ -99,7 +99,7 @@ final class NotificationTimelineViewModel {
         Task { [weak self] in
             guard let self else { return }
 
-            let policy = try await self.context.apiService.notificationPolicy(authenticationBox: self.authenticationBox)
+            let policy = try await APIService.shared.notificationPolicy(authenticationBox: self.authenticationBox)
             self.notificationPolicy = policy.value
 
             await self.loadLatest()

@@ -245,7 +245,7 @@ extension ComposeViewController {
     private func enqueuePublishStatus() {
         do {
             let statusPublisher = try composeContentViewModel.statusPublisher()
-            viewModel.context.publisherService.enqueue(
+            PublisherService.shared.enqueue(
                 statusPublisher: statusPublisher,
                 authenticationBox: viewModel.authenticationBox
             )
@@ -294,7 +294,7 @@ extension ComposeViewController {
     private func enqueuePublishStatusEdit() {
         do {
             guard let editStatusPublisher = try composeContentViewModel.statusEditPublisher() else { return }
-            viewModel.context.publisherService.enqueue(
+            PublisherService.shared.enqueue(
                 statusPublisher: editStatusPublisher,
                 authenticationBox: viewModel.authenticationBox
             )
@@ -325,7 +325,6 @@ extension ComposeViewController {
         if UIPasteboard.general.hasImages, let images = UIPasteboard.general.images {
             let attachmentViewModels = images.map { image in
                 return AttachmentViewModel(
-                    api: viewModel.context.apiService,
                     authenticationBox: viewModel.authenticationBox,
                     input: .image(image),
                     sizeLimit: composeContentViewModel.sizeLimit,

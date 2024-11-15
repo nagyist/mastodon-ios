@@ -145,7 +145,7 @@ extension DiscoveryForYouViewController: ProfileCardTableViewCellDelegate {
             do {
                 let userID = account.id
                 let familiarFollowers = viewModel.familiarFollowers.first(where: { $0.id == userID })?.accounts ?? []
-                let relationships = try await context.apiService.relationship(forAccounts: familiarFollowers, authenticationBox: authenticationBox).value
+                let relationships = try await APIService.shared.relationship(forAccounts: familiarFollowers, authenticationBox: authenticationBox).value
 
                 coordinator.hideLoading()
 

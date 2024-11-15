@@ -123,7 +123,7 @@ extension FavoriteViewModel.State {
             
             Task {
                 do {
-                    let response = try await viewModel.context.apiService.favoritedStatuses(
+                    let response = try await APIService.shared.favoritedStatuses(
                         maxID: maxID,
                         authenticationBox: viewModel.authenticationBox
                     )

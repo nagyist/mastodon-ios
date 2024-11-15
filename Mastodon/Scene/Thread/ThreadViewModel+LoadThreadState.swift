@@ -10,6 +10,7 @@ import Combine
 import GameplayKit
 import CoreDataStack
 import MastodonSDK
+import MastodonCore
 
 extension ThreadViewModel {
     class LoadThreadState: GKState {
@@ -60,7 +61,7 @@ extension ThreadViewModel.LoadThreadState {
             
             Task { @MainActor in
                 do {
-                    let response = try await viewModel.context.apiService.statusContext(
+                    let response = try await APIService.shared.statusContext(
                         statusID: threadContext.statusID,
                         authenticationBox: viewModel.authenticationBox
                     )
@@ -70,7 +71,7 @@ extension ThreadViewModel.LoadThreadState {
                     // assert(!Thread.isMainThread)
                     // await Task.sleep(1_000_000_000)     // 1s delay to prevent UI render issue
 
-                    _ = try await viewModel.context.apiService.getHistory(forStatusID: threadContext.statusID,
+                    _ = try await APIService.shared.getHistory(forStatusID: threadContext.statusID,
                                                                                           authenticationBox: viewModel.authenticationBox)
                     
                     viewModel.mastodonStatusThreadViewModel.appendAncestor(

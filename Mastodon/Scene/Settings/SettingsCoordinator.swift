@@ -48,7 +48,7 @@ class SettingsCoordinator: NSObject, Coordinator {
             let userAuthentication = s.authenticationBox.authentication
             let seed = Mastodon.Entity.DonationCampaign.donationSeed(username: userAuthentication.username, domain: userAuthentication.domain)
             do {
-                let campaign = try await s.appContext.apiService.getDonationCampaign(seed: seed, source: nil).value
+                let campaign = try await APIService.shared.getDonationCampaign(seed: seed, source: nil).value
                 
                 await MainActor.run {
                     s.settingsViewController.donationCampaign = campaign
@@ -84,8 +84,8 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                 navigationController.pushViewController(generalSettingsViewController, animated: true)
             case .notifications:
 
-                let currentSetting = appContext.settingService.currentSetting.value
-                let notificationsEnabled = appContext.notificationService.isNotificationPermissionGranted.value
+            let currentSetting = SettingService.shared.currentSetting.value
+            let notificationsEnabled = NotificationService.shared.isNotificationPermissionGranted.value
                 let notificationViewController = NotificationSettingsViewController(currentSetting: currentSetting, notificationsEnabled: notificationsEnabled)
                 notificationViewController.delegate = self
 
@@ -101,7 +101,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                 let serverDetailsViewController = ServerDetailsViewController(domain: domain, appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
                 serverDetailsViewController.delegate = self
 
-                appContext.apiService.instanceV2(domain: domain, authenticationBox: authenticationBox)
+            APIService.shared.instanceV2(domain: domain, authenticationBox: authenticationBox)
                     .sink { _ in
 
                     } receiveValue: { content in
@@ -109,7 +109,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                     }
                     .store(in: &disposeBag)
 
-                appContext.apiService.extendedDescription(domain: domain, authenticationBox: authenticationBox)
+            APIService.shared.extendedDescription(domain: domain, authenticationBox: authenticationBox)
                     .sink { _ in
 
                     } receiveValue: { content in
@@ -219,7 +219,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
         guard let subscription = setting.activeSubscription,
               setting.domain == authenticationBox.domain,
               setting.userID == authenticationBox.userID,
-              let legacyViewModel = appContext.notificationService.dequeueNotificationViewModel(mastodonAuthenticationBox: authenticationBox), let deviceToken = appContext.notificationService.deviceToken.value else { return }
+              let legacyViewModel = NotificationService.shared.dequeueNotificationViewModel(mastodonAuthenticationBox: authenticationBox), let deviceToken = NotificationService.shared.deviceToken.value else { return }
 
         let queryData = Mastodon.API.Subscriptions.QueryData(
             policy: viewModel.selectedPolicy.subscriptionPolicy,
@@ -237,7 +237,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
             mastodonAuthenticationBox: authenticationBox
         )
 
-        appContext.apiService.createSubscription(
+        APIService.shared.createSubscription(
             subscriptionObjectID: subscription.objectID,
             query: query,
             mastodonAuthenticationBox: authenticationBox
@@ -260,7 +260,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
 extension SettingsCoordinator: PolicySelectionViewControllerDelegate {
     func newPolicySelected(_ viewController: PolicySelectionViewController, newPolicy: NotificationPolicy) {
         self.setting.activeSubscription?.policyRaw = newPolicy.subscriptionPolicy.rawValue
-        try? self.appContext.managedObjectContext.save()
+        try? PersistenceManager.shared.managedObjectContext.save()
     }
 }
 

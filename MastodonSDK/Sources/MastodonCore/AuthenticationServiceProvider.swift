@@ -47,6 +47,11 @@ public class AuthenticationServiceProvider: ObservableObject {
             .assign(to: &$mastodonAuthenticationBoxes)
         
         Task {
+            if authenticationMigrationRequired {
+                migrateLegacyAuthentications(
+                    in: PersistenceManager.shared.managedObjectContext
+                )
+            }
             await prepareForUse()
             authentications = authenticationSortedByActivation()
         }
@@ -146,7 +151,7 @@ public extension AuthenticationServiceProvider {
     
     func signOutMastodonUser(authentication: MastodonAuthentication) async throws {
         try await AuthenticationServiceProvider.shared.delete(authentication: authentication)
-        _ = try await AppContext.shared.apiService.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
+        _ = try await APIService.shared.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
     }
     
     @MainActor
@@ -217,13 +222,13 @@ public extension AuthenticationServiceProvider {
         userDefaults.didMigrateAuthentications == false
     }
 
-    func fetchAccounts(apiService: APIService) async {
+    func fetchAccounts() async {
         // FIXME: This is a dirty hack to make the performance-stuff work.
         // Problem is, that we don't persist the user on disk anymore. So we have to fetch
         // it when we need it to display on the home timeline.
         // We need this (also) for the Account-list, but it might be the wrong place. App Startup might be more appropriate
         for authentication in authentications {
-            guard let account = try? await apiService.accountInfo(domain: authentication.domain,
+            guard let account = try? await APIService.shared.accountInfo(domain: authentication.domain,
                                                                   userID: authentication.userID,
                                                                   authorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.userAccessToken)).value else { continue }
 
@@ -250,7 +255,7 @@ private extension AuthenticationServiceProvider {
         _ previousFollowingIDs: [String]? = nil,
         _ maxID: String? = nil
     ) async throws {
-        let apiService = AppContext.shared.apiService
+        let apiService = APIService.shared
         
         let followingResponse = try await fetchFollowing(maxID, apiService, authBox)
         let followingIds = (previousFollowingIDs ?? []) + followingResponse.ids

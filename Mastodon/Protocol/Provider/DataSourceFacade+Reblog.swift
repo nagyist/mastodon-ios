@@ -49,7 +49,7 @@ private extension DataSourceFacade {
     ) async throws {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
-        let updatedStatus = try await provider.context.apiService.reblog(
+        let updatedStatus = try await APIService.shared.reblog(
             status: status,
             authenticationBox: provider.authenticationBox
         ).value

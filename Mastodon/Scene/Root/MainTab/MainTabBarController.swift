@@ -136,7 +136,7 @@ extension MainTabBarController {
             }
         }
         
-        context.apiService.error
+        APIService.shared.error
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
                 guard let self, let coordinator = self.coordinator else { return }
@@ -161,7 +161,7 @@ extension MainTabBarController {
         // handle push notification.
         // toggle entry when finish fetch latest notification
         Publishers.CombineLatest(
-            context.notificationService.unreadNotificationCountDidUpdate,
+            NotificationService.shared.unreadNotificationCountDidUpdate,
             $currentTab
         )
         .receive(on: DispatchQueue.main)
@@ -380,7 +380,7 @@ extension MainTabBarController {
         guard let authenticationBox else { return }
         
         Task { @MainActor in
-            let profileResponse = try await context.apiService.authenticatedUserInfo(authenticationBox: authenticationBox)
+            let profileResponse = try await APIService.shared.authenticatedUserInfo(authenticationBox: authenticationBox)
             FileManager.default.store(account: profileResponse.value, forUserID: authenticationBox.authentication.userIdentifier())
         }
     }
@@ -519,7 +519,7 @@ extension MainTabBarController {
             }
             
             // open settings
-            if context.settingService.currentSetting.value != nil {
+            if SettingService.shared.currentSetting.value != nil {
                 commands.append(openSettingsKeyCommand)
             }
         }
@@ -562,7 +562,7 @@ extension MainTabBarController {
     }
     
     @objc private func openSettingsKeyCommandHandler(_ sender: UIKeyCommand) {
-        guard let setting = context.settingService.currentSetting.value else { return }
+        guard let setting = SettingService.shared.currentSetting.value else { return }
 
         _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
     }

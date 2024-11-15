@@ -274,7 +274,7 @@ extension MediaPreviewViewController: MediaPreviewImageViewControllerDelegate {
         switch action {
         case .savePhoto:
             guard let assetURL = viewController.viewModel.item.assetURL else { return }
-            context.photoLibraryService.save(imageSource: .url(assetURL))
+            PhotoLibraryService.shared.save(imageSource: .url(assetURL))
                 .sink { [weak self] completion in
                     guard let self = self else { return }
                     switch completion {
@@ -300,7 +300,7 @@ extension MediaPreviewViewController: MediaPreviewImageViewControllerDelegate {
         case .copyPhoto:
             guard let assetURL = viewController.viewModel.item.assetURL else { return }
 
-            context.photoLibraryService.copy(imageSource: .url(assetURL))
+            PhotoLibraryService.shared.copy(imageSource: .url(assetURL))
                 .sink { completion in
                     switch completion {
                     case .failure(_):

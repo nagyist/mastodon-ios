@@ -22,9 +22,9 @@ extension MastodonRegisterViewController {
         viewController.context = context
         viewController.coordinator = coordinator
         
-        let instanceResponse = try await context.apiService.instance(domain: domain, authenticationBox: nil).singleOutput()
-        let applicationResponse = try await context.apiService.createApplication(domain: domain).singleOutput()
-        let accessTokenResponse = try await context.apiService.applicationAccessToken(
+        let instanceResponse = try await APIService.shared.instance(domain: domain, authenticationBox: nil).singleOutput()
+        let applicationResponse = try await APIService.shared.createApplication(domain: domain).singleOutput()
+        let accessTokenResponse = try await APIService.shared.applicationAccessToken(
             domain: domain,
             clientID: applicationResponse.value.clientID!,
             clientSecret: applicationResponse.value.clientSecret!,

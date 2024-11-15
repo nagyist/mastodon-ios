@@ -24,7 +24,7 @@ final class RemoteThreadViewModel: ThreadViewModel {
         )
         
         Task { @MainActor in
-            let response = try await context.apiService.status(
+            let response = try await APIService.shared.status(
                 statusID: statusID,
                 authenticationBox: authenticationBox
             )
@@ -47,7 +47,7 @@ final class RemoteThreadViewModel: ThreadViewModel {
         )
         
         Task { @MainActor in
-            let response = try await context.apiService.notification(
+            let response = try await APIService.shared.notification(
                 notificationID: notificationID,
                 authenticationBox: authenticationBox
             )

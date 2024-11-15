@@ -169,29 +169,29 @@ private extension FeedDataController {
   func load(kind: MastodonFeed.Kind, maxID: MastodonStatus.ID?) async throws -> [MastodonFeed] {
         switch kind {
         case .home(let timeline):
-            await AuthenticationServiceProvider.shared.fetchAccounts(apiService: context.apiService)
+            await AuthenticationServiceProvider.shared.fetchAccounts()
 
             let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
 
             switch timeline {
             case .home:
-                response = try await context.apiService.homeTimeline(
+                response = try await APIService.shared.homeTimeline(
                     maxID: maxID,
                     authenticationBox: authenticationBox
                 )
             case .public:
-                response = try await context.apiService.publicTimeline(
+                response = try await APIService.shared.publicTimeline(
                     query: .init(local: true, maxID: maxID),
                     authenticationBox: authenticationBox
                 )
             case let .list(id):
-                response = try await context.apiService.listTimeline(
+                response = try await APIService.shared.listTimeline(
                     id: id,
                     query: .init(maxID: maxID),
                     authenticationBox: authenticationBox
                 )
             case let .hashtag(tag):
-                response = try await context.apiService.hashtagTimeline(
+                response = try await APIService.shared.hashtagTimeline(
                     hashtag: tag,
                     authenticationBox: authenticationBox
                 )
@@ -209,10 +209,10 @@ private extension FeedDataController {
 
     private func getFeeds(with scope: APIService.MastodonNotificationScope?, accountID: String? = nil) async throws -> [MastodonFeed] {
 
-        let notifications = try await context.apiService.notifications(maxID: nil, accountID: accountID, scope: scope, authenticationBox: authenticationBox).value
+        let notifications = try await APIService.shared.notifications(maxID: nil, accountID: accountID, scope: scope, authenticationBox: authenticationBox).value
 
         let accounts = notifications.map { $0.account }
-        let relationships = try await context.apiService.relationship(forAccounts: accounts, authenticationBox: authenticationBox).value
+        let relationships = try await APIService.shared.relationship(forAccounts: accounts, authenticationBox: authenticationBox).value
 
         let notificationsWithRelationship: [(notification: Mastodon.Entity.Notification, relationship: Mastodon.Entity.Relationship?)] = notifications.compactMap { notification in
             guard let relationship = relationships.first(where: {$0.id == notification.account.id }) else { return (notification: notification, relationship: nil)}

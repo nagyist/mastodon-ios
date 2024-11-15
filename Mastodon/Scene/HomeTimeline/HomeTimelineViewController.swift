@@ -308,14 +308,14 @@ extension HomeTimelineViewController {
             }
             .store(in: &disposeBag)
         
-        context.publisherService.statusPublishResult.receive(on: DispatchQueue.main).sink { result in
+        PublisherService.shared.statusPublishResult.receive(on: DispatchQueue.main).sink { result in
             if case .success(.edit(let status)) = result {
                 self.viewModel?.hasPendingStatusEditReload = true
                 self.viewModel?.dataController.update(status: .fromEntity(status.value), intent: .edit)
             }
         }.store(in: &disposeBag)
         
-        context.publisherService.$currentPublishProgress
+        PublisherService.shared.$currentPublishProgress
             .receive(on: DispatchQueue.main)
             .sink { [weak self] progress in
                 guard let self = self else { return }
@@ -434,7 +434,7 @@ extension HomeTimelineViewController {
             })
             .store(in: &disposeBag)
 
-        context.publisherService.statusPublishResult.prepend(.failure(AppError.badRequest))
+        PublisherService.shared.statusPublishResult.prepend(.failure(AppError.badRequest))
         .receive(on: DispatchQueue.main)
         .sink { [weak self] publishResult in
             guard let self else { return }
@@ -625,7 +625,7 @@ extension HomeTimelineViewController {
     }
     
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let setting = context.settingService.currentSetting.value else { return }
+        guard let setting = SettingService.shared.currentSetting.value else { return }
 
         _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
@@ -638,7 +638,6 @@ extension HomeTimelineViewController {
     }
     
     @objc func signOutAction(_ sender: UIAction) {
-        guard let authContext = viewModel?.authenticationBox else { return }
 
         Task { @MainActor in
             try await AuthenticationServiceProvider.shared.signOutMastodonUser(authentication: authenticationBox.authentication)

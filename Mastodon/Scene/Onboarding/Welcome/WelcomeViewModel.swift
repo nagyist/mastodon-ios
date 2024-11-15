@@ -31,7 +31,7 @@ final class WelcomeViewModel {
     }
 
     func downloadDefaultServer(completion: (() -> Void)? = nil) {
-            context.apiService.defaultServers()
+        APIService.shared.defaultServers()
             .timeout(.milliseconds(500) , scheduler: DispatchQueue.main)
             .sink { [weak self] result in
 

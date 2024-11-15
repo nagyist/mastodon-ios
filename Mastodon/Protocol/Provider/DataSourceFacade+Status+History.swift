@@ -10,7 +10,7 @@ extension DataSourceFacade {
         forStatus status: Status,
         provider: NeedsDependency & AuthContextProvider
     ) async throws -> [Mastodon.Entity.StatusEdit] {
-        let reponse = try await provider.context.apiService.getHistory(forStatusID: status.id, authenticationBox: provider.authenticationBox)
+        let reponse = try await APIService.shared.getHistory(forStatusID: status.id, authenticationBox: provider.authenticationBox)
 
         return reponse.value
     }

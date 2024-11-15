@@ -40,7 +40,7 @@ final class AutoCompleteViewModel {
     init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
         self.context = context
         self.authenticationBox = authenticationBox
-        self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(for: authenticationBox.domain)
+        self.customEmojiViewModel = EmojiService.shared.dequeueCustomEmojiViewModel(for: authenticationBox.domain)
         // end init
         
         autoCompleteItems

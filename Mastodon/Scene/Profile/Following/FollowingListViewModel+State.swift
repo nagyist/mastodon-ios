@@ -8,6 +8,7 @@
 import Foundation
 import GameplayKit
 import MastodonSDK
+import MastodonCore
 
 extension FollowingListViewModel {
     class State: GKState {
@@ -133,7 +134,7 @@ extension FollowingListViewModel.State {
             
             Task {
                 do {
-                    let accountResponse = try await viewModel.context.apiService.following(
+                    let accountResponse = try await APIService.shared.following(
                         userID: userID,
                         maxID: maxID,
                         authenticationBox: viewModel.authenticationBox
@@ -149,7 +150,7 @@ extension FollowingListViewModel.State {
 
                     var hasNewAppend = false
 
-                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
+                    let newRelationships = try await APIService.shared.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
 
                     var accounts = viewModel.accounts
 

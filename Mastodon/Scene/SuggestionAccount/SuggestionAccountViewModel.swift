@@ -50,7 +50,7 @@ final class SuggestionAccountViewModel: NSObject {
         Task {
             var suggestedAccounts: [Mastodon.Entity.V2.SuggestionAccount] = []
             do {
-                let response = try await context.apiService.suggestionAccountV2(
+                let response = try await APIService.shared.suggestionAccountV2(
                     query: .init(limit: 5),
                     authenticationBox: authenticationBox
                 )
@@ -60,7 +60,7 @@ final class SuggestionAccountViewModel: NSObject {
 
                 let accounts = suggestedAccounts.compactMap { $0.account }
 
-                let relationships = try await context.apiService.relationship(
+                let relationships = try await APIService.shared.relationship(
                     forAccounts: accounts,
                     authenticationBox: authenticationBox
                 ).value

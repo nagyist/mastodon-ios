@@ -568,7 +568,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 .compactMap { poll.options.firstIndex(of: $0) }
 
             do {
-                let newPoll = try await context.apiService.vote(
+                let newPoll = try await APIService.shared.vote(
                     poll: poll.entity,
                     choices: choices,
                     authenticationBox: authenticationBox

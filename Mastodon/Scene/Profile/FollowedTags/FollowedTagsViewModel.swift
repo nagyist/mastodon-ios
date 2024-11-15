@@ -38,7 +38,7 @@ extension FollowedTagsViewModel {
     func fetchFollowedTags(completion: (() -> Void)? = nil ) {
         Task { @MainActor in
             do {
-                followedTags = try await context.apiService.getFollowedTags(
+                followedTags = try await APIService.shared.getFollowedTags(
                     domain: authenticationBox.domain,
                     query: Mastodon.API.Account.FollowedTagsQuery(limit: nil),
                     authenticationBox: authenticationBox
@@ -59,12 +59,12 @@ extension FollowedTagsViewModel {
     func followOrUnfollow(_ tag: Mastodon.Entity.Tag) {
         Task { @MainActor in
             if tag.following ?? false {
-                _ = try? await context.apiService.unfollowTag(
+                _ = try? await APIService.shared.unfollowTag(
                     for: tag.name,
                     authenticationBox: authenticationBox
                 )
             } else {
-                _ = try? await context.apiService.followTag(
+                _ = try? await APIService.shared.followTag(
                     for: tag.name,
                     authenticationBox: authenticationBox
                 )

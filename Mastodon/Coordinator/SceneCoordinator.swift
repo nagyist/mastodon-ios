@@ -46,7 +46,7 @@ final public class SceneCoordinator {
         
         scene.session.sceneCoordinator = self
 
-        appContext.notificationService.requestRevealNotificationPublisher
+        NotificationService.shared.requestRevealNotificationPublisher
             .receive(on: DispatchQueue.main)
             .sink(receiveValue: {
                 [weak self] pushNotification in
@@ -98,12 +98,12 @@ final public class SceneCoordinator {
 
                             switch type {
                             case .follow:
-                                let account = try await appContext.apiService.notification(
+                                let account = try await APIService.shared.notification(
                                     notificationID: notificationID,
                                     authenticationBox: authenticationBox
                                 ).value.account
 
-                                let relationship = try await appContext.apiService.relationship(forAccounts: [account], authenticationBox: authenticationBox).value.first
+                                let relationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: authenticationBox).value.first
 
                                 let profileViewModel = ProfileViewModel(
                                     context: appContext,
@@ -645,7 +645,7 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
         let signOutAction = UIAlertAction(title: L10n.Common.Alerts.SignOut.confirm, style: .destructive) { [weak self] _ in
             guard let self, let authenticationBox = self.authenticationBox else { return }
 
-            self.appContext.notificationService.clearNotificationCountForActiveUser()
+            NotificationService.shared.clearNotificationCountForActiveUser()
 
             Task { @MainActor in
                 try await AuthenticationServiceProvider.shared.signOutMastodonUser(

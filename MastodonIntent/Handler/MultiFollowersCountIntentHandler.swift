@@ -15,8 +15,7 @@ class MultiFollowersCountIntentHandler: INExtension, MultiFollowersCountIntentHa
             return INObjectCollection(items: [])
         }
 
-        let results = try await AppContext.shared
-            .apiService
+        let results = try await APIService.shared
             .search(query: .init(q: searchTerm), authenticationBox: authenticationBox)
         
         return INObjectCollection(items: results.value.accounts.map { $0.acctWithDomainIfMissing(authenticationBox.domain) as NSString })

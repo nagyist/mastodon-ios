@@ -163,30 +163,30 @@ extension HomeTimelineViewModel {
         guard let status = record.status else { return }
         record.isLoadingMore = true
 
-        await AuthenticationServiceProvider.shared.fetchAccounts(apiService: context.apiService)
+        await AuthenticationServiceProvider.shared.fetchAccounts()
 
         // fetch data
         let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>?
         
         switch timelineContext {
         case .home:
-            response = try? await context.apiService.homeTimeline(
+            response = try? await APIService.shared.homeTimeline(
                maxID: status.id,
                authenticationBox: authenticationBox
            )
         case .public:
-            response = try? await context.apiService.publicTimeline(
+            response = try? await APIService.shared.publicTimeline(
                 query: .init(local: true, maxID: status.id),
                 authenticationBox: authenticationBox
             )
         case let .list(id):
-            response = try? await context.apiService.listTimeline(
-                id: id, 
+            response = try? await APIService.shared.listTimeline(
+                id: id,
                 query: .init(local: true, maxID: status.id),
                 authenticationBox: authenticationBox
             )
         case let .hashtag(tag):
-            response = try? await context.apiService.hashtagTimeline(
+            response = try? await APIService.shared.hashtagTimeline(
                 hashtag: tag,
                 authenticationBox: authenticationBox
             )

@@ -98,8 +98,7 @@ private extension MultiFollowersCountWidgetProvider {
             
             for desiredAccount in desiredAccounts {
                 guard
-                    let resultingAccount = try await AppContext.shared
-                        .apiService
+                    let resultingAccount = try await APIService.shared
                         .search(query: .init(q: desiredAccount, type: .accounts), authenticationBox: authBox)
                         .value
                         .accounts

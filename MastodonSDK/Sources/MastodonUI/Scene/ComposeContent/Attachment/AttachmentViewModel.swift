@@ -41,7 +41,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
     }()
 
     // input
-    public let api: APIService
     public let authenticationBox: MastodonAuthenticationBox
     public let input: Input
     public let sizeLimit: SizeLimit
@@ -72,7 +71,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
     @Published var remainTimeLocalizedString: String?
     
     public init(
-        api: APIService,
         authenticationBox: MastodonAuthenticationBox,
         input: Input,
         sizeLimit: SizeLimit,
@@ -80,7 +78,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
         isEditing: Bool = false,
         caption: String? = nil
     ) {
-        self.api = api
         self.authenticationBox = authenticationBox
         self.input = input
         self.sizeLimit = sizeLimit

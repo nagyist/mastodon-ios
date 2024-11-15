@@ -179,11 +179,11 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
             return visibility
         }()
         
-        self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(
+        self.customEmojiViewModel = EmojiService.shared.dequeueCustomEmojiViewModel(
             for: authenticationBox.domain
         )
                 
-        let recentLanguages = context.settingService.currentSetting.value?.recentLanguages ?? []
+        let recentLanguages = SettingService.shared.currentSetting.value?.recentLanguages ?? []
         self.recentLanguages = recentLanguages
         self.language = UserDefaults.shared.defaultPostLanguage
         super.init()
@@ -259,7 +259,6 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
                 guard let assetURL = $0.assetURL, let url = URL(string: assetURL) else { return nil }
 
                 let attachmentViewModel = AttachmentViewModel(
-                    api: context.apiService,
                     authenticationBox: authenticationBox,
                     input: .mastodonAssetUrl(url: url, attachmentId: $0.id),
                     sizeLimit: sizeLimit,
@@ -502,7 +501,7 @@ extension ComposeContentViewModel {
         .assign(to: &$shouldDismiss)
         
         // languages
-        context.settingService.currentSetting
+        SettingService.shared.currentSetting
             .flatMap { settings in
                 if let settings {
                     return settings.publisher(for: \.recentLanguages, options: .initial).eraseToAnyPublisher()
@@ -591,7 +590,7 @@ extension ComposeContentViewModel {
         }()
         
         // save language to recent languages
-        if let settings = context.settingService.currentSetting.value {
+        if let settings = SettingService.shared.currentSetting.value {
             settings.managedObjectContext?.performAndWait {
                 settings.recentLanguages = [language] + settings.recentLanguages.filter { $0 != language }
             }
@@ -640,7 +639,7 @@ extension ComposeContentViewModel {
         }()
 
         // save language to recent languages
-        if let settings = context.settingService.currentSetting.value {
+        if let settings = SettingService.shared.currentSetting.value {
             settings.managedObjectContext?.performAndWait {
                 settings.recentLanguages = [language] + settings.recentLanguages.filter { $0 != language }
             }

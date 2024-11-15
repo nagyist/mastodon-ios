@@ -71,7 +71,7 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
         let authenticationBox = self.authenticationBox
 
         Task {
-            let searchResult = try await context.apiService.search(
+            let searchResult = try await APIService.shared.search(
                 query: query,
                 authenticationBox: authenticationBox
             ).value
@@ -124,7 +124,7 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
         )
 
         Task {
-            let searchResult = try await context.apiService.search(
+            let searchResult = try await APIService.shared.search(
                 query: query,
                 authenticationBox: authenticationBox
             ).value

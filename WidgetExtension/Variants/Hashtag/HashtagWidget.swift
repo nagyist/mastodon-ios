@@ -51,8 +51,7 @@ extension HashtagWidgetProvider {
                 Task {
                     
                     do {
-                        let mostRecentStatuses = try await AppContext.shared
-                            .apiService
+                        let mostRecentStatuses = try await APIService.shared
                             .hashtagTimeline(limit: 40, hashtag: desiredHashtag, authenticationBox: authBox)
                             .value
                         

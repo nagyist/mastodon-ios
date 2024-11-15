@@ -271,13 +271,13 @@ extension MastodonPickServerViewController {
 
         authenticationViewModel.isAuthenticating.send(true)
         
-        context.apiService.instance(domain: server.domain, authenticationBox: nil)
+        APIService.shared.instance(domain: server.domain, authenticationBox: nil)
             .compactMap { [weak self] response -> AnyPublisher<MastodonPickServerViewModel.SignUpResponseFirst, Error>? in
                 guard let self = self else { return nil }
                 guard response.value.registrations != false else {
                     return Fail(error: AuthenticationViewModel.AuthenticationError.registrationClosed).eraseToAnyPublisher()
                 }
-                return self.context.apiService.createApplication(domain: server.domain)
+                return APIService.shared.createApplication(domain: server.domain)
                     .map { MastodonPickServerViewModel.SignUpResponseFirst(instance: response, application: $0) }
                     .eraseToAnyPublisher()
             }
@@ -299,7 +299,7 @@ extension MastodonPickServerViewController {
                 guard let self = self else { return nil }
                 let instance = response.instance
                 let authenticateInfo = response.authenticateInfo
-                return self.context.apiService.applicationAccessToken(
+                return APIService.shared.applicationAccessToken(
                     domain: server.domain,
                     clientID: authenticateInfo.clientID,
                     clientSecret: authenticateInfo.clientSecret,

@@ -126,7 +126,7 @@ extension NotificationTimelineViewController {
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
         Task {
-            let policy = try? await context.apiService.notificationPolicy(authenticationBox: authenticationBox)
+            let policy = try? await APIService.shared.notificationPolicy(authenticationBox: authenticationBox)
             viewModel.notificationPolicy = policy?.value
 
             await viewModel.loadLatest()

@@ -8,6 +8,7 @@
 import UIKit
 import CoreData
 import MastodonSDK
+import MastodonCore
 
 extension NotificationTimelineViewModel {
     
@@ -22,7 +23,7 @@ extension NotificationTimelineViewModel {
                 authenticationBox: authenticationBox,
                 notificationTableViewCellDelegate: notificationTableViewCellDelegate,
                 filterContext: .notifications,
-                activeFilters: context.statusFilterService.$activeFilters
+                activeFilters: StatusFilterService.shared.$activeFilters
             )
         )
 

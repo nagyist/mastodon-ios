@@ -59,29 +59,29 @@ extension HomeTimelineViewModel.LoadOldestState {
                 }
 
                 do {
-                    await AuthenticationServiceProvider.shared.fetchAccounts(apiService: viewModel.context.apiService)
+                    await AuthenticationServiceProvider.shared.fetchAccounts()
 
                     let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
 
                     switch viewModel.timelineContext {
                     case .home:
-                        response = try await viewModel.context.apiService.homeTimeline(
+                        response = try await APIService.shared.homeTimeline(
                             maxID: maxID,
                             authenticationBox: viewModel.authenticationBox
                         )
                     case .public:
-                        response = try await viewModel.context.apiService.publicTimeline(
+                        response = try await APIService.shared.publicTimeline(
                             query: .init(local: true, maxID: maxID),
                             authenticationBox: viewModel.authenticationBox
                         )
                     case let .list(id):
-                        response = try await viewModel.context.apiService.listTimeline(
-                            id: id, 
+                        response = try await APIService.shared.listTimeline(
+                            id: id,
                             query: .init(local: true, maxID: maxID),
                             authenticationBox: viewModel.authenticationBox
                         )
                     case let .hashtag(tag):
-                        response = try await viewModel.context.apiService.hashtagTimeline(
+                        response = try await APIService.shared.hashtagTimeline(
                             hashtag: tag,
                             authenticationBox: viewModel.authenticationBox
                         )

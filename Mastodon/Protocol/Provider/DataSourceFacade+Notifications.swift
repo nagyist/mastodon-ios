@@ -12,7 +12,7 @@ extension DataSourceFacade {
         provider.coordinator.showLoading()
 
         do {
-            let notificationRequests = try await provider.context.apiService.notificationRequests(authenticationBox: provider.authenticationBox).value
+            let notificationRequests = try await APIService.shared.notificationRequests(authenticationBox: provider.authenticationBox).value
             let viewModel = NotificationRequestsViewModel(appContext: provider.context, authenticationBox: provider.authenticationBox, coordinator: provider.coordinator, requests: notificationRequests)
 
             provider.coordinator.hideLoading()

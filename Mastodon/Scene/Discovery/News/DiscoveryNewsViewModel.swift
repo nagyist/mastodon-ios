@@ -55,7 +55,7 @@ final class DiscoveryNewsViewModel {
 extension DiscoveryNewsViewModel {
     func checkServerEndpoint() async {
         do {
-            _ = try await context.apiService.trendLinks(
+            _ = try await APIService.shared.trendLinks(
                 domain: authenticationBox.domain,
                 query: .init(offset: nil, limit: nil),
                 authenticationBox: authenticationBox
