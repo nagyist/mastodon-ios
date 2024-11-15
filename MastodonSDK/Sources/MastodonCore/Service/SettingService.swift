@@ -29,9 +29,7 @@ public final class SettingService {
     public let currentSetting = CurrentValueSubject<Setting?, Never>(nil)
     
     private init() {
-        self.settingFetchedResultController = SettingFetchedResultController(
-            additionalPredicate: nil
-        )
+        self.settingFetchedResultController = SettingFetchedResultController()
 
         // create setting (if non-exist) for authenticated users
         AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
