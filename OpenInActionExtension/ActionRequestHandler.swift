@@ -89,11 +89,11 @@ private extension ActionRequestHandler {
                         "openURL": "mastodon://status/\(foundStatus.id)"
                     ])
                 } else if let foundHashtag = value.hashtags.first {
-                    Task {
+                    Task { [weak self] in
                         await self?.continueWithSearch(foundHashtag.name)
                     }
                 } else {
-                    Task {
+                    Task { [weak self] in
                         await self?.continueWithSearch(url)
                     }
                 }
