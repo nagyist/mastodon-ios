@@ -119,11 +119,11 @@ extension NotificationTimelineViewModel.LoadOldestState {
         
         override func didEnter(from previousState: GKState?) {
             guard let viewModel = viewModel else { return }
-            guard let diffableDataSource = viewModel.diffableDataSource else {
-                assertionFailure()
-                return
-            }
             DispatchQueue.main.async {
+                guard let diffableDataSource = viewModel.diffableDataSource else {
+                    assertionFailure()
+                    return
+                }
                 var snapshot = diffableDataSource.snapshot()
                 snapshot.deleteItems([.bottomLoader])
                 diffableDataSource.apply(snapshot)

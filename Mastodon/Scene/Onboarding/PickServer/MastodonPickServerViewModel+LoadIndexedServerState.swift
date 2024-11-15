@@ -28,6 +28,7 @@ extension MastodonPickServerViewModel.LoadIndexedServerState {
         }
     }
     
+    @MainActor
     class Loading: MastodonPickServerViewModel.LoadIndexedServerState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             return stateClass == Fail.self || stateClass == Idle.self

@@ -13,6 +13,7 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 final class MastodonRegisterViewModel: ObservableObject {
     var disposeBag = Set<AnyCancellable>()
     

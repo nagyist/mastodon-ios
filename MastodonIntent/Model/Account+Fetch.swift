@@ -36,6 +36,7 @@ extension Account {
 }
 
 extension Array where Element == Account {
+    @MainActor
     func mastodonAuthentication() throws -> [MastodonAuthentication] {
         let identifiers = self
             .compactMap { $0.identifier }

@@ -16,6 +16,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
+@MainActor
 class MastodonPickServerViewModel: NSObject {
 
     enum EmptyStateViewState {

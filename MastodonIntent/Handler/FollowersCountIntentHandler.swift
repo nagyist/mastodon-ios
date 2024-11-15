@@ -6,6 +6,7 @@ import MastodonCore
 import MastodonSDK
 import MastodonLocalization
 
+@MainActor
 class FollowersCountIntentHandler: INExtension, FollowersCountIntentHandling {
     func resolveShowChart(for intent: FollowersCountIntent) async -> INBooleanResolutionResult {
         return .success(with: intent.showChart?.boolValue ?? false)

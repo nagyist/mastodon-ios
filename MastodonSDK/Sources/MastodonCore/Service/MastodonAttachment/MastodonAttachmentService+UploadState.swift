@@ -18,6 +18,7 @@ extension MastodonAttachmentService {
             self.service = service
         }
         
+        @MainActor
         public override func didEnter(from previousState: GKState?) {
             service?.uploadStateMachineSubject.send(self)
         }
@@ -51,6 +52,7 @@ extension MastodonAttachmentService.UploadState {
                 || stateClass == Processing.self
         }
         
+        @MainActor
         public override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             

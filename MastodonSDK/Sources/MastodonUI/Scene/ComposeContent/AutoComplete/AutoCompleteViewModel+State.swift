@@ -41,6 +41,7 @@ extension AutoCompleteViewModel.State {
         }
     }
     
+    @MainActor
     class Loading: AutoCompleteViewModel.State {
         
         var previoursSearchText = ""

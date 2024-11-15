@@ -23,7 +23,7 @@ extension DataSourceFacade {
            url.pathComponents[1] == "web",
            url.pathComponents[2] == "statuses" {
             let statusID = url.pathComponents[3]
-            let threadViewModel = RemoteThreadViewModel(context: provider.context, authenticationBox: provider.authenticationBox, statusID: statusID)
+            let threadViewModel = await RemoteThreadViewModel(context: provider.context, authenticationBox: provider.authenticationBox, statusID: statusID)
             _ = await provider.coordinator.present(scene: .thread(viewModel: threadViewModel), from: nil, transition: .show)
         } else {
             _ = await provider.coordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))

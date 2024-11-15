@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 
+@MainActor
 public protocol StatusPublisher: ProgressReporting {
     var state: Published<StatusPublisherState>.Publisher { get }
     var reactor: StatusPublisherReactor? { get set }

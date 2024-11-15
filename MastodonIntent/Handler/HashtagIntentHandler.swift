@@ -4,7 +4,7 @@ import Foundation
 import Intents
 import MastodonSDK
 import MastodonCore
-
+@MainActor
 class HashtagIntentHandler: INExtension, HashtagIntentHandling {
     func provideHashtagOptionsCollection(for intent: HashtagIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
 

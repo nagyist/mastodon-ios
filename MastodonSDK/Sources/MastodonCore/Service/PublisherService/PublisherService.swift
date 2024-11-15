@@ -8,6 +8,7 @@
 import UIKit
 import Combine
 
+@MainActor
 public final class PublisherService {
     
     public static let shared = { PublisherService() }()

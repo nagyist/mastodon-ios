@@ -41,6 +41,7 @@ public class PersistenceManager {
     }
 }
 
+@MainActor
 public class AppContext: ObservableObject {
     public static let shared = { AppContext() }()
     

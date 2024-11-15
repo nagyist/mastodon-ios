@@ -11,6 +11,7 @@ import CoreData
 import CoreDataStack
 import MastodonSDK
 
+@MainActor
 public final class InstanceService {
     
     var disposeBag = Set<AnyCancellable>()

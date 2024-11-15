@@ -13,6 +13,7 @@ import MastodonSDK
 import MastodonCommon
 import MastodonLocalization
 
+@MainActor
 public final class NotificationService {
     
     public static let shared = { NotificationService() }()

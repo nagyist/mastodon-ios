@@ -17,6 +17,7 @@ import MastodonCore
 import MastodonUI
 import MastodonSDK
 
+@MainActor
 final class HomeTimelineViewModel: NSObject {
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()

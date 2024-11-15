@@ -11,6 +11,7 @@ import Photos
 import Alamofire
 import AlamofireImage
 
+@MainActor
 public final class PhotoLibraryService: NSObject {
     public static let shared = { PhotoLibraryService() }()
 

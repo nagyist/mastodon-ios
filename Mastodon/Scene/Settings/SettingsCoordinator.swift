@@ -16,6 +16,7 @@ protocol SettingsCoordinatorDelegate: AnyObject {
     func openProfileSettingsURL(_ settingsCoordinator: SettingsCoordinator)
 }
 
+@MainActor
 class SettingsCoordinator: NSObject, Coordinator {
 
     let navigationController: UINavigationController

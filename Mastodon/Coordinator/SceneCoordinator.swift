@@ -14,6 +14,7 @@ import MastodonAsset
 import MastodonLocalization
 import MBProgressHUD
 
+@MainActor
 final public class SceneCoordinator {
     
     private var disposeBag = Set<AnyCancellable>()

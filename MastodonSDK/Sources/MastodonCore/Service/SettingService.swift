@@ -13,6 +13,7 @@ import MastodonAsset
 import MastodonLocalization
 import MastodonCommon
 
+@MainActor
 public final class SettingService {
     
     public static let shared = { SettingService() }()

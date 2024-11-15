@@ -13,6 +13,7 @@ import MastodonSDK
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 final class NotificationTimelineViewModel {
     
     var disposeBag = Set<AnyCancellable>()

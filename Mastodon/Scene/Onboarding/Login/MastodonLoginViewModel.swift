@@ -14,6 +14,7 @@ protocol MastodonLoginViewModelDelegate: AnyObject {
   func serversUpdated(_ viewModel: MastodonLoginViewModel)
 }
 
+@MainActor
 class MastodonLoginViewModel {
 
   private var serverList: [Mastodon.Entity.Server] = []

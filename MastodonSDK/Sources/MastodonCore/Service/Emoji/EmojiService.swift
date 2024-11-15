@@ -9,6 +9,7 @@ import Foundation
 import Combine
 import MastodonSDK
 
+@MainActor
 public final class EmojiService {
     public static let shared = { EmojiService() }()
     let workingQueue = DispatchQueue(label: "org.joinmastodon.app.EmojiService.working-queue")

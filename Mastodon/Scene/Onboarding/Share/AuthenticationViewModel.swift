@@ -12,6 +12,7 @@ import Combine
 import MastodonSDK
 import MastodonCore
 
+@MainActor
 final class AuthenticationViewModel {
     
     var disposeBag = Set<AnyCancellable>()

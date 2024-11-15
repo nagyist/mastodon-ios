@@ -13,6 +13,7 @@ import MastodonSDK
 import AlamofireImage
 // import AlamofireNetworkActivityIndicator
 
+@MainActor
 public final class APIService {
     
     @MainActor

@@ -14,6 +14,7 @@ import MastodonMeta
 import MastodonCore
 import MastodonUI
 
+@MainActor
 final class AccountListViewModel: NSObject {
 
     var disposeBag = Set<AnyCancellable>()

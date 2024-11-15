@@ -16,6 +16,7 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 class ThreadViewModel {
     
     var disposeBag = Set<AnyCancellable>()

@@ -31,6 +31,7 @@ extension EmojiService.CustomEmojiViewModel.LoadState {
             return stateClass == Fail.self || stateClass == Finish.self
         }
         
+        @MainActor
         override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             guard let viewModel,

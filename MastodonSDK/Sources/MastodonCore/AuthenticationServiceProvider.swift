@@ -8,6 +8,7 @@ import KeychainAccess
 import MastodonCommon
 import os.log
 
+@MainActor
 public class AuthenticationServiceProvider: ObservableObject {
     private let logger = Logger(subsystem: "AuthenticationServiceProvider", category: "Authentication")
 
@@ -21,6 +22,9 @@ public class AuthenticationServiceProvider: ObservableObject {
     public let updateActiveUserAccountPublisher = PassthroughSubject<Void, Never>()
     
     private init() {
+        prepareForUse()
+        authentications = authenticationSortedByActivation()
+        
         $mastodonAuthenticationBoxes
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] boxes in
@@ -52,8 +56,6 @@ public class AuthenticationServiceProvider: ObservableObject {
                     in: PersistenceManager.shared.managedObjectContext
                 )
             }
-            await prepareForUse()
-            authentications = authenticationSortedByActivation()
         }
     }
     

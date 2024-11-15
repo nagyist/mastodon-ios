@@ -11,6 +11,7 @@ import GameplayKit
 import MastodonSDK
 import MastodonCore
 
+@MainActor
 final class AutoCompleteViewModel {
     
     var disposeBag = Set<AnyCancellable>()

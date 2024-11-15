@@ -10,6 +10,7 @@ import Combine
 import MastodonCore
 import MastodonSDK
 
+@MainActor
 final class WelcomeViewModel {
  
     var disposeBag = Set<AnyCancellable>()

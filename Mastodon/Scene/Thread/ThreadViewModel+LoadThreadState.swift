@@ -54,12 +54,12 @@ extension ThreadViewModel.LoadThreadState {
 
             guard let viewModel, let stateMachine else { return }
             
-            guard let threadContext = viewModel.threadContext else {
-                stateMachine.enter(Fail.self)
-                return
-            }
             
             Task { @MainActor in
+                guard let threadContext = viewModel.threadContext else {
+                    stateMachine.enter(Fail.self)
+                    return
+                }
                 do {
                     let response = try await APIService.shared.statusContext(
                         statusID: threadContext.statusID,

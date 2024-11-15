@@ -15,6 +15,7 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 final class SidebarViewModel {
     var disposeBag = Set<AnyCancellable>()
     

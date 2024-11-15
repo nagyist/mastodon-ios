@@ -18,6 +18,7 @@ public protocol ComposeContentViewModelDelegate: AnyObject {
     func composeContentViewModel(_ viewModel: ComposeContentViewModel, handleAutoComplete info: ComposeContentViewModel.AutoCompleteInfo) -> Bool
 }
 
+@MainActor
 public final class ComposeContentViewModel: NSObject, ObservableObject {
 
     public enum ComposeContext {

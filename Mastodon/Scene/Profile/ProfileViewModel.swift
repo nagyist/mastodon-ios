@@ -16,6 +16,7 @@ import MastodonLocalization
 import MastodonUI
 
 // please override this base class
+@MainActor
 class ProfileViewModel: NSObject {
         
     typealias UserID = String

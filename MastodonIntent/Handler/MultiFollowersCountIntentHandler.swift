@@ -6,6 +6,7 @@ import MastodonCore
 import MastodonSDK
 import MastodonLocalization
 
+@MainActor
 class MultiFollowersCountIntentHandler: INExtension, MultiFollowersCountIntentHandling {
     func provideAccountsOptionsCollection(for intent: MultiFollowersCountIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
         guard

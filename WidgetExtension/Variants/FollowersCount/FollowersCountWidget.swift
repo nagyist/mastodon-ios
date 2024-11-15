@@ -76,7 +76,7 @@ private extension FollowersCountWidgetProvider {
             await AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
-                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                let authBox = await AuthenticationServiceProvider.shared.activeAuthentication
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -91,7 +91,7 @@ private extension FollowersCountWidgetProvider {
             }
             
             guard
-                let resultingAccount = try await APIService.shared
+                let resultingAccount = try? await APIService.shared
                     .search(query: .init(q: desiredAccount, type: .accounts), authenticationBox: authBox)
                     .value
                     .accounts
@@ -100,14 +100,19 @@ private extension FollowersCountWidgetProvider {
                 return completion(.unconfigured)
             }
             
-            let imageData = try await URLSession.shared.data(from: resultingAccount.avatarImageURLWithFallback(domain: authBox.domain)).0
-                        
+            let imageData = try? await URLSession.shared.data(from: resultingAccount.avatarImageURLWithFallback(domain: authBox.domain)).0
+            let avatarImage: UIImage
+            if let imageData {
+                avatarImage = UIImage(data: imageData) ?? UIImage(named: "missingAvatar")!
+            } else {
+                avatarImage = UIImage(named: "missingAvatar")!
+            }
             let entry = FollowersCountEntry(
                 date: Date(),
                 account: FollowersEntryAccount.from(
                     mastodonAccount: resultingAccount,
                     domain: authBox.domain,
-                    avatarImage: UIImage(data: imageData) ?? UIImage(named: "missingAvatar")!
+                    avatarImage: avatarImage
                 ),
                 configuration: configuration
             )

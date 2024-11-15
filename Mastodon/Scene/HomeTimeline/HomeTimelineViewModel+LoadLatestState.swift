@@ -81,12 +81,12 @@ extension HomeTimelineViewModel.LoadLatestState {
 
         override func didEnter(from previousState: GKState?) {
             guard let viewModel else { return }
-            guard let diffableDataSource = viewModel.diffableDataSource else {
-                assertionFailure()
-                return
-            }
-
-            OperationQueue.main.addOperation {
+            Task { @MainActor in
+                guard let diffableDataSource = viewModel.diffableDataSource else {
+                    assertionFailure()
+                    return
+                }
+                
                 viewModel.dataController.records = []
                 var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
                 snapshot.appendSections([.main])
@@ -104,10 +104,10 @@ extension HomeTimelineViewModel.LoadLatestState {
         super.didEnter(from: previousState)
 
         guard let viewModel else { return }
-
-        viewModel.timelineIsEmpty.send(nil)
         
         Task { @MainActor in
+            viewModel.timelineIsEmpty.send(nil)
+            
             let latestFeedRecords = viewModel.dataController.records
 
             let latestStatusIDs: [Status.ID] = latestFeedRecords.compactMap { record in

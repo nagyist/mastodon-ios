@@ -12,6 +12,7 @@ import CoreDataStack
 import MastodonSDK
 import MastodonMeta
 
+@MainActor
 public final class StatusFilterService {
     public static let shared = { StatusFilterService() }()
 

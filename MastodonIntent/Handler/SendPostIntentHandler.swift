@@ -13,6 +13,7 @@ import CoreDataStack
 import MastodonSDK
 import MastodonCore
 
+@MainActor
 final class SendPostIntentHandler: NSObject {
 
     var disposeBag = Set<AnyCancellable>()
@@ -118,7 +119,7 @@ extension SendPostIntentHandler: SendPostIntentHandling {
     }   // end func
 
     // content
-    func resolveContent(for intent: SendPostIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
+    nonisolated func resolveContent(for intent: SendPostIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
         guard let content = intent.content, !content.isEmpty else {
             completion(.needsValue())
             return
@@ -146,7 +147,7 @@ extension SendPostIntentHandler: SendPostIntentHandling {
     }
 
     // visibility
-    func resolveVisibility(for intent: SendPostIntent, with completion: @escaping (PostVisibilityResolutionResult) -> Void) {
+    nonisolated func resolveVisibility(for intent: SendPostIntent, with completion: @escaping (PostVisibilityResolutionResult) -> Void) {
         completion(.success(with: intent.visibility))
     }
 
