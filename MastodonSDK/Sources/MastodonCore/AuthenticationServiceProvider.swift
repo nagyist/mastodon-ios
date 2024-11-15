@@ -53,7 +53,7 @@ public class AuthenticationServiceProvider: ObservableObject {
         Task {
             if authenticationMigrationRequired {
                 migrateLegacyAuthentications(
-                    in: PersistenceManager.shared.managedObjectContext
+                    in: PersistenceManager.shared.mainActorManagedObjectContext
                 )
             }
         }

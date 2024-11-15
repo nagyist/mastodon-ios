@@ -78,7 +78,7 @@ extension ThreadViewModel {
                 newSnapshot.appendSections([.main])
 
                 // top loader
-                let _hasReplyTo: Bool? = try? await PersistenceManager.shared.managedObjectContext.perform {
+                let _hasReplyTo: Bool? = try? await PersistenceManager.shared.mainActorManagedObjectContext.perform {
                     guard case let .root(threadContext) = root else { return nil }
                     return threadContext.status.entity.inReplyToID != nil
                 }

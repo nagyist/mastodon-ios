@@ -183,7 +183,7 @@ extension NotificationService {
     ) async throws {
         // Subscription maybe failed to cancel when sign-out
         // Try cancel again if receive that kind push notification
-        let managedObjectContext = PersistenceManager.shared.managedObjectContext
+        let managedObjectContext = PersistenceManager.shared.mainActorManagedObjectContext
 
         let userAccessToken = pushNotification.accessToken
 
@@ -209,7 +209,7 @@ extension NotificationService {
     }
     
     private func domain(for pushNotification: MastodonPushNotification) async throws -> String? {
-        let managedObjectContext = PersistenceManager.shared.managedObjectContext
+        let managedObjectContext = PersistenceManager.shared.mainActorManagedObjectContext
         return try await managedObjectContext.perform {
             let subscriptionRequest = NotificationSubscription.sortedFetchRequest
             subscriptionRequest.predicate = NotificationSubscription.predicate(userToken: pushNotification.accessToken)

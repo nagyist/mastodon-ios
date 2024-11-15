@@ -12,10 +12,11 @@ import CoreData
 import CoreDataStack
 import AlamofireImage
 
+@MainActor
 public class PersistenceManager {
     public static let shared = { PersistenceManager() }()
     public let coreDataStack: CoreDataStack
-    public let managedObjectContext: NSManagedObjectContext
+    public let mainActorManagedObjectContext: NSManagedObjectContext
     public let backgroundManagedObjectContext: NSManagedObjectContext
     
     private var disposeBag = Set<AnyCancellable>()
@@ -26,15 +27,15 @@ public class PersistenceManager {
         let _backgroundManagedObjectContext = _coreDataStack.persistentContainer.newBackgroundContext()
         
         coreDataStack = _coreDataStack
-        managedObjectContext = _managedObjectContext
+        mainActorManagedObjectContext = _managedObjectContext
         backgroundManagedObjectContext = _backgroundManagedObjectContext
         
         backgroundManagedObjectContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
         NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave, object: backgroundManagedObjectContext)
             .sink { [weak self] notification in
                 guard let self = self else { return }
-                self.managedObjectContext.perform {
-                    self.managedObjectContext.mergeChanges(fromContextDidSave: notification)
+                self.mainActorManagedObjectContext.perform {
+                    self.mainActorManagedObjectContext.mergeChanges(fromContextDidSave: notification)
                 }
             }
             .store(in: &disposeBag)
@@ -60,9 +61,6 @@ public class AppContext: ObservableObject {
         .eraseToAnyPublisher()
     
     private init() {
-
-        let authProvider = AuthenticationServiceProvider.shared
-        
         documentStore = DocumentStore()
         documentStoreSubscription = documentStore.objectWillChange
             .receive(on: DispatchQueue.main)

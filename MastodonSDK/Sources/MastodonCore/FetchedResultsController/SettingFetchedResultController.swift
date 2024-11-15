@@ -29,7 +29,7 @@ public final class SettingFetchedResultController: NSObject {
             fetchRequest.fetchBatchSize = 20
             let controller = NSFetchedResultsController(
                 fetchRequest: fetchRequest,
-                managedObjectContext: PersistenceManager.shared.managedObjectContext,
+                managedObjectContext: PersistenceManager.shared.mainActorManagedObjectContext,
                 sectionNameKeyPath: nil,
                 cacheName: nil
             )

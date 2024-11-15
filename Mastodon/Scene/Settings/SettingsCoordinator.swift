@@ -261,7 +261,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
 extension SettingsCoordinator: PolicySelectionViewControllerDelegate {
     func newPolicySelected(_ viewController: PolicySelectionViewController, newPolicy: NotificationPolicy) {
         self.setting.activeSubscription?.policyRaw = newPolicy.subscriptionPolicy.rawValue
-        try? PersistenceManager.shared.managedObjectContext.save()
+        try? PersistenceManager.shared.mainActorManagedObjectContext.save()
     }
 }
 
