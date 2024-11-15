@@ -27,6 +27,7 @@ enum AboutSettingsEntry: Hashable {
         }
     }
 
+    @MainActor
     var secondaryText: String? {
         switch self {
         case .evenMoreSettings, .contributeToMastodon, .privacyPolicy:
