@@ -54,4 +54,45 @@ extension APIService {
         )
     }
 
+    public func userAccessToken(
+        domain: String,
+        clientID: String,
+        clientSecret: String,
+        redirectURI: String,
+        code: String
+    ) async throws -> Mastodon.Entity.Token {
+        let query = Mastodon.API.OAuth.AccessTokenQuery(
+            clientID: clientID,
+            clientSecret: clientSecret,
+            redirectURI: redirectURI,
+            code: code,
+            grantType: "authorization_code"
+        )
+        return try await Mastodon.API.OAuth.accessToken(
+            session: session,
+            domain: domain,
+            query: query
+        )
+    }
+    
+    public func applicationAccessToken(
+        domain: String,
+        clientID: String,
+        clientSecret: String,
+        redirectURI: String
+    ) async throws -> Mastodon.Entity.Token {
+        let query = Mastodon.API.OAuth.AccessTokenQuery(
+            clientID: clientID,
+            clientSecret: clientSecret,
+            redirectURI: redirectURI,
+            code: nil,
+            grantType: "client_credentials"
+        )
+        return try await Mastodon.API.OAuth.accessToken(
+            session: session,
+            domain: domain,
+            query: query
+        )
+    }
+    
 }

@@ -169,12 +169,14 @@ class MastodonLoginViewController: UIViewController, NeedsDependency {
                 
                 self.mastodonAuthenticationController = authenticationController
                 authenticationController.authenticationSession?.presentationContextProvider = self
-                authenticationController.authenticationSession?.start()
                 
                 self.authenticationViewModel.authenticate(
                     info: info,
-                    pinCodePublisher: authenticationController.pinCodePublisher
+                    pinCodePublisher: authenticationController.resultStream
                 )
+                
+                authenticationController.authenticationSession?.start()
+                
             }
             .store(in: &disposeBag)
     }

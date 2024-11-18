@@ -45,11 +45,13 @@ extension APIService {
         domain: String,
         authorization: Mastodon.API.OAuth.Authorization
     ) async throws -> Mastodon.Entity.Account {
-        return try await Mastodon.API.Account.verifyCredentials(
+        let account = try await Mastodon.API.Account.verifyCredentials(
             session: session,
             domain: domain,
             authorization: authorization
         )
+        PersistenceManager.shared.cacheAccount(account, forUserID: MastodonUserIdentifier(domain: domain, userID: account.id))
+        return account
     }
     
     public func accountUpdateCredentials(

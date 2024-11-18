@@ -24,12 +24,12 @@ extension MastodonRegisterViewController {
         
         let instanceResponse = try await APIService.shared.instance(domain: domain, authenticationBox: nil).singleOutput()
         let applicationResponse = try await APIService.shared.createApplication(domain: domain).singleOutput()
-        let accessTokenResponse = try await APIService.shared.applicationAccessToken(
+        let accessToken = try await APIService.shared.applicationAccessToken(
             domain: domain,
             clientID: applicationResponse.value.clientID!,
             clientSecret: applicationResponse.value.clientSecret!,
             redirectURI: applicationResponse.value.redirectURI!
-        ).singleOutput()
+        )
         
         viewController.viewModel = MastodonRegisterViewModel(
             context: context,
@@ -39,7 +39,7 @@ extension MastodonRegisterViewController {
                 application: applicationResponse.value
             )!,
             instance: instanceResponse.value,
-            applicationToken: accessTokenResponse.value
+            applicationToken: accessToken
         )
         
         return viewController

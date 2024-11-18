@@ -55,7 +55,11 @@ public class PersistenceManager {
     }
     
     public func cacheAccount(_ account: Mastodon.Entity.Account, for authenticationBox: MastodonAuthenticationBox) {
-        FileManager.default.store(account: account, forUserID: authenticationBox.authentication.userIdentifier())
+        cacheAccount(account, forUserID: authenticationBox.authentication.userIdentifier())
+    }
+    
+    public func cacheAccount(_ account: Mastodon.Entity.Account, forUserID userID: MastodonUserIdentifier) {
+        FileManager.default.store(account: account, forUserID: userID)
     }
 }
 

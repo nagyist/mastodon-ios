@@ -11,6 +11,7 @@ import CoreDataStack
 import Combine
 import MastodonSDK
 import MastodonCore
+import AuthenticationServices
 
 @MainActor
 final class AuthenticationViewModel {
@@ -136,50 +137,38 @@ extension AuthenticationViewModel {
         }
     }
     
-    func authenticate(info: AuthenticateInfo, pinCodePublisher: PassthroughSubject<String, Never>) {
-        pinCodePublisher
-            .handleEvents(receiveOutput: { [weak self] _ in
-                guard let self = self else { return }
-                self.isAuthenticating.value = true
-            })
-            .compactMap { [weak self] code -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Account>, Error>? in
-                guard let self = self else { return nil }
-                return APIService.shared
-                    .userAccessToken(
-                        domain: info.domain,
-                        clientID: info.clientID,
-                        clientSecret: info.clientSecret,
-                        redirectURI: info.redirectURI,
-                        code: code
-                    )
-                    .flatMap { response -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Account>, Error> in
-                        let token = response.value
-                        return AuthenticationViewModel.verifyAndSaveAuthentication(
-                            context: self.context,
-                            info: info,
-                            userToken: token
+    func authenticate(info: AuthenticateInfo, pinCodePublisher: AsyncThrowingStream<String, Error>) {
+        Task {
+            do {
+                for try await code in pinCodePublisher {
+                    self.isAuthenticating.value = true
+                    let token = try await APIService.shared
+                        .userAccessToken(
+                            domain: info.domain,
+                            clientID: info.clientID,
+                            clientSecret: info.clientSecret,
+                            redirectURI: info.redirectURI,
+                            code: code
                         )
-                    }
-                    .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                guard let self = self else { return }
-                switch completion {
-                case .failure(let error):
-                    self.isAuthenticating.value = false
-                    self.error.value = error
-                case .finished:
-                    break
+                    let account = try await AuthenticationViewModel.verifyAndSaveAuthentication(
+                        context: self.context,
+                        info: info,
+                        userToken: token
+                    )
+                    self.authenticated.send((domain: info.domain, account: account))
                 }
-            } receiveValue: { [weak self] response in
-                guard let self = self else { return }
-                let account = response.value
-                
-                self.authenticated.send((domain: info.domain, account: account))
+            } catch let error {
+                self.isAuthenticating.value = false
+                if let error = error as? ASWebAuthenticationSessionError {
+                    if error.errorCode == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                        //cancelled
+                        return
+                    }
+                } else {
+                    // error
+                }
             }
-            .store(in: &self.disposeBag)
+        }
     }
     
     static func verifyAndSaveAuthentication(
@@ -213,5 +202,34 @@ extension AuthenticationViewModel {
             return response
         }
         .eraseToAnyPublisher()
+    }
+    
+    static func verifyAndSaveAuthentication(
+        context: AppContext,
+        info: AuthenticateInfo,
+        userToken: Mastodon.Entity.Token
+    ) async throws -> Mastodon.Entity.Account {
+        let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken.accessToken)
+        
+        let account = try await APIService.shared.accountVerifyCredentials(
+            domain: info.domain,
+            authorization: authorization
+        )
+        
+        let authentication = MastodonAuthentication
+            .createFrom(domain: info.domain,
+                        userID: account.id,
+                        username: account.username,
+                        appAccessToken: userToken.accessToken,  // TODO: swap app token
+                        userAccessToken: userToken.accessToken,
+                        clientID: info.clientID,
+                        clientSecret: info.clientSecret,
+                        accountCreatedAt: account.createdAt)
+        
+        AuthenticationServiceProvider.shared
+            .authentications
+            .insert(authentication, at: 0) // TODO: this should not be happening. authentications should be readonly.
+        
+        return account
     }
 }

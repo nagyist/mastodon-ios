@@ -20,7 +20,7 @@ public final class APIService {
     public static let shared = { APIService(backgroundContext: PersistenceManager.shared.backgroundManagedObjectContext) }()
     
     public static let callbackURLScheme = "mastodon"
-    public static let oauthCallbackURL = "mastodon://joinmastodon.org/oauth"
+    nonisolated public static let oauthCallbackURL = "mastodon://joinmastodon.org/oauth"
         
     var disposeBag = Set<AnyCancellable>()
     
