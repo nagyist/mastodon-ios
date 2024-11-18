@@ -653,7 +653,7 @@ extension ProfileViewController {
                 viewModel.profileAboutViewModel.fields = updatedAccount.mastodonFields
             }
 
-            if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox) {
+            if let updatedMe = try? await APIService.shared.accountInfo(viewModel.authenticationBox) {
                 viewModel.me = updatedMe
             }
 
@@ -1096,7 +1096,7 @@ extension ProfileViewController {
         } else if viewModel.account == viewModel.me {
             // update my profile
             Task {
-                if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox) {
+                if let updatedMe = try? await APIService.shared.accountInfo(viewModel.authenticationBox) {
                     viewModel.me = updatedMe
                     viewModel.account = updatedMe
                 }

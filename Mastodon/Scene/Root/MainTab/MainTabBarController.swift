@@ -380,7 +380,7 @@ extension MainTabBarController {
         guard let authenticationBox else { return }
         
         Task { @MainActor in
-            let profileResponse = try await APIService.shared.authenticatedUserInfo(authenticationBox: authenticationBox)
+            let profileResponse = try await APIService.shared.accountInfo(authenticationBox)
         }
     }
 }

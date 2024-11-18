@@ -12,13 +12,6 @@ import MastodonCommon
 import MastodonSDK
 
 extension APIService {
-    public func authenticatedUserInfo(
-        authenticationBox: MastodonAuthenticationBox
-    ) async throws -> Mastodon.Entity.Account {
-        let authenticated = try await accountInfo(authenticationBox)
-        return authenticated
-    }
-
     public func accountInfo(_ authenticationBox: MastodonAuthenticationBox
     ) async throws -> Mastodon.Entity.Account {
         let account = try await Mastodon.API.Account.accountInfo(
