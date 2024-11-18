@@ -139,7 +139,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         switch (profile, statusID) {
             case (profile, nil):
                 Task {
-                    guard let me = authenticationBox.authentication.account() else { return }
+                    guard let me = authenticationBox.cachedAccount else { return }
 
                     guard let account = try await APIService.shared.search(
                         query: .init(q: incomingURL.absoluteString, type: .accounts, resolve: true),
@@ -208,9 +208,8 @@ extension SceneDelegate {
                 return false
             }
 
-            let _isActive = try? await AuthenticationServiceProvider.shared.activeMastodonUser(
-                domain: authentication.domain,
-                userID: authentication.userID
+            let _isActive = AuthenticationServiceProvider.shared.activateUser(authentication.userID,
+                inDomain: authentication.domain
             )
             
             guard _isActive == true else {
@@ -283,7 +282,7 @@ extension SceneDelegate {
             
             Task {
                 do {
-                    guard let me = authenticationBox.authentication.account() else { return }
+                    guard let me = authenticationBox.cachedAccount else { return }
                     
                     guard let account = try await APIService.shared.search(
                         query: .init(q: components[1], type: .accounts, resolve: true),

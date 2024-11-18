@@ -151,8 +151,8 @@ extension MastodonPickServerViewController {
             .authenticated
             .asyncMap { domain, user -> Result<Bool, Error> in
                 do {
-                    let result = try await AuthenticationServiceProvider.shared.activeMastodonUser(domain: domain, userID: user.id)
-                    return .success(result)
+                    let activated = AuthenticationServiceProvider.shared.activateUser(user.id, inDomain: domain)
+                    return .success(activated)
                 } catch {
                     return .failure(error)
                 }

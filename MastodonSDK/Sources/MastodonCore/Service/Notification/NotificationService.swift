@@ -94,7 +94,7 @@ extension NotificationService {
 
         var items: [UIApplicationShortcutItem] = []
         for authentication in AuthenticationServiceProvider.shared.authentications {
-            guard let account = authentication.account() else { continue }
+            guard let account = authentication.cachedAccount() else { continue }
             let accessToken = authentication.userAccessToken
             let count = UserDefaults.shared.getNotificationCountWithAccessToken(accessToken: accessToken)
             guard count > 0 else { continue }

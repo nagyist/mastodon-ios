@@ -104,7 +104,7 @@ extension AccountListViewModel {
         authentication: MastodonAuthentication,
         activeAuthentication: MastodonAuthentication
     ) {
-        guard let account = authentication.account() else { return }
+        guard let account = authentication.cachedAccount() else { return }
 
         // avatar
         cell.avatarButton.avatarImageView.configure(with: account.avatarImageURL())

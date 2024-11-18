@@ -355,7 +355,7 @@ extension HomeTimelineViewController {
 
                 let userDoesntFollowPeople: Bool
                 if let authenticationBox = self?.authenticationBox,
-                   let me = authenticationBox.authentication.account() {
+                   let me = authenticationBox.cachedAccount {
                     userDoesntFollowPeople = me.followersCount == 0
                 } else {
                     userDoesntFollowPeople = true

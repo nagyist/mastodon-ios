@@ -181,7 +181,6 @@ class ProfileViewModel: NSObject {
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: mastodonAuthentication.userAccessToken)
         return APIService.shared.accountVerifyCredentials(domain: domain, authorization: authorization)
             .tryMap { response in
-                FileManager.default.store(account: response.value, forUserID: mastodonAuthentication.userIdentifier())
                 return response
             }.eraseToAnyPublisher()
     }
@@ -233,8 +232,6 @@ extension ProfileViewModel {
             query: query,
             authorization: authorization
         )
-
-        FileManager.default.store(account: response.value, forUserID: authenticationBox.authentication.userIdentifier())
         NotificationCenter.default.post(name: .userFetched, object: nil)
 
         return response

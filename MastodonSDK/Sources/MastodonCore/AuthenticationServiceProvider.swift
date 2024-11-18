@@ -101,13 +101,16 @@ public class AuthenticationServiceProvider: ObservableObject {
         authentications.removeAll(where: { $0 == authentication })
     }
     
-    func activateAuthentication(in domain: String, for userID: String) {
+    public func activateUser(_ userID: String, inDomain domain: String) -> Bool {
+        var found = false
         authentications = authentications.map { authentication in
             guard authentication.domain == domain, authentication.userID == userID else {
                 return authentication
             }
+            found = true
             return authentication.updating(activatedAt: Date())
         }
+        return found
     }
     
     func getAuthentication(in domain: String, for userID: String) -> MastodonAuthentication? {
@@ -139,16 +142,6 @@ public extension AuthenticationServiceProvider {
                 catch {}
             }
         }
-    }
-    
-    func activeMastodonUser(domain: String, userID: String) async throws -> Bool {
-        var isActive = false
-        
-        AuthenticationServiceProvider.shared.activateAuthentication(in: domain, for: userID)
-        
-        isActive = true
-        
-        return isActive
     }
     
     func signOutMastodonUser(authentication: MastodonAuthentication) async throws {
@@ -230,11 +223,7 @@ public extension AuthenticationServiceProvider {
         // it when we need it to display on the home timeline.
         // We need this (also) for the Account-list, but it might be the wrong place. App Startup might be more appropriate
         for authentication in authentications {
-            guard let account = try? await APIService.shared.accountInfo(domain: authentication.domain,
-                                                                  userID: authentication.userID,
-                                                                  authorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.userAccessToken)).value else { continue }
-
-            FileManager.default.store(account: account, forUserID: authentication.userIdentifier())
+            guard let account = try? await APIService.shared.accountInfo(MastodonAuthenticationBox(authentication: authentication)) else { continue }
         }
 
         NotificationCenter.default.post(name: .userFetched, object: nil)

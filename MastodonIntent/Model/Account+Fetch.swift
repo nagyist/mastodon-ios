@@ -16,7 +16,7 @@ extension Account {
     @MainActor
     static func fetch() async throws -> [Account] {
         let accounts = AuthenticationServiceProvider.shared.authentications.compactMap { mastodonAuthentication -> Account? in
-            guard let authenticatedAccount = mastodonAuthentication.account() else {
+            guard let authenticatedAccount = mastodonAuthentication.cachedAccount() else {
                 return nil
             }
             let account = Account(

@@ -96,7 +96,7 @@ final class HomeTimelineViewModel: NSObject {
         self.authenticationBox = authenticationBox
         self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox)
         super.init()
-        self.dataController.records = (try? FileManager.default.cachedHomeTimeline(for: authenticationBox).map {
+        self.dataController.records = (try? PersistenceManager.shared.cachedTimeline(.homeTimeline(authenticationBox)).map {
             MastodonFeed.fromStatus($0, kind: .home)
         }) ?? []
         

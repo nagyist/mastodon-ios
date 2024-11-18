@@ -144,7 +144,7 @@ extension AccountListViewController: UITableViewDelegate {
         case .authentication(let record):
             assert(Thread.isMainThread)
             Task { @MainActor in
-                let isActive = try await AuthenticationServiceProvider.shared.activeMastodonUser(domain: record.domain, userID: record.userID)
+                let isActive = AuthenticationServiceProvider.shared.activateUser(record.userID, inDomain: record.domain)
                 guard isActive else { return }
                 self.coordinator.setup()
             }   // end Task

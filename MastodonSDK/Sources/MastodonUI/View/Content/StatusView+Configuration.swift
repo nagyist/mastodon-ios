@@ -88,7 +88,7 @@ extension StatusView {
     private func configureHeader(status: MastodonStatus) {
         if status.entity.reblogged == true, 
             let authenticationBox = viewModel.authenticationBox,
-           let account = authenticationBox.authentication.account() {
+           let account = authenticationBox.cachedAccount {
 
             let name = account.displayNameWithFallback
             let emojis = account.emojis

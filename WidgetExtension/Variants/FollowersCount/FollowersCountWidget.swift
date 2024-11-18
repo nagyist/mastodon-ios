@@ -71,12 +71,12 @@ struct FollowersCountWidget: Widget {
 
 private extension FollowersCountWidgetProvider {
     func loadCurrentEntry(for configuration: FollowersCountIntent, in context: Context, completion: @escaping (FollowersCountEntry) -> Void) {
-        Task {
+        Task { @MainActor in
 
-            await AuthenticationServiceProvider.shared.prepareForUse()
+            AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
-                let authBox = await AuthenticationServiceProvider.shared.activeAuthentication
+                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -85,7 +85,7 @@ private extension FollowersCountWidgetProvider {
             }
             
             guard
-                let desiredAccount = configuration.account ?? authBox.authentication.account()?.acctWithDomain
+                let desiredAccount = configuration.account ?? authBox.cachedAccount?.acctWithDomain
             else {
                 return completion(.unconfigured)
             }

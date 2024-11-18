@@ -14,27 +14,23 @@ import MastodonSDK
 extension APIService {
     public func authenticatedUserInfo(
         authenticationBox: MastodonAuthenticationBox
-    ) async throws -> Mastodon.Response.Content<Mastodon.Entity.Account> {
-        try await accountInfo(
+    ) async throws -> Mastodon.Entity.Account {
+        let authenticated = try await accountInfo(authenticationBox)
+        return authenticated
+    }
+
+    public func accountInfo(_ authenticationBox: MastodonAuthenticationBox
+    ) async throws -> Mastodon.Entity.Account {
+        let account = try await Mastodon.API.Account.accountInfo(
+            session: session,
             domain: authenticationBox.domain,
             userID: authenticationBox.userID,
             authorization: authenticationBox.userAuthorization
-        )
-    }
-
-    public func accountInfo(
-        domain: String,
-        userID: Mastodon.Entity.Account.ID,
-        authorization: Mastodon.API.OAuth.Authorization
-    ) async throws -> Mastodon.Response.Content<Mastodon.Entity.Account> {
-        let response = try await Mastodon.API.Account.accountInfo(
-            session: session,
-            domain: domain,
-            userID: userID,
-            authorization: authorization
-        ).singleOutput()
+        ).singleOutput().value
         
-        return response
+        PersistenceManager.shared.cacheAccount(account, for: authenticationBox)
+        
+        return account
     }
     
 }

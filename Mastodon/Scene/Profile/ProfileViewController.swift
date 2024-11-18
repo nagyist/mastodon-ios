@@ -653,9 +653,8 @@ extension ProfileViewController {
                 viewModel.profileAboutViewModel.fields = updatedAccount.mastodonFields
             }
 
-            if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
+            if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox) {
                 viewModel.me = updatedMe
-                FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -1097,10 +1096,9 @@ extension ProfileViewController {
         } else if viewModel.account == viewModel.me {
             // update my profile
             Task {
-                if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
+                if let updatedMe = try? await APIService.shared.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox) {
                     viewModel.me = updatedMe
                     viewModel.account = updatedMe
-                    FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
                 }
 
                 viewModel.isUpdating = false

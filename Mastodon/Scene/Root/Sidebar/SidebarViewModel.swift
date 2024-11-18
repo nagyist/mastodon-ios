@@ -76,7 +76,7 @@ extension SidebarViewModel {
             let imageURL: URL?
             switch item {
             case .me:
-                let account = self.authenticationBox?.authentication.account()
+                let account = self.authenticationBox?.authentication.cachedAccount()
                 imageURL = account?.avatarImageURL()
             case .home, .search, .compose, .notifications:
                 // no custom avatar for other tabs
@@ -134,7 +134,7 @@ extension SidebarViewModel {
                     }
                     .store(in: &cell.disposeBag)
                 case .me:
-                    guard let account = self.authenticationBox?.authentication.account() else { return }
+                    guard let account = self.authenticationBox?.authentication.cachedAccount() else { return }
 
                     let currentUserDisplayName = account.displayNameWithFallback
                     cell.accessibilityHint = L10n.Scene.AccountList.tabBarHint(currentUserDisplayName)

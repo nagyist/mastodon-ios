@@ -189,7 +189,7 @@ extension NotificationView {
             notificationTypeIndicatorLabel.reset()
         }
 
-        if let me = authenticationBox.authentication.account() {
+        if let me = authenticationBox.cachedAccount {
             let isMyself = (author == me)
             let isMuting: Bool
             let isBlocking: Bool

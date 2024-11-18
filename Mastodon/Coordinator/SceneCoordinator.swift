@@ -66,7 +66,7 @@ final public class SceneCoordinator {
                             }
                             let domain = authentication.domain
                             let userID = authentication.userID
-                            let isSuccess = try await AuthenticationServiceProvider.shared.activeMastodonUser(domain: domain, userID: userID)
+                            let isSuccess = AuthenticationServiceProvider.shared.activateUser(userID, inDomain: domain)
                             guard isSuccess else { return }
 
                             self.setup()
@@ -94,7 +94,7 @@ final public class SceneCoordinator {
                             // show notification related content
                             guard let type = Mastodon.Entity.Notification.NotificationType(rawValue: pushNotification.notificationType) else { return }
                             guard let authenticationBox = self.authenticationBox else { return }
-                            guard let me = authenticationBox.authentication.account() else { return }
+                            guard let me = authenticationBox.cachedAccount else { return }
                             let notificationID = String(pushNotification.notificationID)
 
                             switch type {

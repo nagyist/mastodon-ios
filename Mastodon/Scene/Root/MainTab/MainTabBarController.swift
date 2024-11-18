@@ -86,7 +86,7 @@ class MainTabBarController: UITabBarController {
             homeTimelineViewController.viewModel = HomeTimelineViewModel(context: context, authenticationBox: authenticationBox)
             searchViewController.viewModel = SearchViewModel(context: context, authenticationBox: authenticationBox)
 
-            if let account = authenticationBox.authentication.account() {
+            if let account = authenticationBox.cachedAccount {
                 meProfileViewController.viewModel = ProfileViewModel(context: context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
         }
@@ -112,7 +112,7 @@ extension MainTabBarController {
         willSet {
             if let profileView = (newValue as? UINavigationController)?.topViewController as? ProfileViewController{
                 guard let authenticationBox,
-                      let account = authenticationBox.authentication.account() else { return }
+                      let account = authenticationBox.cachedAccount else { return }
                 profileView.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
         }
@@ -204,7 +204,7 @@ extension MainTabBarController {
             .sink { [weak self] _ in
                 guard let self,
                       let authenticationBox,
-                      let account = authenticationBox.authentication.account() else { return }
+                      let account = authenticationBox.cachedAccount else { return }
 
                 self.avatarURL = account.avatarImageURL()
 
@@ -381,7 +381,6 @@ extension MainTabBarController {
         
         Task { @MainActor in
             let profileResponse = try await APIService.shared.authenticatedUserInfo(authenticationBox: authenticationBox)
-            FileManager.default.store(account: profileResponse.value, forUserID: authenticationBox.authentication.userIdentifier())
         }
     }
 }

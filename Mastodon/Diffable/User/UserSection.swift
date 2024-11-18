@@ -37,7 +37,7 @@ extension UserSection {
                 case .account(let account, let relationship):
                     let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: UserTableViewCell.self), for: indexPath) as! UserTableViewCell
 
-                    guard let me = authenticationBox.authentication.account() else { return cell }
+                    guard let me = authenticationBox.cachedAccount else { return cell }
 
                     cell.userView.setButtonState(.loading)
                     cell.configure(

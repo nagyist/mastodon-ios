@@ -156,7 +156,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
         self.visibility = {
             // default private when user locked
             var visibility: Mastodon.Entity.Status.Visibility = {
-                guard let author = authenticationBox.authentication.account() else {
+                guard let author = authenticationBox.cachedAccount else {
                     return .public
                 }
                 return author.locked ? .private : .public
@@ -195,7 +195,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
         switch destination {
         case .reply(let record):
             let status = record.entity
-            let author = authenticationBox.authentication.account()
+            let author = authenticationBox.cachedAccount
             
             var mentionAccts: [String] = []
             if author?.id != status.account.id {
@@ -306,7 +306,7 @@ extension ComposeContentViewModel {
         // bind author
         $authenticationBox
             .sink { [weak self] authenticationBox in
-                guard let self, let account = authenticationBox.authentication.account() else { return }
+                guard let self, let account = authenticationBox.cachedAccount else { return }
 
                 self.avatarURL = account.avatarImageURL()
 
@@ -575,7 +575,7 @@ extension ComposeContentViewModel {
     
     public func statusPublisher() throws -> StatusPublisher {
        
-        guard authenticationBox.authentication.account() != nil else {
+        guard authenticationBox.cachedAccount != nil else {
             throw AppError.badAuthentication
         }
         
@@ -624,7 +624,7 @@ extension ComposeContentViewModel {
         guard case let .editStatus(status, _) = composeContext else { return nil }
 
         // author
-        guard let author = authenticationBox.authentication.account() else {
+        guard let author = authenticationBox.cachedAccount else {
             throw AppError.badAuthentication
         }
 
