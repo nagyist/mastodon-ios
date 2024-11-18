@@ -57,7 +57,7 @@ extension SendPostIntentHandler: SendPostIntentHandling {
                 }
                 mastodonAuthentications = [authentication]
             } else {
-                mastodonAuthentications = try accounts.mastodonAuthentication()
+                mastodonAuthentications = try accounts.mastodonAuthentications()
             }
 
             let authenticationBoxes = mastodonAuthentications.map { authentication in
@@ -149,6 +149,18 @@ extension SendPostIntentHandler: SendPostIntentHandling {
     // visibility
     nonisolated func resolveVisibility(for intent: SendPostIntent, with completion: @escaping (PostVisibilityResolutionResult) -> Void) {
         completion(.success(with: intent.visibility))
+    }
+
+}
+
+extension Array where Element == Account {
+    @MainActor
+    func mastodonAuthentications() throws -> [MastodonAuthentication] {
+        let identifiers = self
+            .compactMap { $0.identifier }
+            .compactMap { UUID(uuidString: $0) }
+        let results = AuthenticationServiceProvider.shared.authentications.filter({ identifiers.contains($0.identifier) })
+        return results
     }
 
 }

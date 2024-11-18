@@ -34,15 +34,3 @@ extension Account {
     }
 
 }
-
-extension Array where Element == Account {
-    @MainActor
-    func mastodonAuthentication() throws -> [MastodonAuthentication] {
-        let identifiers = self
-            .compactMap { $0.identifier }
-            .compactMap { UUID(uuidString: $0) }
-        let results = AuthenticationServiceProvider.shared.authentications.filter({ identifiers.contains($0.identifier) })
-        return results
-    }
-    
-}
