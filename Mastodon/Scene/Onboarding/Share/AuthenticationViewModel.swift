@@ -156,16 +156,17 @@ extension AuthenticationViewModel {
                         userToken: token
                     )
                     self.authenticated.send((domain: info.domain, account: account))
+                    self.authenticated.send(completion: .finished)
                 }
             } catch let error {
                 self.isAuthenticating.value = false
                 if let error = error as? ASWebAuthenticationSessionError {
                     if error.errorCode == ASWebAuthenticationSessionError.canceledLogin.rawValue {
-                        //cancelled
+                        authenticated.send(completion: .finished)
                         return
                     }
                 } else {
-                    // error
+                    authenticated.send(completion: .finished)
                 }
             }
         }
