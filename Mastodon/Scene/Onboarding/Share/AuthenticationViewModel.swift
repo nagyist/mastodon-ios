@@ -175,14 +175,14 @@ extension AuthenticationViewModel {
         context: AppContext,
         info: AuthenticateInfo,
         userToken: Mastodon.Entity.Token
-    ) -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Account>, Error> {
+    ) -> AnyPublisher<MastodonAuthentication, Error> {
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken.accessToken)
 
         return APIService.shared.accountVerifyCredentials(
             domain: info.domain,
             authorization: authorization
         )
-        .tryMap { response -> Mastodon.Response.Content<Mastodon.Entity.Account> in
+        .tryMap { response -> MastodonAuthentication in
             let account = response.value
 
             let authentication = MastodonAuthentication.createFrom(domain: info.domain,
@@ -198,8 +198,7 @@ extension AuthenticationViewModel {
                 .authentications
                 .insert(authentication, at: 0)
 
-
-            return response
+            return authentication
         }
         .eraseToAnyPublisher()
     }

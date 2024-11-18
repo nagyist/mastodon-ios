@@ -128,7 +128,7 @@ extension MastodonConfirmEmailViewController {
                                 }
                                 .store(in: &self.context.disposeBag)    // execute in the background
                         }   // end switch
-                    } receiveValue: { response in
+                    } receiveValue: { _ in
                         self.coordinator.setup()
                         // self.dismiss(animated: true, completion: nil)
                     }
