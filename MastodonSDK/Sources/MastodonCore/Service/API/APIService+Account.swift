@@ -162,6 +162,8 @@ extension APIService {
             authorization: authorization
         ).singleOutput()
 
+        PersistenceManager.shared.cacheAccount(response.value, for: authenticationBox)
+        
         return response.value
     }
 }
