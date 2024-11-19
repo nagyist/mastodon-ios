@@ -11,7 +11,7 @@ class MultiFollowersCountIntentHandler: INExtension, MultiFollowersCountIntentHa
     func provideAccountsOptionsCollection(for intent: MultiFollowersCountIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
         guard
             let searchTerm = searchTerm,
-            let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
+            let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value
         else {
             return INObjectCollection(items: [])
         }

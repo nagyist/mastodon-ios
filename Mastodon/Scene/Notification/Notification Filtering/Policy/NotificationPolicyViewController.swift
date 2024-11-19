@@ -143,7 +143,7 @@ class NotificationPolicyViewController: UIViewController {
     // MARK: - Action
 
     @objc private func save(_ sender: UIButton) {
-        guard let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication else { return }
+        guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
 
         Task { [weak self] in
             guard let self else { return }

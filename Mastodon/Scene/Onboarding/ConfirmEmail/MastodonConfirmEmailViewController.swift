@@ -99,7 +99,7 @@ extension MastodonConfirmEmailViewController {
         self.viewModel.timestampUpdatePublisher
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                AuthenticationViewModel.verifyAndSaveAuthentication(context: self.context, info: self.viewModel.authenticateInfo, userToken: self.viewModel.userToken)
+                AuthenticationViewModel.verifyAndActivateAuthentication(info: self.viewModel.authenticateInfo, userToken: self.viewModel.userToken)
                     .receive(on: DispatchQueue.main)
                     .sink { completion in
                         switch completion {

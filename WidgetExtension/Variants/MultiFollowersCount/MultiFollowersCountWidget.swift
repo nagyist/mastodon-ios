@@ -76,7 +76,7 @@ private extension MultiFollowersCountWidgetProvider {
             AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
-                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)

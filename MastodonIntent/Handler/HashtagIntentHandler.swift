@@ -8,7 +8,7 @@ import MastodonCore
 class HashtagIntentHandler: INExtension, HashtagIntentHandling {
     func provideHashtagOptionsCollection(for intent: HashtagIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
 
-        guard let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
+        guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value
         else {
             return INObjectCollection(items: [])
         }

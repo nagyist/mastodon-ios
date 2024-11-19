@@ -851,11 +851,11 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
                         self.profileHeaderViewController?.viewModel.isEditing = true
                         profileAboutViewModel.isEditing = true
                     }
-                } receiveValue: { [weak self] response in
+                } receiveValue: { [weak self] account in
                     guard let self else { return }
 
-                    self.profileHeaderViewController?.viewModel.setProfileInfo(accountForEdit: response.value)
-                    viewModel.accountForEdit = response.value
+                    self.profileHeaderViewController?.viewModel.setProfileInfo(accountForEdit: account)
+                    viewModel.accountForEdit = account
                 }
                 .store(in: &disposeBag)
         } else if isEdited == false {

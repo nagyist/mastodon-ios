@@ -162,8 +162,7 @@ extension ShareViewController {
     private func setupAuthContext() throws -> MastodonAuthenticationBox? {
         AuthenticationServiceProvider.shared.prepareForUse()
 
-        guard let authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first else { return nil }
-        return MastodonAuthenticationBox(authentication: authentication)
+        return AuthenticationServiceProvider.shared.currentActiveUser.value
     }
     
     private func setupHintLabel() {

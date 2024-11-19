@@ -35,7 +35,7 @@ extension EmojiService.CustomEmojiViewModel.LoadState {
         override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             guard let viewModel,
-                  let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication,
+                  let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value,
                   let stateMachine else { return }
 
             let apiService = APIService.shared

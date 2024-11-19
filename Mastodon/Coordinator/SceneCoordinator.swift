@@ -23,7 +23,9 @@ final public class SceneCoordinator {
     private weak var sceneDelegate: SceneDelegate!
     private(set) weak var appContext: AppContext!
     
-    private(set) var authenticationBox: MastodonAuthenticationBox?
+    var authenticationBox: MastodonAuthenticationBox? {
+        AuthenticationServiceProvider.shared.currentActiveUser.value
+    }
     
     let id = UUID().uuidString
     
@@ -61,13 +63,9 @@ final public class SceneCoordinator {
                     } else {
                         // switch to notification's account
                         do {
-                            guard let authentication = AuthenticationServiceProvider.shared.authentications.first(where: { $0.userAccessToken == accessToken }) else {
+                            guard let authenticationBox = AuthenticationServiceProvider.shared.activateExistingUserToken(accessToken) else {
                                 return
                             }
-                            let domain = authentication.domain
-                            let userID = authentication.userID
-                            let isSuccess = AuthenticationServiceProvider.shared.activateUser(userID, inDomain: domain)
-                            guard isSuccess else { return }
 
                             self.setup()
                             try await Task.sleep(nanoseconds: .second * 1)
@@ -93,7 +91,6 @@ final public class SceneCoordinator {
 
                             // show notification related content
                             guard let type = Mastodon.Entity.Notification.NotificationType(rawValue: pushNotification.notificationType) else { return }
-                            guard let authenticationBox = self.authenticationBox else { return }
                             guard let me = authenticationBox.cachedAccount else { return }
                             let notificationID = String(pushNotification.notificationID)
 
@@ -254,9 +251,6 @@ extension SceneCoordinator {
         let rootViewController: UIViewController
 
         AuthenticationServiceProvider.shared.prepareForUse()
-        if let _authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first {
-            self.authenticationBox = MastodonAuthenticationBox(authentication: _authentication)
-        }
 
         switch UIDevice.current.userInterfaceIdiom {
             case .phone:
@@ -544,11 +538,11 @@ private extension SceneCoordinator {
             activityViewController.popoverPresentationController?.barButtonItem = barButtonItem
             viewController = activityViewController
         case .settings(let setting):
-            guard let presentedOn = sender,
-                  let accountName = authenticationBox?.authentication.username,
-                  let authenticationBox
+            guard let presentedOn = sender, let authenticationBox = self.authenticationBox
             else { return nil }
-
+            
+            let accountName = authenticationBox.authentication.username
+            
             let settingsCoordinator = SettingsCoordinator(presentedOn: presentedOn,
                                                           accountName: accountName,
                                                           setting: setting,

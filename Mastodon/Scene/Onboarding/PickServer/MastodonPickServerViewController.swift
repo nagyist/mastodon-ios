@@ -149,9 +149,9 @@ extension MastodonPickServerViewController {
 
         authenticationViewModel
             .authenticated
-            .asyncMap { domain, user -> Result<Bool, Error> in
+            .asyncMap { authBox -> Result<Bool, Error> in
                 do {
-                    let activated = AuthenticationServiceProvider.shared.activateUser(user.id, inDomain: domain)
+                    let activated = AuthenticationServiceProvider.shared.activateExistingUser(authBox.userID, inDomain: authBox.domain)
                     return .success(activated)
                 } catch {
                     return .failure(error)

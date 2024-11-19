@@ -19,8 +19,8 @@ final class AuthenticationViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
-    let coordinator: SceneCoordinator
+    private let context: AppContext
+    private let coordinator: SceneCoordinator
     let isAuthenticationExist: Bool
     let input = CurrentValueSubject<String, Never>("")
     
@@ -31,7 +31,7 @@ final class AuthenticationViewModel {
     let isAuthenticating = CurrentValueSubject<Bool, Never>(false)
     let isRegistering = CurrentValueSubject<Bool, Never>(false)
     let isIdle = CurrentValueSubject<Bool, Never>(true)
-    let authenticated = PassthroughSubject<(domain: String, account: Mastodon.Entity.Account), Never>()
+    let authenticated = PassthroughSubject<MastodonAuthenticationBox, Never>()
     let error = CurrentValueSubject<Error?, Never>(nil)
         
     init(context: AppContext, coordinator: SceneCoordinator, isAuthenticationExist: Bool) {
@@ -150,12 +150,11 @@ extension AuthenticationViewModel {
                             redirectURI: info.redirectURI,
                             code: code
                         )
-                    let account = try await AuthenticationViewModel.verifyAndSaveAuthentication(
-                        context: self.context,
+                    let authBox = try await AuthenticationViewModel.verifyAndActivateAuthentication(
                         info: info,
                         userToken: token
                     )
-                    self.authenticated.send((domain: info.domain, account: account))
+                    self.authenticated.send(authBox)
                     self.authenticated.send(completion: .finished)
                 }
             } catch let error {
@@ -166,70 +165,38 @@ extension AuthenticationViewModel {
                         return
                     }
                 } else {
+                    self.error.value = error
                     authenticated.send(completion: .finished)
                 }
             }
         }
     }
     
-    static func verifyAndSaveAuthentication(
-        context: AppContext,
+    static func verifyAndActivateAuthentication(
         info: AuthenticateInfo,
         userToken: Mastodon.Entity.Token
-    ) -> AnyPublisher<MastodonAuthentication, Error> {
+    ) -> AnyPublisher<(Mastodon.Entity.Account, MastodonAuthenticationBox), Error> {
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken.accessToken)
-
-        return APIService.shared.accountVerifyCredentials(
+        return APIService.shared.verifyAndActivateUser(
             domain: info.domain,
+            clientID: info.clientID,
+            clientSecret: info.clientSecret,
             authorization: authorization
         )
-        .tryMap { response -> MastodonAuthentication in
-            let account = response.value
-
-            let authentication = MastodonAuthentication.createFrom(domain: info.domain,
-                                                                   userID: account.id,
-                                                                   username: account.username,
-                                                                   appAccessToken: userToken.accessToken,  // TODO: swap app token
-                                                                   userAccessToken: userToken.accessToken,
-                                                                   clientID: info.clientID,
-                                                                   clientSecret: info.clientSecret,
-                                                                   accountCreatedAt: account.createdAt)
-
-            AuthenticationServiceProvider.shared
-                .authentications
-                .insert(authentication, at: 0)
-
-            return authentication
-        }
-        .eraseToAnyPublisher()
     }
     
-    static func verifyAndSaveAuthentication(
-        context: AppContext,
+    static func verifyAndActivateAuthentication(
         info: AuthenticateInfo,
         userToken: Mastodon.Entity.Token
-    ) async throws -> Mastodon.Entity.Account {
+    ) async throws -> MastodonAuthenticationBox {
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: userToken.accessToken)
         
-        let account = try await APIService.shared.accountVerifyCredentials(
+        let (_, authBox) = try await APIService.shared.verifyAndActivateUser(
             domain: info.domain,
+            clientID: info.clientID,
+            clientSecret: info.clientSecret,
             authorization: authorization
         )
-        
-        let authentication = MastodonAuthentication
-            .createFrom(domain: info.domain,
-                        userID: account.id,
-                        username: account.username,
-                        appAccessToken: userToken.accessToken,  // TODO: swap app token
-                        userAccessToken: userToken.accessToken,
-                        clientID: info.clientID,
-                        clientSecret: info.clientSecret,
-                        accountCreatedAt: account.createdAt)
-        
-        AuthenticationServiceProvider.shared
-            .authentications
-            .insert(authentication, at: 0) // TODO: this should not be happening. authentications should be readonly.
-        
-        return account
+        return authBox
     }
 }

@@ -45,16 +45,16 @@ extension InstanceService {
     func updateInstance(domain: String) async {
         guard let apiService else { return }
         
-        let response = try? await apiService.instance(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication)
+        let response = try? await apiService.instance(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.currentActiveUser.value)
             .singleOutput()
             
         if response?.value.version?.majorServerVersion(greaterThanOrEquals: 4) == true {
-            guard let instanceV2 = try? await apiService.instanceV2(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication).singleOutput() else {
+            guard let instanceV2 = try? await apiService.instanceV2(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.currentActiveUser.value).singleOutput() else {
                 return
             }
             
             self.updateInstanceV2(domain: domain, response: instanceV2)
-            if let translationResponse = try? await apiService.translationLanguages(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication).singleOutput() {
+            if let translationResponse = try? await apiService.translationLanguages(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.currentActiveUser.value).singleOutput() {
                 updateTranslationLanguages(domain: domain, response: translationResponse)
             }
         } else if let response {

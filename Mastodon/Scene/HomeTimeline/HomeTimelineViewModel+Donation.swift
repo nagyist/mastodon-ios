@@ -11,8 +11,11 @@ extension HomeTimelineViewModel {
         let userAuthentication = authenticationBox
             .authentication
         guard let accountCreatedAt = userAuthentication.accountCreatedAt else {
-            let updated = try? await APIService.shared.accountVerifyCredentials(domain: userAuthentication.domain, authorization: authenticationBox.userAuthorization)
-            guard let accountCreatedAt = updated?.createdAt else { return }
+            let updated = try? await APIService.shared.verifyAndActivateUser(domain: userAuthentication.domain,
+                                                                                clientID: userAuthentication.clientID,
+                                                                                clientSecret: userAuthentication.clientSecret,
+                                                                                    authorization: authenticationBox.userAuthorization)
+            guard let accountCreatedAt = updated?.1.authentication.createdAt else { return }
             AuthenticationServiceProvider.shared.updateAccountCreatedAt(accountCreatedAt, forAuthentication: userAuthentication)
             return
         }

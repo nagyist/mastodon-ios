@@ -45,29 +45,20 @@ extension SendPostIntentHandler: SendPostIntentHandling {
             // fetch authentications from
             // user pick accounts
             // or fallback to active account
-            let mastodonAuthentications: [MastodonAuthentication]
+            let authBoxes: [MastodonAuthenticationBox]
             let accounts = intent.accounts ?? []
             if accounts.isEmpty {
-                // fixme: refactor this and implemented method on AuthenticationServiceProvider
-                let _authentication = AuthenticationServiceProvider.shared.authentications.sorted(by: { $0.activedAt > $1.activedAt }).first
-    
-                guard let authentication = _authentication else {
+                guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else {
                     let failureReason = APIService.APIError.implicit(.authenticationMissing).errorDescription ?? "Fail to Send Post"
                     return SendPostIntentResponse.failure(failureReason: failureReason)
                 }
-                mastodonAuthentications = [authentication]
+                authBoxes = [authBox]
             } else {
-                mastodonAuthentications = try accounts.mastodonAuthentications()
-            }
-
-            let authenticationBoxes = mastodonAuthentications.map { authentication in
-                MastodonAuthenticationBox(
-                    authentication: authentication
-                )
+                authBoxes = try accounts.mastodonAuthenticationBoxes()
             }
             
             var posts: [Post] = []
-            for authenticationBox in authenticationBoxes {
+            for authenticationBox in authBoxes {
                 let idempotencyKey = UUID().uuidString
                 let response = try await api.publishStatus(
                     domain: authenticationBox.domain,
@@ -142,7 +133,7 @@ extension SendPostIntentHandler: SendPostIntentHandling {
     }
     
     func provideAccountsOptionsCollection(for intent: SendPostIntent) async throws -> INObjectCollection<Account> {
-        let accounts = try await Account.fetch()
+        let accounts = Account.loadFromCache()
         return .init(items: accounts)
     }
 
@@ -155,11 +146,11 @@ extension SendPostIntentHandler: SendPostIntentHandling {
 
 extension Array where Element == Account {
     @MainActor
-    func mastodonAuthentications() throws -> [MastodonAuthentication] {
+    func mastodonAuthenticationBoxes() throws -> [MastodonAuthenticationBox] {
         let identifiers = self
             .compactMap { $0.identifier }
             .compactMap { UUID(uuidString: $0) }
-        let results = AuthenticationServiceProvider.shared.authentications.filter({ identifiers.contains($0.identifier) })
+        let results = AuthenticationServiceProvider.shared.mastodonAuthenticationBoxes.filter({ identifiers.contains($0.authentication.identifier) })
         return results
     }
 

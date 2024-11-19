@@ -18,16 +18,17 @@ public class AuthenticationServiceProvider: ObservableObject {
 
     var disposeBag = Set<AnyCancellable>()
     
+    public let currentActiveUser = CurrentValueSubject<MastodonAuthenticationBox?, Never>(nil)
     @Published public var mastodonAuthenticationBoxes: [MastodonAuthenticationBox] = []
     public let updateActiveUserAccountPublisher = PassthroughSubject<Void, Never>()
     
     private init() {
         prepareForUse()
-        authentications = authenticationSortedByActivation()
         
         $mastodonAuthenticationBoxes
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] boxes in
+                self?.currentActiveUser.send(boxes.first)
                 Task { [weak self] in
                     for authBox in boxes {
                         do { try await self?.fetchFollowedBlockedUserIds(authBox) }
@@ -59,7 +60,7 @@ public class AuthenticationServiceProvider: ObservableObject {
         }
     }
     
-    @Published public var authentications: [MastodonAuthentication] = [] {
+    @Published private var authentications: [MastodonAuthentication] = [] {
         didSet {
             persist(authentications)
         }
@@ -101,7 +102,7 @@ public class AuthenticationServiceProvider: ObservableObject {
         authentications.removeAll(where: { $0 == authentication })
     }
     
-    public func activateUser(_ userID: String, inDomain domain: String) -> Bool {
+    public func activateExistingUser(_ userID: String, inDomain domain: String) -> Bool {
         var found = false
         authentications = authentications.map { authentication in
             guard authentication.domain == domain, authentication.userID == userID else {
@@ -113,8 +114,20 @@ public class AuthenticationServiceProvider: ObservableObject {
         return found
     }
     
-    func getAuthentication(in domain: String, for userID: String) -> MastodonAuthentication? {
-        authentications.first(where: { $0.domain == domain && $0.userID == userID })
+    public func activateExistingUserToken(_ accessToken: String) -> MastodonAuthenticationBox? {
+        guard let match = mastodonAuthenticationBoxes.first(where: { $0.authentication.userAccessToken == accessToken }) else { return nil }
+        guard activateExistingUser(match.userID, inDomain: match.domain) else { return nil }
+        return match
+    }
+    
+    public func activateAuthentication(_ authenticationBox: MastodonAuthenticationBox) {
+        if activateExistingUser(authenticationBox.userID, inDomain: authenticationBox.domain) {
+            return
+        } else {
+            authentications.insert(authenticationBox.authentication, at: 0)
+            _ = activateExistingUser(authenticationBox.userID, inDomain: authenticationBox.domain)
+        }
+        
     }
 }
 
@@ -124,20 +137,13 @@ public extension AuthenticationServiceProvider {
         authentications.first(where: { $0.userAccessToken == userAccessToken })
     }
 
-    func authenticationSortedByActivation() -> [MastodonAuthentication] { // fixme: why do we need this?
-        return authentications.sorted(by: { $0.activedAt > $1.activedAt })
-    }
     
-    var activeAuthentication: MastodonAuthenticationBox? {
-        guard let active =  authenticationSortedByActivation().first else { return nil }
-        return MastodonAuthenticationBox(authentication: active)
-    }
     
     func fetchFollowingAndBlockedAsync() {
         /// We're dispatching this as a separate async call to not block the caller
         /// Also we'll only be updating the current active user as the state will be refreshed upon user-change anyways
         Task {
-            if let authBox = activeAuthentication {
+            if let authBox = currentActiveUser.value {
                 do { try await fetchFollowedBlockedUserIds(authBox) }
                 catch {}
             }
@@ -145,7 +151,7 @@ public extension AuthenticationServiceProvider {
     }
     
     func signOutMastodonUser(authentication: MastodonAuthentication) async throws {
-        try await AuthenticationServiceProvider.shared.delete(authentication: authentication)
+        try AuthenticationServiceProvider.shared.delete(authentication: authentication)
         _ = try await APIService.shared.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
     }
     
@@ -165,6 +171,7 @@ public extension AuthenticationServiceProvider {
             else { return nil }
             return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
         }
+        .sorted(by: { $0.activedAt > $1.activedAt })
     }
     
     func updateAccountCreatedAt(_ newCreatedAt: Date, forAuthentication outdated: MastodonAuthentication) {

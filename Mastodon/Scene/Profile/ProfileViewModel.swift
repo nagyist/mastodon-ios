@@ -172,16 +172,19 @@ class ProfileViewModel: NSObject {
     }
     
     // fetch profile info before edit
-    func fetchEditProfileInfo() -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Account>, Error> {
+    func fetchEditProfileInfo() -> AnyPublisher<Mastodon.Entity.Account, Error> {
         guard let domain = me.domain else {
             return Fail(error: APIService.APIError.implicit(.authenticationMissing)).eraseToAnyPublisher()
         }
 
         let mastodonAuthentication = authenticationBox.authentication
         let authorization = Mastodon.API.OAuth.Authorization(accessToken: mastodonAuthentication.userAccessToken)
-        return APIService.shared.accountVerifyCredentials(domain: domain, authorization: authorization)
-            .tryMap { response in
-                return response
+        return APIService.shared.verifyAndActivateUser(domain: domain,
+                                                          clientID: mastodonAuthentication.clientID,
+                                                          clientSecret: mastodonAuthentication.clientSecret,
+                                                            authorization: authorization)
+            .tryMap { (account, _) in
+                return account
             }.eraseToAnyPublisher()
     }
 }

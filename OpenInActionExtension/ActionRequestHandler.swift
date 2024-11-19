@@ -61,7 +61,7 @@ class ActionRequestHandler: NSObject, NSExtensionRequestHandling {
 private extension ActionRequestHandler {
     func performSearch(for url: String) async {
         guard
-            let activeAuthenticationBox = await AuthenticationServiceProvider.shared.activeAuthentication
+            let activeAuthenticationBox = await AuthenticationServiceProvider.shared.currentActiveUser.value
         else {
             return doneWithResults(nil)
         }
@@ -109,7 +109,7 @@ private extension ActionRequestHandler {
         guard
             let url = URL(string: query),
             let host = url.host,
-            let activeAuthenticationBox = await AuthenticationServiceProvider.shared.activeAuthentication
+            let activeAuthenticationBox = await AuthenticationServiceProvider.shared.currentActiveUser.value
 
         else {
             return doneWithInvalidLink()

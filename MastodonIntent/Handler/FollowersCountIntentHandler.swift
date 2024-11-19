@@ -19,7 +19,7 @@ class FollowersCountIntentHandler: INExtension, FollowersCountIntentHandling {
     func provideAccountOptionsCollection(for intent: FollowersCountIntent, searchTerm: String?) async throws -> INObjectCollection<NSString> {
         guard
             let searchTerm = searchTerm,
-            let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication
+            let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value
         else {
             return INObjectCollection(items: [])
         }

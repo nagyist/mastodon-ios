@@ -14,13 +14,13 @@ import MastodonCore
 extension Account {
 
     @MainActor
-    static func fetch() async throws -> [Account] {
-        let accounts = AuthenticationServiceProvider.shared.authentications.compactMap { mastodonAuthentication -> Account? in
-            guard let authenticatedAccount = mastodonAuthentication.cachedAccount() else {
+    static func loadFromCache() -> [Account] {
+        let accounts = AuthenticationServiceProvider.shared.mastodonAuthenticationBoxes.compactMap { authBox -> Account? in
+            guard let authenticatedAccount = authBox.cachedAccount else {
                 return nil
             }
             let account = Account(
-                identifier: mastodonAuthentication.identifier.uuidString,
+                identifier: authBox.authentication.identifier.uuidString,
                 display: authenticatedAccount.displayNameWithFallback,
                 subtitle: authenticatedAccount.acctWithDomain,
                 image: authenticatedAccount.avatarImageURL().flatMap { INImage(url: $0) }

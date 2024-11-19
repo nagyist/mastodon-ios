@@ -31,7 +31,7 @@ extension HashtagWidgetProvider {
                 AuthenticationServiceProvider.shared.prepareForUse()
                 
                 guard
-                    let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                    let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
                 else {
                     if context.isPreview {
                         return completion(.placeholder)

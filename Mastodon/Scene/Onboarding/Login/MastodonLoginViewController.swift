@@ -122,11 +122,9 @@ class MastodonLoginViewController: UIViewController, NeedsDependency {
     
     func login(on server: Mastodon.Entity.Server) {
         authenticationViewModel
-            .authenticated.sink { (domain, account) in
+            .authenticated.sink { authBox in
                 Task { @MainActor in
                     do {
-                        AuthenticationServiceProvider.shared.activateUser(account.id, inDomain: domain)
-
                         self.coordinator.setup()
                     } catch {
                         assertionFailure(error.localizedDescription)

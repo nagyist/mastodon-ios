@@ -208,7 +208,7 @@ extension SceneDelegate {
                 return false
             }
 
-            let _isActive = AuthenticationServiceProvider.shared.activateUser(authentication.userID,
+            let _isActive = AuthenticationServiceProvider.shared.activateExistingUser(authentication.userID,
                 inDomain: authentication.domain
             )
             
