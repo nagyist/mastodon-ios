@@ -28,24 +28,14 @@ public class AuthenticationServiceProvider: ObservableObject {
         $mastodonAuthenticationBoxes
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] boxes in
-                let nowActive = boxes.first
-                guard nowActive?.authentication != self?.currentActiveUser.value?.authentication else { return }
-                self?.currentActiveUser.send(nowActive)
-                guard let nowActive = nowActive else { return }
+                guard let nowActive = boxes.first else { return }
                 Task { [weak self] in
                     try await self?.fetchFollowedBlockedUserIds(nowActive)
                 }
             }
             .store(in: &disposeBag)
-        
-        
+
         // TODO: verify credentials for active authentication
-        
-        $authentications
-            .map { authentications -> [MastodonAuthenticationBox] in
-                return self.authenticationBoxes(authentications)
-            }
-            .assign(to: &$mastodonAuthenticationBoxes)
         
         Task {
             if authenticationMigrationRequired {
@@ -64,8 +54,14 @@ public class AuthenticationServiceProvider: ObservableObject {
             }
     }
     
-    @Published private var authentications: [MastodonAuthentication] = [] {
+    private var authentications: [MastodonAuthentication] = [] {
         didSet {
+            let boxes = authenticationBoxes(authentications)
+            let nowActive = boxes.first
+            if nowActive?.authentication != self.currentActiveUser.value?.authentication {
+                self.currentActiveUser.send(nowActive)
+            }
+            mastodonAuthenticationBoxes = boxes
             persist(authentications)
         }
     }
