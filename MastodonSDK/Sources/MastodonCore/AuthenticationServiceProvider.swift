@@ -28,12 +28,12 @@ public class AuthenticationServiceProvider: ObservableObject {
         $mastodonAuthenticationBoxes
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] boxes in
-                self?.currentActiveUser.send(boxes.first)
+                let nowActive = boxes.first
+                guard nowActive?.authentication != self?.currentActiveUser.value?.authentication else { return }
+                self?.currentActiveUser.send(nowActive)
+                guard let nowActive = nowActive else { return }
                 Task { [weak self] in
-                    for authBox in boxes {
-                        do { try await self?.fetchFollowedBlockedUserIds(authBox) }
-                        catch {}
-                    }
+                    try await self?.fetchFollowedBlockedUserIds(nowActive)
                 }
             }
             .store(in: &disposeBag)
