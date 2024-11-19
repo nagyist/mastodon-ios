@@ -17,7 +17,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var appContext: AppContext { return AppContext.shared }
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        AuthenticationServiceProvider.shared.prepareForUse()
         
         AppSecret.default.register()
 

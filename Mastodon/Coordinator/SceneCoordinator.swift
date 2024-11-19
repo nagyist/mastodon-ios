@@ -250,8 +250,6 @@ extension SceneCoordinator {
     func setup() {
         let rootViewController: UIViewController
 
-        AuthenticationServiceProvider.shared.prepareForUse()
-
         switch UIDevice.current.userInterfaceIdiom {
             case .phone:
                 let viewController = MainTabBarController(context: appContext, coordinator: self, authenticationBox: authenticationBox)

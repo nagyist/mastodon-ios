@@ -160,7 +160,6 @@ extension ShareViewController {
 
 extension ShareViewController {
     private func setupAuthContext() throws -> MastodonAuthenticationBox? {
-        AuthenticationServiceProvider.shared.prepareForUse()
 
         return AuthenticationServiceProvider.shared.currentActiveUser.value
     }

@@ -73,8 +73,6 @@ private extension FollowersCountWidgetProvider {
     func loadCurrentEntry(for configuration: FollowersCountIntent, in context: Context, completion: @escaping (FollowersCountEntry) -> Void) {
         Task { @MainActor in
 
-            AuthenticationServiceProvider.shared.prepareForUse()
-
             guard
                 let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
             else {

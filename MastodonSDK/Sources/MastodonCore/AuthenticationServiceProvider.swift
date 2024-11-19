@@ -43,11 +43,7 @@ public class AuthenticationServiceProvider: ObservableObject {
         
         $authentications
             .map { authentications -> [MastodonAuthenticationBox] in
-                return authentications
-                    .sorted(by: { $0.activedAt > $1.activedAt })
-                    .compactMap { authentication -> MastodonAuthenticationBox? in
-                        return MastodonAuthenticationBox(authentication: authentication)
-                    }
+                return self.authenticationBoxes(authentications)
             }
             .assign(to: &$mastodonAuthenticationBoxes)
         
@@ -58,6 +54,14 @@ public class AuthenticationServiceProvider: ObservableObject {
                 )
             }
         }
+    }
+    
+    private func authenticationBoxes(_ authentications: [MastodonAuthentication]) -> [MastodonAuthenticationBox] {
+        return authentications
+            .sorted(by: { $0.activedAt > $1.activedAt })
+            .compactMap { authentication -> MastodonAuthenticationBox? in
+                return MastodonAuthenticationBox(authentication: authentication)
+            }
     }
     
     @Published private var authentications: [MastodonAuthentication] = [] {
@@ -156,10 +160,12 @@ public extension AuthenticationServiceProvider {
     }
     
     @MainActor
-    func prepareForUse() {
+    private func prepareForUse() {
         if authentications.isEmpty {
             restoreFromKeychain()
         }
+        mastodonAuthenticationBoxes = authenticationBoxes(authentications)
+        currentActiveUser.send(mastodonAuthenticationBoxes.first)
     }
 
     @MainActor

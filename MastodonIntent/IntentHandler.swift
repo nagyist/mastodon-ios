@@ -12,7 +12,6 @@ class IntentHandler: INExtension {
     
     @MainActor
     override func handler(for intent: INIntent) -> Any {
-        AuthenticationServiceProvider.shared.prepareForUse()
 
         switch intent {
         case is SendPostIntent:

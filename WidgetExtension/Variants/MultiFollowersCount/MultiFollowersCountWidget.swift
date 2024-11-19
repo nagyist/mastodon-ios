@@ -72,8 +72,6 @@ struct MultiFollowersCountWidget: Widget {
 private extension MultiFollowersCountWidgetProvider {
     func loadCurrentEntry(for configuration: MultiFollowersCountIntent, in context: Context, completion: @escaping (MultiFollowersCountEntry) -> Void) {
         Task { @MainActor in
-            
-            AuthenticationServiceProvider.shared.prepareForUse()
 
             guard
                 let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value

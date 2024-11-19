@@ -80,8 +80,6 @@ private extension LatestFollowersWidgetProvider {
     func loadCurrentEntry(for configuration: LatestFollowersIntent, in context: Context, completion: @escaping (LatestFollowersEntry) -> Void) {
         Task { @MainActor in
 
-            AuthenticationServiceProvider.shared.prepareForUse()
-
             guard
                 let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
             else {
