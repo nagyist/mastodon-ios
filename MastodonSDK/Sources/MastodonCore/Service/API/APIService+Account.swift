@@ -95,6 +95,8 @@ extension APIService {
             authorization: authorization
         ).singleOutput()
         
+        PersistenceManager.shared.cacheAccount(response.value, forUserID: MastodonUserIdentifier(domain: domain, userID: response.value.id))
+        
         return response
     }
     
