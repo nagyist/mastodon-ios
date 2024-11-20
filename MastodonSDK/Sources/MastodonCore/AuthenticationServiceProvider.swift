@@ -166,7 +166,7 @@ public extension AuthenticationServiceProvider {
 
     @MainActor
     private func restoreFromKeychain() {
-        self.authentications = Self.keychain.allKeys().compactMap {
+        var keychainAuthentications: [MastodonAuthentication] = Self.keychain.allKeys().compactMap {
             guard
                 let encoded = Self.keychain[$0],
                 let data = Data(base64Encoded: encoded)
@@ -174,6 +174,18 @@ public extension AuthenticationServiceProvider {
             return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
         }
         .sorted(by: { $0.activedAt > $1.activedAt })
+        let cachedAccounts = keychainAuthentications.compactMap {
+            $0.cachedAccount()
+        }
+        if cachedAccounts.count == 0 {
+            // Assume this is a fresh install.
+            // Clear the keychain of any accounts remaining from previous installs.
+            for authentication in keychainAuthentications {
+                try? delete(authentication: authentication)
+            }
+            keychainAuthentications = []
+        }
+        self.authentications = keychainAuthentications
     }
     
     func updateAccountCreatedAt(_ newCreatedAt: Date, forAuthentication outdated: MastodonAuthentication) {
