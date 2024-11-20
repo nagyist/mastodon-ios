@@ -1268,6 +1268,10 @@
 		FB7C4CC52CD2CAA800F6129A /* DonationCompletionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationCompletionViewController.swift; sourceTree = "<group>"; };
 		FB7C4CCB2CD55DEB00F6129A /* NavigationFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationFlow.swift; sourceTree = "<group>"; };
 		FB7C4CCD2CD55DFE00F6129A /* NewDonationNavigationFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDonationNavigationFlow.swift; sourceTree = "<group>"; };
+		FB8522702CEE302300BA2757 /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/Intents.strings; sourceTree = "<group>"; };
+		FB8522712CEE302300BA2757 /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/WidgetExtension.strings; sourceTree = "<group>"; };
+		FB8522722CEE302300BA2757 /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		FB8522732CEE302300BA2757 /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = hu; path = hu.lproj/Intents.stringsdict; sourceTree = "<group>"; };
 		FBD689B42CCBF09F00CE29F3 /* DonationCampaignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationCampaignViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -3332,6 +3336,7 @@
 				el,
 				be,
 				hy,
+				hu,
 			);
 			mainGroup = DB427DC925BAA00100D1B89D;
 			packageReferences = (
@@ -4086,6 +4091,7 @@
 				2AB501542992443D00346092 /* ar */,
 				D87DC50C2A17C32F00219C5F /* el */,
 				D82463532A52B47B00A3DBDD /* be */,
+				FB8522712CEE302300BA2757 /* hu */,
 			);
 			name = WidgetExtension.intentdefinition;
 			sourceTree = "<group>";
@@ -4122,6 +4128,7 @@
 				DB96C260292506D600F3B85D /* sl */,
 				D87DC50B2A17C32E00219C5F /* el */,
 				D82463522A52B47B00A3DBDD /* be */,
+				FB8522702CEE302300BA2757 /* hu */,
 			);
 			name = Intents.intentdefinition;
 			sourceTree = "<group>";
@@ -4158,6 +4165,7 @@
 				D87DC50D2A17C32F00219C5F /* el */,
 				D82463542A52B47B00A3DBDD /* be */,
 				D81A940F2B04E7AD0067A19D /* hy */,
+				FB8522722CEE302300BA2757 /* hu */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -4211,6 +4219,7 @@
 				DB96C262292506D700F3B85D /* sl */,
 				D87DC50E2A17C32F00219C5F /* el */,
 				D82463552A52B47B00A3DBDD /* be */,
+				FB8522732CEE302300BA2757 /* hu */,
 			);
 			name = Intents.stringsdict;
 			sourceTree = "<group>";
