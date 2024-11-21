@@ -16,7 +16,6 @@ final class MastodonAuthenticationController {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    var context: AppContext
     let authenticateURL: URL
     var authenticationSession: ASWebAuthenticationSession?
     
@@ -25,10 +24,8 @@ final class MastodonAuthenticationController {
     private let resultStreamContinuation: AsyncThrowingStream<String, Error>.Continuation
     
     init(
-        context: AppContext,
         authenticateURL: URL
     ) {
-        self.context = context
         self.authenticateURL = authenticateURL
         
         (resultStream, resultStreamContinuation) = AsyncThrowingStream<String, Error>.makeStream()

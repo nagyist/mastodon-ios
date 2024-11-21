@@ -20,13 +20,8 @@ class MastodonLoginViewModel {
   private var serverList: [Mastodon.Entity.Server] = []
   var filteredServers: [Mastodon.Entity.Server] = []
 
-  weak var appContext: AppContext?
   weak var delegate: MastodonLoginViewModelDelegate?
   var disposeBag = Set<AnyCancellable>()
-
-  init(appContext: AppContext) {
-    self.appContext = appContext
-  }
 
   func updateServers() {
       APIService.shared.servers(registrations: "all").sink(receiveCompletion: { [weak self] completion in

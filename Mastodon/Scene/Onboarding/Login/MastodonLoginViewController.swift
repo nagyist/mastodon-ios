@@ -21,16 +21,14 @@ enum MastodonLoginViewSection: Hashable {
     case servers
 }
 
-class MastodonLoginViewController: UIViewController, NeedsDependency {
+class MastodonLoginViewController: UIViewController {
     
     weak var delegate: MastodonLoginViewControllerDelegate?
     var dataSource: UITableViewDiffableDataSource<MastodonLoginViewSection, Mastodon.Entity.Server>?
     let viewModel: MastodonLoginViewModel
     let authenticationViewModel: AuthenticationViewModel
     var mastodonAuthenticationController: MastodonAuthenticationController?
-    
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
+    private let suggestedDomain: String?
     
     var disposeBag = Set<AnyCancellable>()
     
@@ -38,12 +36,11 @@ class MastodonLoginViewController: UIViewController, NeedsDependency {
         view as! MastodonLoginView
     }
     
-    init(appContext: AppContext, authenticationViewModel: AuthenticationViewModel, sceneCoordinator: SceneCoordinator) {
+    init(authenticationViewModel: AuthenticationViewModel, suggestedDomain: String?) {
         
-        viewModel = MastodonLoginViewModel(appContext: appContext)
+        viewModel = MastodonLoginViewModel()
         self.authenticationViewModel = authenticationViewModel
-        self.context = appContext
-        self.coordinator = sceneCoordinator
+        self.suggestedDomain = suggestedDomain
         
         super.init(nibName: nil, bundle: nil)
         viewModel.delegate = self
@@ -99,6 +96,8 @@ class MastodonLoginViewController: UIViewController, NeedsDependency {
         setupOnboardingAppearance()
         
         title = L10n.Scene.Login.title
+        
+        guard let view = view as? MastodonLoginView else { return }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -118,65 +117,6 @@ class MastodonLoginViewController: UIViewController, NeedsDependency {
     @objc func backButtonPressed(_ sender: Any) {
         contentView.searchTextField.resignFirstResponder()
         delegate?.backButtonPressed(self)
-    }
-    
-    func login(on server: Mastodon.Entity.Server) {
-        authenticationViewModel
-            .authenticated.sink { authBox in
-                Task { @MainActor in
-                    do {
-                        self.coordinator.setup()
-                    } catch {
-                        assertionFailure(error.localizedDescription)
-                    }
-                }
-            }
-            .store(in: &disposeBag)
-
-        authenticationViewModel.isAuthenticating.send(true)
-        APIService.shared.createApplication(domain: server.domain)
-            .tryMap { response -> AuthenticationViewModel.AuthenticateInfo in
-                let application = response.value
-                guard let info = AuthenticationViewModel.AuthenticateInfo(
-                    domain: server.domain,
-                    application: application,
-                    redirectURI: response.value.redirectURI ?? APIService.oauthCallbackURL
-                ) else {
-                    throw APIService.APIError.explicit(.badResponse)
-                }
-                return info
-            }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                guard let self = self else { return }
-                self.authenticationViewModel.isAuthenticating.send(false)
-                
-                switch completion {
-                case .failure(let error):
-                    let alert = UIAlertController.standardAlert(of: error)
-                    self.present(alert, animated: true)
-                case .finished:
-                    break
-                }
-            } receiveValue: { [weak self] info in
-                guard let self else { return }
-                let authenticationController = MastodonAuthenticationController(
-                    context: self.context,
-                    authenticateURL: info.authorizeURL
-                )
-                
-                self.mastodonAuthenticationController = authenticationController
-                authenticationController.authenticationSession?.presentationContextProvider = self
-                
-                self.authenticationViewModel.authenticate(
-                    info: info,
-                    pinCodePublisher: authenticationController.resultStream
-                )
-                
-                authenticationController.authenticationSession?.start()
-                
-            }
-            .store(in: &disposeBag)
     }
     
     @objc func textfieldDidChange(_ textField: UITextField) {
@@ -227,7 +167,9 @@ extension MastodonLoginViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
 
         let selectedServer = viewModel.filteredServers[indexPath.row]
-        login(on: selectedServer)
+        Task {
+            await authenticationViewModel.logIn(on: selectedServer, withPresentationContextProvider: self)
+        }
     }
 }
 

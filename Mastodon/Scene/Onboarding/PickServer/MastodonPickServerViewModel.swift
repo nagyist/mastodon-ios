@@ -30,8 +30,7 @@ class MastodonPickServerViewModel: NSObject {
     let serverSectionHeaderView = PickServerServerSectionTableHeaderView()
 
     // input
-    let context: AppContext
-    var categoryPickerItems: [CategoryPickerItem] = {
+    let categoryPickerItems: [CategoryPickerItem] = {
         var items: [CategoryPickerItem] = []
         items.append(.language(language: nil))
         items.append(.signupSpeed(manuallyReviewed: nil))
@@ -71,11 +70,14 @@ class MastodonPickServerViewModel: NSObject {
     let isLoadingIndexedServers = CurrentValueSubject<Bool, Never>(false)
     let loadingIndexedServersError = CurrentValueSubject<Error?, Never>(nil)
     let emptyStateViewState = CurrentValueSubject<EmptyStateViewState, Never>(.none)
+    
+    let joinServer: (Mastodon.Entity.Server) async throws ->()
+    let displayError: (Error)->()
         
-    init(context: AppContext) {
-        self.context = context
+    init(joinServer: @escaping (Mastodon.Entity.Server) async throws ->(), displayError: @escaping (Error)->()) {
+        self.joinServer = joinServer
+        self.displayError = displayError
         super.init()
-
         configure()
     }
     
@@ -276,28 +278,9 @@ extension MastodonPickServerViewModel {
     }
 }
 
-// MARK: - SignUp methods & structs
-extension MastodonPickServerViewModel {
-    struct SignUpResponseFirst {
-        let instance: Mastodon.Response.Content<Mastodon.Entity.Instance>
-        let application: Mastodon.Response.Content<Mastodon.Entity.Application>
-    }
-    
-    struct SignUpResponseSecond {
-        let instance: Mastodon.Response.Content<Mastodon.Entity.Instance>
-        let authenticateInfo: AuthenticationViewModel.AuthenticateInfo
-    }
-    
-    struct SignUpResponseThird {
-        let instance: Mastodon.Response.Content<Mastodon.Entity.Instance>
-        let authenticateInfo: AuthenticationViewModel.AuthenticateInfo
-        let applicationToken: Mastodon.Response.Content<Mastodon.Entity.Token>
-    }
-}
-
 // MARK: - TMBarDataSource
 extension MastodonPickServerViewModel: TMBarDataSource {
-    func barItem(for bar: TMBar, at index: Int) -> TMBarItemable {
+    nonisolated func barItem(for bar: TMBar, at index: Int) -> TMBarItemable {
         let item = categoryPickerItems[index]
         let barItem = TMBarItem(title: item.title)
         return barItem

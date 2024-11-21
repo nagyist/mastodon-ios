@@ -168,11 +168,11 @@ extension SceneCoordinator {
         case mastodonPickServer(viewMode: MastodonPickServerViewModel)
         case mastodonRegister(viewModel: MastodonRegisterViewModel)
         case mastodonPrivacyPolicies(viewModel: PrivacyViewModel)
-        case mastodonServerRules(viewModel: MastodonServerRulesViewModel)
+        case mastodonServerRules(viewModel: MastodonServerRulesView.ViewModel)
         case mastodonConfirmEmail(viewModel: MastodonConfirmEmailViewModel)
         case mastodonResendEmail(viewModel: MastodonResendEmailViewModel)
         case mastodonWebView(viewModel: WebViewModel)
-        case mastodonLogin
+        case mastodonLogin(authenticationViewModel: AuthenticationViewModel, suggestedDomain: String?)
 
         // search
         case searchDetail(viewModel: SearchDetailViewModel)
@@ -395,9 +395,7 @@ private extension SceneCoordinator {
             let _viewController = WelcomeViewController()
             viewController = _viewController
         case .mastodonPickServer(let viewModel):
-            let _viewController = MastodonPickServerViewController()
-            _viewController.viewModel = viewModel
-            viewController = _viewController
+            viewController = MastodonPickServerViewController(coordinator: self, viewModel: viewModel)
         case .mastodonRegister(let viewModel):
             let _viewController = MastodonRegisterViewController()
             _viewController.viewModel = viewModel
@@ -409,15 +407,14 @@ private extension SceneCoordinator {
             let _viewController = MastodonConfirmEmailViewController()
             _viewController.viewModel = viewModel
             viewController = _viewController
-        case .mastodonLogin:
-            let loginViewController = MastodonLoginViewController(appContext: appContext,
-                                                                  authenticationViewModel: AuthenticationViewModel(context: appContext, coordinator: self, isAuthenticationExist: false),
-                                                                  sceneCoordinator: self)
+        case .mastodonLogin(let authenticationViewModel, let suggestedDomain):
+            let loginViewController = MastodonLoginViewController(authenticationViewModel: authenticationViewModel,
+                                                                  suggestedDomain: suggestedDomain)
             loginViewController.delegate = self
 
             viewController = loginViewController
         case .mastodonPrivacyPolicies(let viewModel):
-            let privacyViewController = PrivacyTableViewController(context: appContext, coordinator: self, viewModel: viewModel)
+            let privacyViewController = PrivacyTableViewController(coordinator: self, viewModel: viewModel)
             viewController = privacyViewController
         case .mastodonResendEmail(let viewModel):
             let _viewController = MastodonResendEmailViewController()
@@ -689,7 +686,7 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
         let domain = authenticationBox.domain
         let profileSettingsURL = Mastodon.API.profileSettingsURL(domain: domain)
 
-        let authenticationController = MastodonAuthenticationController(context: appContext, authenticateURL: profileSettingsURL)
+        let authenticationController = MastodonAuthenticationController(authenticateURL: profileSettingsURL)
 
         authenticationController.authenticationSession?.presentationContextProvider = settingsCoordinator
         authenticationController.authenticationSession?.start()

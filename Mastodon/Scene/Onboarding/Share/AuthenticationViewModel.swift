@@ -12,33 +12,31 @@ import Combine
 import MastodonSDK
 import MastodonCore
 import AuthenticationServices
+import MastodonLocalization
+import SwiftUICore
 
 @MainActor
 final class AuthenticationViewModel {
     
+    public let stateStream: AsyncStream<State>
+    private let stateStreamContinuation: AsyncStream<State>.Continuation
+    
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    private let context: AppContext
-    private let coordinator: SceneCoordinator
-    let isAuthenticationExist: Bool
     let input = CurrentValueSubject<String, Never>("")
     
     // output
-    let viewHierarchyShouldReset: Bool
     let domain = CurrentValueSubject<String?, Never>(nil)
     let isDomainValid = CurrentValueSubject<Bool, Never>(false)
     let isAuthenticating = CurrentValueSubject<Bool, Never>(false)
     let isRegistering = CurrentValueSubject<Bool, Never>(false)
     let isIdle = CurrentValueSubject<Bool, Never>(true)
-    let authenticated = PassthroughSubject<MastodonAuthenticationBox, Never>()
     let error = CurrentValueSubject<Error?, Never>(nil)
         
-    init(context: AppContext, coordinator: SceneCoordinator, isAuthenticationExist: Bool) {
-        self.context = context
-        self.coordinator = coordinator
-        self.isAuthenticationExist = isAuthenticationExist
-        self.viewHierarchyShouldReset = isAuthenticationExist
+    init() {
+        
+        (stateStream, stateStreamContinuation) = AsyncStream<State>.makeStream()
         
         input
             .map { input in
@@ -63,6 +61,188 @@ final class AuthenticationViewModel {
     
 }
 
+
+extension AuthenticationViewModel {
+    // Sign in to existing account
+    public func logInRequested() {
+        stateStreamContinuation.yield(.logInToExistingAccountRequested)
+    }
+    
+    func logIn(on server: Mastodon.Entity.Server, withPresentationContextProvider contextProvider: ASWebAuthenticationPresentationContextProviding) async {
+
+        stateStreamContinuation.yield(.authenticatingUser)
+        
+        do {
+            let application = try await APIService.shared.createApplication(domain: server.domain)
+            guard let authenticateInfo = AuthenticateInfo(domain: server.domain, application: application) else { throw AuthenticationError.badCredentials }
+            let authenticationController = MastodonAuthenticationController(
+                authenticateURL: authenticateInfo.authorizeURL
+            )
+            authenticationController.authenticationSession?.presentationContextProvider = contextProvider
+            authenticate(
+                info: authenticateInfo,
+                pinCodePublisher: authenticationController.resultStream
+            )
+            authenticationController.authenticationSession?.start()
+        } catch let error {
+            stateStreamContinuation.yield(.error(error))
+        }
+    }
+}
+
+extension AuthenticationViewModel {
+    // Register a new account
+    
+    public func pickServer() {
+        stateStreamContinuation.yield(.pickingServer)
+    }
+    
+    public func joinServer(_ server: Mastodon.Entity.Server) async throws {
+        
+        stateStreamContinuation.yield(.joiningServer(server))
+        
+        let instance = try await APIService.shared.instance(domain: server.domain, authenticationBox: nil)
+        
+        guard instance.registrations != false else {
+            throw AuthenticationViewModel.AuthenticationError.registrationClosed
+        }
+        let application = try await APIService.shared.createApplication(domain: server.domain)
+        
+        guard let authenticateInfo = AuthenticationViewModel.AuthenticateInfo(
+            domain: server.domain,
+            application: application
+        ) else {
+            throw APIService.APIError.explicit(.badResponse)
+        }
+        
+        let applicationToken = try await APIService.shared.applicationAccessToken(
+            domain: server.domain,
+            clientID: authenticateInfo.clientID,
+            clientSecret: authenticateInfo.clientSecret,
+            redirectURI: authenticateInfo.redirectURI
+        )
+        
+        func doStartRegistration() {
+            let mastodonRegisterViewModel = MastodonRegisterViewModel(
+                domain: server.domain,
+                authenticateInfo: authenticateInfo,
+                instance: instance,
+                applicationToken: applicationToken,
+                submitValidatedUserRegistration: { [weak self] (registerInfo, hasAgreedToRules) in
+                    await self?.registerNewUser(info: registerInfo, instance: server, hasAgreedToRules: hasAgreedToRules, locale: nil)
+                }
+            )
+            stateStreamContinuation.yield(.registering(mastodonRegisterViewModel))
+        }
+        
+        if let rules = instance.rules, !rules.isEmpty {
+            // show server rules before registering
+            let serverRulesViewModel = MastodonServerRulesView.ViewModel(
+                disclaimer: LocalizedStringKey(L10n.Scene.ServerRules.subtitle(server.domain)),
+                rules: rules.map({ $0.text }),
+                onAgree: { [weak self] in
+                    let privacyViewModel = PrivacyViewModel(domain: server.domain, authenticateInfo: authenticateInfo, rows: [.iOSApp, .server(domain: server.domain)], instance: instance, applicationToken: applicationToken, didAccept: { doStartRegistration() })
+                    self?.stateStreamContinuation.yield(.showingPrivacyPolicy(privacyViewModel))
+                },
+                onDisagree: { [weak self] in self?.stateStreamContinuation.yield(.showingRules(nil)) })
+            stateStreamContinuation.yield(.showingRules(serverRulesViewModel))
+        } else {
+            doStartRegistration()
+        }
+    }
+    
+    public func registerNewUser(info: MastodonRegisterViewModel, instance: Mastodon.Entity.Server, hasAgreedToRules: Bool, locale: String?) async {
+        assert(hasAgreedToRules == true)
+        let query = Mastodon.API.Account.RegisterQuery(
+            reason: info.reason,
+            username: info.username,
+            email: info.email,
+            password: info.password,
+            agreement: hasAgreedToRules, 
+            locale: locale ?? self.locale
+        )
+
+        do {
+            // register without showing server rules again
+            let userToken = try await APIService.shared.accountRegister(
+                domain: info.domain,
+                query: query,
+                authorization: info.applicationAuthorization
+            )
+            
+            let updateCredentialQuery: Mastodon.API.Account.UpdateCredentialQuery = {
+                let displayName: String? = info.name.isEmpty ? nil : info.name
+                return Mastodon.API.Account.UpdateCredentialQuery(
+                    displayName: displayName,
+                    avatar: nil
+                )
+            }()
+            let viewModel = MastodonConfirmEmailViewModel(email: info.email, authenticateInfo: info.authenticateInfo, userToken: userToken, updateCredentialQuery: updateCredentialQuery)
+            stateStreamContinuation.yield(.confirmingEmail(viewModel))
+        } catch let error {
+            var errorDueToMissingLocale: Bool
+            if let error = error as? Mastodon.API.Error,
+                  case let .generic(errorEntity) = error.mastodonError,
+               errorEntity.error == "Validation failed: Locale is not included in the list" {
+                errorDueToMissingLocale = true
+            } else {
+                errorDueToMissingLocale = false
+            }
+            let fallbackLocale = instance.languages.first ?? "en"
+            let alreadyTriedFallback = locale == fallbackLocale
+            if errorDueToMissingLocale && !alreadyTriedFallback {
+                await registerNewUser(info: info, instance: instance, hasAgreedToRules: hasAgreedToRules, locale: fallbackLocale)
+            } else {
+                stateStreamContinuation.yield(.error(error))
+            }
+        }
+    }
+    
+    private var locale: String {
+        guard let url = Bundle.main.url(forResource: "local-codes", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let localCode = try? JSONDecoder().decode(MastodonLocalCode.self, from: data)
+        else {
+            assertionFailure()
+            return "en"
+        }
+        let fallbackLanguageCode: String = {
+            let code = Locale.current.language.languageCode?.identifier ?? "en"
+            guard localCode[code] != nil else { return "en" }
+            return code
+        }()
+        
+        // pick device preferred language
+        guard let identifier = Locale.preferredLanguages.first else {
+            return fallbackLanguageCode
+        }
+        // prepare languageCode and validate then return fallback if needs
+        let local = Locale(identifier: identifier)
+        guard let languageCode = local.language.languageCode?.identifier,
+              localCode[languageCode] != nil
+        else {
+            return fallbackLanguageCode
+        }
+        // prepare extendCode and validate then return fallback if needs
+        let extendCodes: [String] = {
+            let locales = Locale.preferredLanguages.map { Locale(identifier: $0) }
+            return locales.compactMap { locale in
+                guard let languageCode = locale.language.languageCode?.identifier,
+                      let regionIdentifier = locale.region?.identifier
+                else { return nil }
+                return languageCode + "-" + regionIdentifier
+            }
+        }()
+        let _firstMatchExtendCode = extendCodes.first { code in
+            localCode[code] != nil
+        }
+        guard let firstMatchExtendCode = _firstMatchExtendCode else {
+            return languageCode
+        }
+        return firstMatchExtendCode
+    }
+}
+
 extension AuthenticationViewModel {
     static func parseDomain(from input: String) -> String? {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -82,6 +262,20 @@ extension AuthenticationViewModel {
 }
 
 extension AuthenticationViewModel {
+    enum State {
+        case initial
+        case error(Error)
+        case logInToExistingAccountRequested
+        case pickingServer
+        case joiningServer(Mastodon.Entity.Server)
+        case showingRules(MastodonServerRulesView.ViewModel?) // nil when we're returning to a previously configured state
+        case registering(MastodonRegisterViewModel)
+        case showingPrivacyPolicy(PrivacyViewModel)
+        case confirmingEmail(MastodonConfirmEmailViewModel)
+        case authenticatingUser
+        case authenticatedUser(MastodonAuthenticationBox)
+    }
+    
     enum AuthenticationError: Error, LocalizedError {
         case badCredentials
         case registrationClosed
@@ -137,7 +331,7 @@ extension AuthenticationViewModel {
         }
     }
     
-    func authenticate(info: AuthenticateInfo, pinCodePublisher: AsyncThrowingStream<String, Error>) {
+    private func authenticate(info: AuthenticateInfo, pinCodePublisher: AsyncThrowingStream<String, Error>) {
         Task {
             do {
                 for try await code in pinCodePublisher {
@@ -154,19 +348,19 @@ extension AuthenticationViewModel {
                         info: info,
                         userToken: token
                     )
-                    self.authenticated.send(authBox)
-                    self.authenticated.send(completion: .finished)
+                    AuthenticationServiceProvider.shared.activateAuthentication(authBox)
+                    self.stateStreamContinuation.yield(.authenticatedUser(authBox))
+                    self.stateStreamContinuation.finish()
                 }
             } catch let error {
                 self.isAuthenticating.value = false
                 if let error = error as? ASWebAuthenticationSessionError {
                     if error.errorCode == ASWebAuthenticationSessionError.canceledLogin.rawValue {
-                        authenticated.send(completion: .finished)
                         return
                     }
                 } else {
                     self.error.value = error
-                    authenticated.send(completion: .finished)
+                    stateStreamContinuation.yield(.error(error))
                 }
             }
         }

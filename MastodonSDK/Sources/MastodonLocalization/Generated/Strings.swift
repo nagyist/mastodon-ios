@@ -919,8 +919,8 @@ public enum L10n {
       }
     }
     public enum Login {
-      /// Log in with the server where you created your account.
-      public static let subtitle = L10n.tr("Localizable", "Scene.Login.Subtitle", fallback: "Log in with the server where you created your account.")
+      /// Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.
+      public static let subtitle = L10n.tr("Localizable", "Scene.Login.Subtitle", fallback: "Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.")
       /// Welcome Back
       public static let title = L10n.tr("Localizable", "Scene.Login.Title", fallback: "Welcome Back")
       public enum ServerSearchField {

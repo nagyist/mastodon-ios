@@ -312,7 +312,7 @@
         },
         "login": {
             "title": "Welcome Back",
-            "subtitle": "Log in with the server where you created your account.",
+            "subtitle": "Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.",
             "server_search_field": {
                 "placeholder": "Enter URL or search for your server"
             }

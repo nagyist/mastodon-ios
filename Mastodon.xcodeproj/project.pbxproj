@@ -389,7 +389,6 @@
 		DB789A0B25F9F2950071ACA0 /* ComposeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB789A0A25F9F2950071ACA0 /* ComposeViewController.swift */; };
 		DB789A1225F9F2CC0071ACA0 /* ComposeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB789A1125F9F2CC0071ACA0 /* ComposeViewModel.swift */; };
 		DB7A9F912818EAF10016AF98 /* MastodonRegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7A9F902818EAF10016AF98 /* MastodonRegisterView.swift */; };
-		DB7A9F932818F33C0016AF98 /* MastodonServerRulesViewController+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7A9F922818F33C0016AF98 /* MastodonServerRulesViewController+Debug.swift */; };
 		DB7F48452620241000796008 /* ProfileHeaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7F48442620241000796008 /* ProfileHeaderViewModel.swift */; };
 		DB848E33282B62A800A302CC /* ReportResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB848E32282B62A800A302CC /* ReportResultView.swift */; };
 		DB852D1926FAEB6B00FC9D81 /* SidebarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB852D1826FAEB6B00FC9D81 /* SidebarViewController.swift */; };
@@ -1092,7 +1091,6 @@
 		DB789A0A25F9F2950071ACA0 /* ComposeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposeViewController.swift; sourceTree = "<group>"; };
 		DB789A1125F9F2CC0071ACA0 /* ComposeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposeViewModel.swift; sourceTree = "<group>"; };
 		DB7A9F902818EAF10016AF98 /* MastodonRegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MastodonRegisterView.swift; sourceTree = "<group>"; };
-		DB7A9F922818F33C0016AF98 /* MastodonServerRulesViewController+Debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MastodonServerRulesViewController+Debug.swift"; sourceTree = "<group>"; };
 		DB7F48442620241000796008 /* ProfileHeaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileHeaderViewModel.swift; sourceTree = "<group>"; };
 		DB848E32282B62A800A302CC /* ReportResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportResultView.swift; sourceTree = "<group>"; };
 		DB852D1826FAEB6B00FC9D81 /* SidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarViewController.swift; sourceTree = "<group>"; };
@@ -2525,7 +2523,6 @@
 			children = (
 				DB0618082785B2790030EE79 /* Cell */,
 				DB72601B25E36A2100235243 /* MastodonServerRulesViewController.swift */,
-				DB7A9F922818F33C0016AF98 /* MastodonServerRulesViewController+Debug.swift */,
 				DB72602625E36A6F00235243 /* MastodonServerRulesViewModel.swift */,
 				DB0617FE27855D6C0030EE79 /* MastodonServerRulesViewModel+Diffable.swift */,
 				DB0617F427855AB90030EE79 /* ServerRuleSection.swift */,
@@ -3867,7 +3864,6 @@
 				DB8AF54425C13647002E6C99 /* SceneCoordinator.swift in Sources */,
 				DB1D84382657B275000346B3 /* SegmentedControlNavigateable.swift in Sources */,
 				0F20220726134DA4000C64BF /* HashtagTimelineViewModel+Diffable.swift in Sources */,
-				DB7A9F932818F33C0016AF98 /* MastodonServerRulesViewController+Debug.swift in Sources */,
 				D85DF97E2C50EFA700A01408 /* AccountNotificationTimelineViewController.swift in Sources */,
 				2D5A3D2825CF8BC9002347D6 /* HomeTimelineViewModel+Diffable.swift in Sources */,
 				DB6B74FC272FF55800C70B6E /* UserSection.swift in Sources */,

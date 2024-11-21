@@ -31,8 +31,8 @@ class InstanceRulesViewController: UIHostingController<InstanceRulesView> {
         self.rootView.rulesView.viewModel = .init(
             disclaimer: nil,
             rules: instance.rules?.map({ $0.text }) ?? [],
-            onAgree: nil,
-            onDisagree: nil
+            onAgree: self.rootView.rulesView.viewModel.onAgree,
+            onDisagree: self.rootView.rulesView.viewModel.onDisagree
         )
     }
 }

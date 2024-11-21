@@ -326,7 +326,7 @@ uploaded to Mastodon.";
 "Scene.HomeTimeline.TimelinePill.PostSent" = "Post Sent";
 "Scene.HomeTimeline.Title" = "Home";
 "Scene.Login.ServerSearchField.Placeholder" = "Enter URL or search for your server";
-"Scene.Login.Subtitle" = "Log in with the server where you created your account.";
+"Scene.Login.Subtitle" = "Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.";
 "Scene.Login.Title" = "Welcome Back";
 "Scene.Notification.FilteredNotification.Accept" = "Accept";
 "Scene.Notification.FilteredNotification.Dismiss" = "Dismiss";
