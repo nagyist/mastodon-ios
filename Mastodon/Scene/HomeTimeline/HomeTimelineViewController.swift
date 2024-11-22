@@ -618,10 +618,7 @@ extension HomeTimelineViewController {
     }
     
     @objc private func manuallySearchButtonPressed(_ sender: UIButton) {
-        guard let authenticationBox = viewModel?.authenticationBox else { return }
-
-        let searchDetailViewModel = SearchDetailViewModel(authenticationBox: authenticationBox)
-        _ = coordinator.present(scene: .searchDetail(viewModel: searchDetailViewModel), from: self, transition: .modal(animated: true, completion: nil))
+        coordinator.switchToTabBar(tab: .search)
     }
     
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
