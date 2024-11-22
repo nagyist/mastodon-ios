@@ -100,6 +100,10 @@ final class HomeTimelineViewModel: NSObject {
             MastodonFeed.fromStatus($0, kind: .home)
         }) ?? []
         
+        authenticationBox.inMemoryCache.$followingUserIds.sink { [weak self] _ in
+            self?.homeTimelineNeedRefresh.send()
+        }.store(in: &disposeBag)
+        
         homeTimelineNeedRefresh
             .sink { [weak self] _ in
                 self?.loadLatestStateMachine.enter(LoadLatestState.Loading.self)
