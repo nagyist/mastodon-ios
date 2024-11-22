@@ -468,15 +468,18 @@ extension StatusView {
                 }
             }
 
-            var needsFilter = false
+            var needsFilter = FilterStatus.notFiltered
             for filter in nonWordFilters {
                 guard content.contains(filter.phrase.lowercased()) else { continue }
-                needsFilter = true
+                needsFilter = .filtered(filter.phrase)
                 break
             }
 
-            if needsFilter {
-                return true
+            switch needsFilter {
+            case .notFiltered:
+                break
+            default:
+                return needsFilter
             }
 
             let tokenizer = NLTokenizer(unit: .word)
@@ -485,7 +488,7 @@ extension StatusView {
             tokenizer.enumerateTokens(in: content.startIndex..<content.endIndex) { range, _ in
                 let word = String(content[range])
                 if phraseWords.contains(word) {
-                    needsFilter = true
+                    needsFilter = .filtered(word)
                     return false
                 } else {
                     return true

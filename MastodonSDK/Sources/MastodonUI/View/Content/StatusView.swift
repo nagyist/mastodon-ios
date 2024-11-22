@@ -301,15 +301,6 @@ public final class StatusView: UIView {
     // metric
     public let statusMetricView = StatusMetricView()
     
-    // filter hint
-    public let filterHintLabel: UILabel = {
-        let label = UILabel()
-        label.textColor = Asset.Colors.Label.secondary.color
-        label.text = L10n.Common.Controls.Timeline.filtered
-        label.font = .systemFont(ofSize: 17, weight: .regular)
-        return label
-    }()
-    
     public func prepareForReuse() {
         disposeBag.removeAll()
         
@@ -327,7 +318,6 @@ public final class StatusView: UIView {
         setSpoilerOverlayViewHidden(isHidden: true)
         setMediaDisplay(isDisplay: false)
         setPollDisplay(isDisplay: false)
-        setFilterHintLabelDisplay(isDisplay: false)
         setStatusCardControlDisplay(isDisplay: false)
         
         headerInfoLabel.text = nil
@@ -555,14 +545,6 @@ extension StatusView.Style {
         statusView.actionToolbarAdaptiveMarginContainerView.contentView = statusView.actionToolbarContainer
         statusView.actionToolbarAdaptiveMarginContainerView.margin = StatusView.containerLayoutMargin
         statusView.containerStackView.addArrangedSubview(statusView.actionToolbarAdaptiveMarginContainerView)
-        
-        // filterHintLabel
-        statusView.filterHintLabel.translatesAutoresizingMaskIntoConstraints = false
-        statusView.addSubview(statusView.filterHintLabel)
-        NSLayoutConstraint.activate([
-            statusView.filterHintLabel.centerXAnchor.constraint(equalTo: statusView.containerStackView.centerXAnchor),
-            statusView.filterHintLabel.centerYAnchor.constraint(equalTo: statusView.containerStackView.centerYAnchor),
-        ])
     }
     
     func inline(statusView: StatusView) {
@@ -642,10 +624,6 @@ extension StatusView {
     
     func setPollDisplay(isDisplay: Bool = true) {
         pollAdaptiveMarginContainerView.isHidden = !isDisplay
-    }
-    
-    func setFilterHintLabelDisplay(isDisplay: Bool = true) {
-        filterHintLabel.isHidden = !isDisplay
     }
 
     func setStatusCardControlDisplay(isDisplay: Bool = true) {
