@@ -22,6 +22,7 @@ final class AuthenticationViewModel {
     private let stateStreamContinuation: AsyncStream<State>.Continuation
     
     var disposeBag = Set<AnyCancellable>()
+    var authenticationController: MastodonAuthenticationController?
     
     // input
     let input = CurrentValueSubject<String, Never>("")
@@ -75,9 +76,10 @@ extension AuthenticationViewModel {
         do {
             let application = try await APIService.shared.createApplication(domain: server.domain)
             guard let authenticateInfo = AuthenticateInfo(domain: server.domain, application: application) else { throw AuthenticationError.badCredentials }
-            let authenticationController = MastodonAuthenticationController(
+            authenticationController = MastodonAuthenticationController(
                 authenticateURL: authenticateInfo.authorizeURL
             )
+            guard let authenticationController else { return }
             authenticationController.authenticationSession?.presentationContextProvider = contextProvider
             authenticate(
                 info: authenticateInfo,
