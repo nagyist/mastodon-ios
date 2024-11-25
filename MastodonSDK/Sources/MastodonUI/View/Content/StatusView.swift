@@ -313,6 +313,7 @@ public final class StatusView: UIView {
             pollTableViewDiffableDataSource?.applySnapshotUsingReloadData(snapshot)
         }
         
+        mediaGridContainerView.hideContentWarning(true)
         setHeaderDisplay(isDisplay: false)
         setContentSensitiveeToggleButtonDisplay(isDisplay: false)
         setSpoilerOverlayViewHidden(isHidden: true)
