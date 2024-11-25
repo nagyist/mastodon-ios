@@ -55,7 +55,7 @@ final class NotificationTimelineViewModel {
         self.context = context
         self.authenticationBox = authenticationBox
         self.scope = scope
-        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox)
+        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox, kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
 
         switch scope {
@@ -122,6 +122,17 @@ extension NotificationTimelineViewModel {
                 return L10n.Scene.Notification.Title.mentions
             case .fromAccount(let account):
                 return "Notifications from \(account.displayName)"
+            }
+        }
+        
+        var feedKind: MastodonFeed.Kind {
+            switch self {
+            case .everything:
+                return .notificationAll
+            case .mentions:
+                return .notificationMentions
+            case .fromAccount(let account):
+                return .notificationAccount(account.id)
             }
         }
     }

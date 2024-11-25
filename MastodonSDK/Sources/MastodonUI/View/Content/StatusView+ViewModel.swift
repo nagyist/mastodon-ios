@@ -19,12 +19,6 @@ import MastodonSDK
 import MastodonMeta
 
 extension StatusView {
-    public enum FilterStatus {
-        case notFiltered
-        case filtered(String)
-        case hidden
-    }
-    
     public final class ViewModel: ObservableObject {
         var disposeBag = Set<AnyCancellable>()
         var observations = Set<NSKeyValueObservation>()
@@ -123,7 +117,7 @@ extension StatusView {
         // Filter
         @Published public var activeFilters: [Mastodon.Entity.Filter] = []
         @Published public var filterContext: Mastodon.Entity.Filter.Context?
-        @Published public var isFiltered: FilterStatus = .notFiltered
+        @Published public var isFiltered: Mastodon.Entity.Filter.FilterStatus = .notFiltered
 
         @Published public var groupedAccessibilityLabel = ""
         @Published public var contentAccessibilityLabel = ""

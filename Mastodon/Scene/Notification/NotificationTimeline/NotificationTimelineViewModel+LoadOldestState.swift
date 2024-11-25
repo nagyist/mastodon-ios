@@ -30,6 +30,7 @@ extension NotificationTimelineViewModel {
 }
 
 extension NotificationTimelineViewModel.LoadOldestState {
+    @MainActor
     class Initial: NotificationTimelineViewModel.LoadOldestState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             guard let viewModel = viewModel else { return false }
@@ -43,6 +44,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
             stateClass == Fail.self || stateClass == Idle.self || stateClass == NoMore.self
         }
         
+        @MainActor
         override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             
@@ -72,7 +74,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
                 let _maxID: Mastodon.Entity.Notification.ID? = lastFeedRecord.notification?.id
                 
                 guard let maxID = _maxID else {
-                    await self.enter(state: Fail.self)
+                    self.enter(state: Fail.self)
                     return
                 }
                 
@@ -87,13 +89,13 @@ extension NotificationTimelineViewModel.LoadOldestState {
                     let notifications = response.value
                     // enter no more state when no new statuses
                     if notifications.isEmpty || (notifications.count == 1 && notifications[0].id == maxID) {
-                        await self.enter(state: NoMore.self)
+                        self.enter(state: NoMore.self)
                     } else {
-                        await self.enter(state: Idle.self)
+                        self.enter(state: Idle.self)
                     }
                     
                 } catch {
-                    await self.enter(state: Fail.self)
+                    self.enter(state: Fail.self)
                 }
             }   // end Task
         }

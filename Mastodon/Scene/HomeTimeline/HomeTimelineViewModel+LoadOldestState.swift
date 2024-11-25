@@ -29,6 +29,7 @@ extension HomeTimelineViewModel {
 }
 
 extension HomeTimelineViewModel.LoadOldestState {
+    @MainActor
     class Initial: HomeTimelineViewModel.LoadOldestState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             guard let viewModel = viewModel else { return false }

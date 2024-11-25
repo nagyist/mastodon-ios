@@ -23,6 +23,7 @@ final class MastodonStatusThreadViewModel {
     
     // input
     let context: AppContext
+    let filterApplication: Mastodon.Entity.Filter.FilterApplication?
     @Published private(set) var deletedObjectIDs: Set<MastodonStatus.ID> = Set()
 
     // output
@@ -32,8 +33,9 @@ final class MastodonStatusThreadViewModel {
     @Published var __descendants: [StatusItem] = []
     @Published var descendants: [StatusItem] = []
     
-    init(context: AppContext) {
+    init(context: AppContext, filterApplication: Mastodon.Entity.Filter.FilterApplication?) {
         self.context = context
+        self.filterApplication = filterApplication
         
         Publishers.CombineLatest(
             $__ancestors,
@@ -84,6 +86,17 @@ extension MastodonStatusThreadViewModel {
     ) {
         var newItems: [StatusItem] = []
         for node in nodes {
+            
+            if let filterApplication {
+                let filterResult = filterApplication.apply(to: node.status, in: .thread)
+                switch filterResult {
+                case .hidden:
+                    continue
+                default:
+                    break
+                }
+            }
+            
             let item = StatusItem.thread(.leaf(context: .init(status: node.status)))
             newItems.append(item)
         }
@@ -99,6 +112,17 @@ extension MastodonStatusThreadViewModel {
         var newItems: [StatusItem] = []
 
         for node in nodes {
+            
+            if let filterApplication {
+                let filterResult = filterApplication.apply(to: node.status, in: .thread)
+                switch filterResult {
+                case .hidden:
+                    continue
+                default:
+                    break
+                }
+            }
+            
             let context = StatusItem.Thread.Context(status: node.status)
             let item = StatusItem.thread(.leaf(context: context))
             newItems.append(item)

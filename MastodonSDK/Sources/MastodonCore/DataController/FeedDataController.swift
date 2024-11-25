@@ -4,6 +4,7 @@ import Combine
 import MastodonSDK
 import os.log
 
+@MainActor
 final public class FeedDataController {
     private let logger = Logger(subsystem: "FeedDataController", category: "Data")
     private static let entryNotFoundMessage = "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
@@ -12,15 +13,34 @@ final public class FeedDataController {
     
     private let context: AppContext
     private let authenticationBox: MastodonAuthenticationBox
+    private let kind: MastodonFeed.Kind
+    
+    private var subscriptions = Set<AnyCancellable>()
+    private var filterApplication: Mastodon.Entity.Filter.FilterApplication? {
+        didSet {
+            records = filter(records, forFeed: kind)
+        }
+    }
 
-    public init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
+    public init(context: AppContext, authenticationBox: MastodonAuthenticationBox, kind: MastodonFeed.Kind) {
         self.context = context
         self.authenticationBox = authenticationBox
+        self.kind = kind
+        
+        self.filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: StatusFilterService.shared.activeFilters)
+        
+        StatusFilterService.shared.$activeFilters
+            .sink { [weak self] filters in
+                guard let self else { return }
+                self.filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: filters)
+            }
+            .store(in: &subscriptions)
     }
     
     public func loadInitial(kind: MastodonFeed.Kind) {
         Task {
-            records = try await load(kind: kind, maxID: nil)
+            let unfilteredRecords = try await load(kind: kind, maxID: nil)
+            records = filter(unfilteredRecords, forFeed: kind)
         }
     }
     
@@ -30,7 +50,23 @@ final public class FeedDataController {
                 return loadInitial(kind: kind)
             }
 
-            records += try await load(kind: kind, maxID: lastId)
+            let unfiltered = try await load(kind: kind, maxID: lastId)
+            records += filter(unfiltered, forFeed: kind)
+        }
+    }
+    
+    private func filter(_ records: [MastodonFeed], forFeed feedKind: MastodonFeed.Kind) -> [MastodonFeed] {
+        guard let filterApplication else { return records }
+       
+        return records.filter {
+            guard let status = $0.status else { return true }
+            let filterResult = filterApplication.apply(to: status, in: feedKind.filterContext)
+            switch filterResult {
+            case .hidden:
+                return false
+            default:
+                return true
+            }
         }
     }
     
@@ -166,7 +202,7 @@ final public class FeedDataController {
 }
 
 private extension FeedDataController {
-  func load(kind: MastodonFeed.Kind, maxID: MastodonStatus.ID?) async throws -> [MastodonFeed] {
+    func load(kind: MastodonFeed.Kind, maxID: MastodonStatus.ID?) async throws -> [MastodonFeed] {
         switch kind {
         case .home(let timeline):
             await AuthenticationServiceProvider.shared.fetchAccounts()
@@ -197,7 +233,10 @@ private extension FeedDataController {
                 )
             }
 
-            return response.value.map { .fromStatus(.fromEntity($0), kind: .home) }
+            return response.value.compactMap { entity in
+                let status = MastodonStatus.fromEntity(entity)
+                return .fromStatus(status, kind: .home)
+            }
         case .notificationAll:
             return try await getFeeds(with: .everything)
         case .notificationMentions:
@@ -226,6 +265,15 @@ private extension FeedDataController {
 
         return feeds
     }
-
 }
 
+extension MastodonFeed.Kind {
+    var filterContext: Mastodon.Entity.Filter.Context {
+        switch self {
+        case .home(let timeline): // TODO: take timeline into account. See iOS-333.
+            return .home
+        case .notificationAccount, .notificationAll, .notificationMentions:
+            return .notifications
+        }
+    }
+}

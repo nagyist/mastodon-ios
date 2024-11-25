@@ -447,55 +447,18 @@ extension StatusView {
     }
     
     private func configureFilter(status: MastodonStatus) {
-        let status = status.reblog ?? status
-        
-        guard let content = status.entity.content?.lowercased() else { return }
-        
         Publishers.CombineLatest(
             viewModel.$activeFilters,
             viewModel.$filterContext
         )
         .receive(on: StatusView.statusFilterWorkingQueue)
         .map { filters, filterContext in
-            var wordFilters: [Mastodon.Entity.Filter] = []
-            var nonWordFilters: [Mastodon.Entity.Filter] = []
-            for filter in filters {
-                guard filter.context.contains(where: { $0 == filterContext }) else { continue }
-                if filter.wholeWord {
-                    wordFilters.append(filter)
-                } else {
-                    nonWordFilters.append(filter)
-                }
+            guard let filterContext else { return .notFiltered }
+            if let filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: filters) { // TODO: don't c
+                return filterApplication.apply(to: status, in: filterContext)
+            } else {
+                return .notFiltered
             }
-
-            var needsFilter = FilterStatus.notFiltered
-            for filter in nonWordFilters {
-                guard content.contains(filter.phrase.lowercased()) else { continue }
-                needsFilter = .filtered(filter.phrase)
-                break
-            }
-
-            switch needsFilter {
-            case .notFiltered:
-                break
-            default:
-                return needsFilter
-            }
-
-            let tokenizer = NLTokenizer(unit: .word)
-            tokenizer.string = content
-            let phraseWords = wordFilters.map { $0.phrase.lowercased() }
-            tokenizer.enumerateTokens(in: content.startIndex..<content.endIndex) { range, _ in
-                let word = String(content[range])
-                if phraseWords.contains(word) {
-                    needsFilter = .filtered(word)
-                    return false
-                } else {
-                    return true
-                }
-            }
-
-            return needsFilter
         }
         .receive(on: DispatchQueue.main)
         .assign(to: \.isFiltered, on: viewModel)

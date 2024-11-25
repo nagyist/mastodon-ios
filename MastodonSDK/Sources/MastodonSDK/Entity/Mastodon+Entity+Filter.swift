@@ -17,6 +17,36 @@ extension Mastodon.Entity {
     /// # Reference
     ///  [Document](https://docs.joinmastodon.org/entities/filter/)
     public struct Filter: Codable {
+        
+        public enum FilterStatus {
+            case notFiltered
+            case filtered(String)
+            case hidden
+        }
+        
+        public enum FilterAction: RawRepresentable, Codable {
+            public typealias RawValue = String
+            case warn
+            case hide
+            case _other(String)
+            
+            public init?(rawValue: String) {
+                switch rawValue {
+                case "warn": self = .warn
+                case "hide": self = .hide
+                default: self = ._other(rawValue)
+                }
+            }
+            
+            public var rawValue: String {
+                switch self {
+                case .warn: return "warn"
+                case .hide: return "hide"
+                case ._other(let value): return value
+                }
+            }
+        }
+        
         public typealias ID = String
         
         public let id: ID
@@ -25,6 +55,7 @@ extension Mastodon.Entity {
         public let expiresAt: Date?
         public let irreversible: Bool
         public let wholeWord: Bool
+        public let filterAction: FilterAction?
         
         enum CodingKeys: String, CodingKey {
             case id
@@ -33,6 +64,7 @@ extension Mastodon.Entity {
             case expiresAt = "expires_at"
             case irreversible
             case wholeWord = "whole_word"
+            case filterAction = "filter_action"
         }
     }
 }
