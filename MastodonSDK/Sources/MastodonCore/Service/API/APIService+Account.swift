@@ -26,6 +26,16 @@ extension APIService {
         return account
     }
     
+    public func accountInfo(domain: String, userID: String, authorization: Mastodon.API.OAuth.Authorization) async throws -> Mastodon.Entity.Account {
+        let account = try await Mastodon.API.Account.accountInfo(
+            session: session,
+            domain: domain,
+            userID: userID,
+            authorization: authorization
+        ).singleOutput().value
+        return account
+    }
+    
 }
 
 extension APIService {

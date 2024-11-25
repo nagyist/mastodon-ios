@@ -83,7 +83,10 @@ extension DataSourceFacade {
 
             do {
                 let account = try await APIService.shared.accountInfo(
-                    provider.authenticationBox
+                    domain: domain,
+                    userID:
+                        accountID,
+                    authorization: provider.authenticationBox.userAuthorization
                 )
 
                 provider.coordinator.hideLoading()
