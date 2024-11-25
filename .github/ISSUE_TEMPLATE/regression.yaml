@@ -15,7 +15,7 @@ body:
     label: Current Behavior
     description: A concise description of what you're experiencing.
     value: |
-       - As of version/build:
+       As of version/build:
   validations:
     required: false
 - type: textarea
@@ -23,7 +23,7 @@ body:
     label: Expected Behavior
     description: A concise description of what you expected to happen.
     value: |
-      - Was last working in version/build: 
+      Was last working in version/build: 
   validations:
     required: false
 - type: textarea
