@@ -115,9 +115,8 @@ extension StatusView {
         @Published public var editedAt: Date? = nil
         
         // Filter
-        @Published public var activeFilters: [Mastodon.Entity.Filter] = []
-        @Published public var filterContext: Mastodon.Entity.Filter.Context?
-        @Published public var isFiltered: Mastodon.Entity.Filter.FilterStatus = .notFiltered
+        public var filterContext: Mastodon.Entity.FilterContext?
+        @Published public var isFiltered: Mastodon.Entity.FilterResult = .notFiltered
 
         @Published public var groupedAccessibilityLabel = ""
         @Published public var contentAccessibilityLabel = ""
@@ -162,8 +161,14 @@ extension StatusView {
             isBookmark = false
             translation = nil
 
-            activeFilters = []
             filterContext = nil
+        }
+        
+        func applyFilters(_ filterBox: Mastodon.Entity.FilterApplication?, to status: Mastodon.Entity.Status) -> Mastodon.Entity.FilterResult {
+            guard let filterBox, let filterContext = filterContext else { return .notFiltered }
+            let status = status.reblog ?? status
+            guard let content = status.content?.lowercased() else { return .notFiltered }
+            return filterBox.apply(to: content, in: filterContext)
         }
         
         init() {
@@ -204,6 +209,7 @@ extension StatusView {
 }
 
 extension StatusView.ViewModel {
+    
     func bind(statusView: StatusView) {
         bindHeader(statusView: statusView)
         bindAuthor(statusView: statusView)
@@ -759,12 +765,11 @@ extension StatusView.ViewModel {
                 switch isFiltered {
                 case .notFiltered:
                     break
-                case .filtered(let reason):
+                case .warn(let reason):
                     self?.isContentSensitive = true
                     self?.isMediaSensitive = true
                     self?.spoilerContent = PlaintextMetaContent(string: reason)
-                case .hidden:
-                    assert(false)
+                case .hide:
                     self?.isContentSensitive = true
                     self?.isMediaSensitive = true
                 }

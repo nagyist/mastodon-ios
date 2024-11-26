@@ -25,8 +25,7 @@ extension HomeTimelineViewModel {
                 authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: timelineMiddleLoaderTableViewCellDelegate,
-                filterContext: .home,
-                activeFilters: StatusFilterService.shared.$activeFilters
+                filterContext: .home
             )
         )
 

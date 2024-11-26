@@ -22,7 +22,7 @@ public final class StatusFilterService {
     public let filterUpdatePublisher = PassthroughSubject<Void, Never>()
 
     // output
-    @Published public var activeFilters: [Mastodon.Entity.Filter] = []
+    @Published public var activeFilterApplication: Mastodon.Entity.FilterApplication? = nil
 
     private init() {
         // fetch account filters every 300s
@@ -38,39 +38,27 @@ public final class StatusFilterService {
             .store(in: &disposeBag)
 
         Publishers.CombineLatest(
-            AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes,
+            AuthenticationServiceProvider.shared.currentActiveUser,
             filterUpdatePublisher
         )
-        .flatMap { mastodonAuthenticationBoxes, _ -> AnyPublisher<Result<Mastodon.Response.Content<[Mastodon.Entity.Filter]>, Error>, Never> in
-            guard let box = mastodonAuthenticationBoxes.first else {
-                return Just(Result { throw APIService.APIError.implicit(.authenticationMissing) }).eraseToAnyPublisher()
-            }
-            return APIService.shared.filters(mastodonAuthenticationBox: box)
-                .map { response in
-                    let now = Date()
-                    let newResponse = response.map { filters in
-                        return filters.filter { filter in
-                            if let expiresAt = filter.expiresAt {
-                                // filter out expired rules
-                                return expiresAt > now
-                            } else {
-                                return true
-                            }
-                        }
+        .sink { authBox, _ in
+            Task {
+                guard let box = authBox else {
+                    throw APIService.APIError.implicit(.authenticationMissing)
+                }
+                let filters = try await APIService.shared.filters(mastodonAuthenticationBox: box)
+                let now = Date()
+                let activeFilters = filters.filter { filter in
+                    if let expiresAt = filter.expiresAt {
+                        // filter out expired rules
+                        return expiresAt > now
+                    } else {
+                        return true
                     }
-                    return Result<Mastodon.Response.Content<[Mastodon.Entity.Filter]>, Error>.success(newResponse)
                 }
-                .catch { error in
-                    Just(Result<Mastodon.Response.Content<[Mastodon.Entity.Filter]>, Error>.failure(error))
-                }
-                .eraseToAnyPublisher()
-        }
-        .sink { result in
-            switch result {
-            case .success(let response):
-                self.activeFilters = response.value
-            case .failure(_):
-                break
+                let newFilterBox = Mastodon.Entity.FilterApplication(filters: activeFilters)
+                guard self.activeFilterApplication != newFilterBox else { return }
+                self.activeFilterApplication = newFilterBox
             }
         }
         .store(in: &disposeBag)

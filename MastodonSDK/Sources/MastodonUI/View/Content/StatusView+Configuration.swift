@@ -447,18 +447,10 @@ extension StatusView {
     }
     
     private func configureFilter(status: MastodonStatus) {
-        Publishers.CombineLatest(
-            viewModel.$activeFilters,
-            viewModel.$filterContext
-        )
+        StatusFilterService.shared.$activeFilterApplication
         .receive(on: StatusView.statusFilterWorkingQueue)
-        .map { filters, filterContext in
-            guard let filterContext else { return .notFiltered }
-            if let filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: filters) { // TODO: don't c
-                return filterApplication.apply(to: status, in: filterContext)
-            } else {
-                return .notFiltered
-            }
+        .map { [weak self] filterBox in
+            return self?.viewModel.applyFilters(filterBox, to: status.entity) ?? .notFiltered
         }
         .receive(on: DispatchQueue.main)
         .assign(to: \.isFiltered, on: viewModel)

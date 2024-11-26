@@ -74,14 +74,14 @@ extension ThreadViewModel.LoadThreadState {
                     _ = try await APIService.shared.getHistory(forStatusID: threadContext.statusID,
                                                                                           authenticationBox: viewModel.authenticationBox)
                     
-                    viewModel.mastodonStatusThreadViewModel.appendAncestor(
+                    await viewModel.mastodonStatusThreadViewModel.appendAncestor(
                         nodes: MastodonStatusThreadViewModel.Node.replyToThread(
                             for: threadContext.replyToID,
                             from: response.value.ancestors
                         )
                     )
 
-                    viewModel.mastodonStatusThreadViewModel.appendDescendant(
+                    await viewModel.mastodonStatusThreadViewModel.appendDescendant(
                         nodes: response.value.descendants.map { status in
                             return .init(status: .fromEntity(status), children: [])
                         }

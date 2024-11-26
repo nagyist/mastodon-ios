@@ -54,11 +54,10 @@ class ThreadViewModel {
         authenticationBox: MastodonAuthenticationBox,
         optionalRoot: StatusItem.Thread?
     ) {
-        let filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: StatusFilterService.shared.activeFilters.filter { $0.context.contains(.thread) })
         self.context = context
         self.authenticationBox = authenticationBox
         self.root = optionalRoot
-        self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(context: context, filterApplication: filterApplication)
+        self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(context: context, filterContext: .thread)
         // end init
 
         $root

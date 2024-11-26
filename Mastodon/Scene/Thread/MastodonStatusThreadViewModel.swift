@@ -23,7 +23,7 @@ final class MastodonStatusThreadViewModel {
     
     // input
     let context: AppContext
-    let filterApplication: Mastodon.Entity.Filter.FilterApplication?
+    let filterContext: Mastodon.Entity.FilterContext?
     @Published private(set) var deletedObjectIDs: Set<MastodonStatus.ID> = Set()
 
     // output
@@ -33,9 +33,9 @@ final class MastodonStatusThreadViewModel {
     @Published var __descendants: [StatusItem] = []
     @Published var descendants: [StatusItem] = []
     
-    init(context: AppContext, filterApplication: Mastodon.Entity.Filter.FilterApplication?) {
+    init(context: AppContext, filterContext: Mastodon.Entity.FilterContext?) {
         self.context = context
-        self.filterApplication = filterApplication
+        self.filterContext = filterContext
         
         Publishers.CombineLatest(
             $__ancestors,
@@ -83,14 +83,14 @@ extension MastodonStatusThreadViewModel {
     
     func appendAncestor(
         nodes: [Node]
-    ) {
+    ) async {
         var newItems: [StatusItem] = []
         for node in nodes {
             
-            if let filterApplication {
-                let filterResult = filterApplication.apply(to: node.status, in: .thread)
+            if let filterContext, let filterApplication = await StatusFilterService.shared.activeFilterApplication {
+                let filterResult = filterApplication.apply(to: node.status, in: filterContext)
                 switch filterResult {
-                case .hidden:
+                case .hide:
                     continue
                 default:
                     break
@@ -107,16 +107,16 @@ extension MastodonStatusThreadViewModel {
     
     func appendDescendant(
         nodes: [Node]
-    ) {
+    ) async {
 
         var newItems: [StatusItem] = []
 
         for node in nodes {
             
-            if let filterApplication {
-                let filterResult = filterApplication.apply(to: node.status, in: .thread)
+            if let filterContext, let filterApplication = await StatusFilterService.shared.activeFilterApplication {
+                let filterResult = filterApplication.apply(to: node.status, in: filterContext)
                 switch filterResult {
-                case .hidden:
+                case .hide:
                     continue
                 default:
                     break

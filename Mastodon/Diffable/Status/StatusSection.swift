@@ -28,8 +28,7 @@ extension StatusSection {
         let authenticationBox: MastodonAuthenticationBox
         weak var statusTableViewCellDelegate: StatusTableViewCellDelegate?
         weak var timelineMiddleLoaderTableViewCellDelegate: TimelineMiddleLoaderTableViewCellDelegate?
-        let filterContext: Mastodon.Entity.Filter.Context?
-        let activeFilters: Published<[Mastodon.Entity.Filter]>.Publisher?
+        let filterContext: Mastodon.Entity.FilterContext?
     }
 
     static func diffableDataSource(
@@ -221,9 +220,6 @@ extension StatusSection {
         )
         
         cell.statusView.viewModel.filterContext = configuration.filterContext
-        configuration.activeFilters?
-            .assign(to: \.activeFilters, on: cell.statusView.viewModel)
-            .store(in: &cell.disposeBag)
     }
     
     static func configure(
@@ -247,11 +243,7 @@ extension StatusSection {
             viewModel: viewModel,
             delegate: configuration.statusTableViewCellDelegate
         )
-        
         cell.statusView.viewModel.filterContext = configuration.filterContext
-        configuration.activeFilters?
-            .assign(to: \.activeFilters, on: cell.statusView.viewModel)
-            .store(in: &cell.disposeBag)
     }
     
     static func configure(

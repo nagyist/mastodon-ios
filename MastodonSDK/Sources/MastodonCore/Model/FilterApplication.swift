@@ -8,75 +8,94 @@
 import MastodonSDK
 import NaturalLanguage
 
-public extension Mastodon.Entity.Filter {
-    struct FilterApplication {
-        let nonWordFilters: [Mastodon.Entity.Filter]
-        let hideWords: [Context : [String]]
-        let warnWords: [Context : [String]]
+public extension Mastodon.Entity {
+    struct FilterApplication: Equatable {
+        let hideAnyMatch: [FilterContext : [String]]
+        let warnAnyMatch: [FilterContext : [String]]
+        let hideWholeWordMatch: [FilterContext : [String]]
+        let warnWholeWordMatch: [FilterContext : [String]]
         
-        public init?(filters: [Mastodon.Entity.Filter]) {
+        public init?(filters: [Mastodon.Entity.FilterInfo]) {
             guard !filters.isEmpty else { return nil }
-            var wordFilters: [Mastodon.Entity.Filter] = []
-            var nonWordFilters: [Mastodon.Entity.Filter] = []
+            
+            var _hideAnyMatch = [FilterContext : [String]]()
+            var _warnAnyMatch = [FilterContext : [String]]()
+            var _hideWholeWordMatch = [FilterContext : [String]]()
+            var _warnWholeWordMatch = [FilterContext : [String]]()
+            
             for filter in filters {
-                if filter.wholeWord {
-                    wordFilters.append(filter)
-                } else {
-                    nonWordFilters.append(filter)
-                }
-            }
-            
-            self.nonWordFilters = nonWordFilters
-            
-            var hidePhraseWords = [Context : [String]]()
-            var warnPhraseWords = [Context : [String]]()
-            for filter in wordFilters {
-                if filter.filterAction ?? ._other("DEFAULT") == .hide {
-                    for context in filter.context {
-                        var words = hidePhraseWords[context] ?? [String]()
-                        words.append(filter.phrase.lowercased())
-                        hidePhraseWords[context] = words
-                    }
-                } else {
-                    for context in filter.context {
-                        var words = warnPhraseWords[context] ?? [String]()
-                        words.append(filter.phrase.lowercased())
-                        warnPhraseWords[context] = words
+                for context in filter.filterContexts {
+                    let partialWords = filter.matchAll
+                    let wholeWords = filter.matchWholeWordOnly
+                    switch filter.filterAction {
+                    case .hide:
+                        var words = _hideWholeWordMatch[context] ?? []
+                        words.append(contentsOf: wholeWords)
+                        _hideWholeWordMatch[context] = words
+                        
+                        words = _hideAnyMatch[context] ?? []
+                        words.append(contentsOf: partialWords)
+                        _hideAnyMatch[context] = words
+                    case .warn, ._other:
+                        var words = _warnWholeWordMatch[context] ?? []
+                        words.append(contentsOf: wholeWords)
+                        _warnWholeWordMatch[context] = words
+                        
+                        words = _warnAnyMatch[context] ?? []
+                        words.append(contentsOf: partialWords)
+                        _warnAnyMatch[context] = words
                     }
                 }
             }
-            
-            self.hideWords = hidePhraseWords
-            self.warnWords = warnPhraseWords
+
+            warnAnyMatch = _warnAnyMatch
+            warnWholeWordMatch = _warnWholeWordMatch
+            hideAnyMatch = _hideAnyMatch
+            hideWholeWordMatch = _hideWholeWordMatch
         }
         
-        public func apply(to status: MastodonStatus, in context: Context) -> Mastodon.Entity.Filter.FilterStatus {
-            
+        public func apply(to status: MastodonStatus, in context: FilterContext) -> Mastodon.Entity.FilterResult {
             let status = status.reblog ?? status
-            let defaultFilterResult = Mastodon.Entity.Filter.FilterStatus.notFiltered
+            let defaultFilterResult = Mastodon.Entity.FilterResult.notFiltered
             guard let content = status.entity.content?.lowercased() else { return defaultFilterResult }
+            return apply(to: content, in: context)
+        }
             
-            for filter in nonWordFilters {
-                guard filter.context.contains(context) else { continue }
-                guard content.contains(filter.phrase.lowercased()) else { continue }
-                switch filter.filterAction {
-                case .hide:
-                    return .hidden
-                default:
-                    return .filtered(filter.phrase)
+        public func apply(to content: String?, in context: FilterContext) -> Mastodon.Entity.FilterResult {
+            
+            let defaultFilterResult = Mastodon.Entity.FilterResult.notFiltered
+            
+            guard let content else { return defaultFilterResult }
+            
+            if let warnAny = warnAnyMatch[context] {
+                for partialMatchable in warnAny {
+                    if content.contains(partialMatchable) {
+                        return .warn(partialMatchable)
+                    }
                 }
             }
+            if let hideAny = hideAnyMatch[context] {
+                for partialMatchable in hideAny {
+                    if content.contains(partialMatchable) {
+                        return .hide
+                    }
+                }
+            }
+            
+            let warnWholeWord = warnWholeWordMatch[context]
+            let hideWholeWord = hideWholeWordMatch[context]
             
             var filterResult = defaultFilterResult
             let tokenizer = NLTokenizer(unit: .word)
             tokenizer.string = content
+            
             tokenizer.enumerateTokens(in: content.startIndex..<content.endIndex) { range, _ in
                 let word = String(content[range])
-                if let wordsToHide = hideWords[context], wordsToHide.contains(word) {
-                    filterResult = .hidden
+                if hideWholeWord?.contains(word) ?? false {
+                    filterResult = .hide
                     return false
-                } else if let wordsToWarn = warnWords[context], wordsToWarn.contains(word) {
-                    filterResult = .filtered(word)
+                } else if warnWholeWord?.contains(word) ?? false {
+                    filterResult = .warn(word)
                     return false
                 } else {
                     return true

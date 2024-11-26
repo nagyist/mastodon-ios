@@ -22,8 +22,7 @@ extension NotificationTimelineViewModel {
             configuration: NotificationSection.Configuration(
                 authenticationBox: authenticationBox,
                 notificationTableViewCellDelegate: notificationTableViewCellDelegate,
-                filterContext: .notifications,
-                activeFilters: StatusFilterService.shared.$activeFilters
+                filterContext: .notifications
             )
         )
 

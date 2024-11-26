@@ -8,6 +8,7 @@
 import UIKit
 
 // MARK: - UITextViewDelegate
+@MainActor
 extension ComposeContentViewModel: UITextViewDelegate {
     
     public func textViewDidBeginEditing(_ textView: UITextView) {

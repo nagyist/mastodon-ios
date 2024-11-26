@@ -16,23 +16,20 @@ final public class FeedDataController {
     private let kind: MastodonFeed.Kind
     
     private var subscriptions = Set<AnyCancellable>()
-    private var filterApplication: Mastodon.Entity.Filter.FilterApplication? {
-        didSet {
-            records = filter(records, forFeed: kind)
-        }
-    }
-
+    
     public init(context: AppContext, authenticationBox: MastodonAuthenticationBox, kind: MastodonFeed.Kind) {
         self.context = context
         self.authenticationBox = authenticationBox
         self.kind = kind
         
-        self.filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: StatusFilterService.shared.activeFilters)
-        
-        StatusFilterService.shared.$activeFilters
-            .sink { [weak self] filters in
-                guard let self else { return }
-                self.filterApplication = Mastodon.Entity.Filter.FilterApplication(filters: filters)
+        StatusFilterService.shared.$activeFilterApplication
+            .sink { filterApplication in
+                if let filterApplication {
+                    Task { [weak self] in
+                        guard let self else { return }
+                        self.records = await self.filter(self.records, forFeed: kind, with: filterApplication)
+                    }
+                }
             }
             .store(in: &subscriptions)
     }
@@ -40,7 +37,11 @@ final public class FeedDataController {
     public func loadInitial(kind: MastodonFeed.Kind) {
         Task {
             let unfilteredRecords = try await load(kind: kind, maxID: nil)
-            records = filter(unfilteredRecords, forFeed: kind)
+            if let filterApplication = StatusFilterService.shared.activeFilterApplication {
+                records = await filter(unfilteredRecords, forFeed: kind, with: filterApplication)
+            } else {
+                records = unfilteredRecords
+            }
         }
     }
     
@@ -51,23 +52,27 @@ final public class FeedDataController {
             }
 
             let unfiltered = try await load(kind: kind, maxID: lastId)
-            records += filter(unfiltered, forFeed: kind)
+            if let filterApplication = StatusFilterService.shared.activeFilterApplication {
+                records += await filter(unfiltered, forFeed: kind, with: filterApplication)
+            } else {
+                records += unfiltered
+            }
         }
     }
     
-    private func filter(_ records: [MastodonFeed], forFeed feedKind: MastodonFeed.Kind) -> [MastodonFeed] {
-        guard let filterApplication else { return records }
-       
-        return records.filter {
-            guard let status = $0.status else { return true }
+    private func filter(_ records: [MastodonFeed], forFeed feedKind: MastodonFeed.Kind, with filterApplication: Mastodon.Entity.FilterApplication) async -> [MastodonFeed] {
+        
+        let filteredRecords = records.filter { feedRecord in
+            guard let status = feedRecord.status else { return true }
             let filterResult = filterApplication.apply(to: status, in: feedKind.filterContext)
             switch filterResult {
-            case .hidden:
+            case .hide:
                 return false
             default:
                 return true
             }
         }
+        return filteredRecords
     }
     
     @MainActor
@@ -268,7 +273,7 @@ private extension FeedDataController {
 }
 
 extension MastodonFeed.Kind {
-    var filterContext: Mastodon.Entity.Filter.Context {
+    var filterContext: Mastodon.Entity.FilterContext {
         switch self {
         case .home(let timeline): // TODO: take timeline into account. See iOS-333.
             return .home

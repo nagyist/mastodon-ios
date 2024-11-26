@@ -28,8 +28,7 @@ extension ThreadViewModel {
                 authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: nil,
-                filterContext: .thread,
-                activeFilters: StatusFilterService.shared.$activeFilters
+                filterContext: .thread
             )
         )
         

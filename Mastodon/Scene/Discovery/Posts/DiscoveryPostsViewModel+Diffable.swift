@@ -22,8 +22,7 @@ extension DiscoveryPostsViewModel {
                 authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: nil,
-                filterContext: .none,
-                activeFilters: nil
+                filterContext: nil
             )
         )
         

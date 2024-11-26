@@ -27,8 +27,7 @@ extension NotificationSection {
     struct Configuration {
         let authenticationBox: MastodonAuthenticationBox
         weak var notificationTableViewCellDelegate: NotificationTableViewCellDelegate?
-        let filterContext: Mastodon.Entity.Filter.Context?
-        let activeFilters: Published<[Mastodon.Entity.Filter]>.Publisher?
+        let filterContext: Mastodon.Entity.FilterContext?
     }
     
     static func diffableDataSource(
@@ -109,13 +108,6 @@ extension NotificationSection {
         
         cell.notificationView.statusView.viewModel.filterContext = configuration.filterContext
         cell.notificationView.quoteStatusView.viewModel.filterContext = configuration.filterContext
-        
-        configuration.activeFilters?
-            .assign(to: \.activeFilters, on: cell.notificationView.statusView.viewModel)
-            .store(in: &cell.disposeBag)
-        configuration.activeFilters?
-            .assign(to: \.activeFilters, on: cell.notificationView.quoteStatusView.viewModel)
-            .store(in: &cell.disposeBag)
     }
     
 }
