@@ -128,16 +128,15 @@ extension MediaView {
     }
     
     private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {        
-        Publishers.CombineLatest3(
-            configuration.$isReveal,
+        Publishers.CombineLatest(
             configuration.$previewImage,
             configuration.$blurhashImage
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] isReveal, previewImage, blurhashImage in
+        .sink { [weak self] previewImage, blurhashImage in
             guard let self = self else { return }
             
-            let image = isReveal ?
+            let image = configuration.isReveal ?
                 (previewImage ?? blurhashImage ?? MediaView.placeholderImage) :
                 (blurhashImage ?? MediaView.placeholderImage)
             self.imageView.image = image
@@ -213,20 +212,6 @@ extension MediaView {
             .assign(to: \.image, on: blurhashImageView)
             .store(in: &_disposeBag)
         blurhashImageView.alpha = configuration.isReveal ? 0 : 1
-        
-        configuration.$isReveal
-            .dropFirst()
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isReveal in
-                guard let self = self else { return }
-                let animator = UIViewPropertyAnimator(duration: 0.3, curve: .easeInOut)
-                animator.addAnimations {
-                    self.blurhashImageView.alpha = isReveal ? 0 : 1
-                }
-                animator.startAnimation()
-            }
-            .store(in: &_disposeBag)
     }
     
     private func layoutAlt() {

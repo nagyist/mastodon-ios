@@ -45,11 +45,13 @@ extension StatusSection {
             switch item {
             case .feed(let feed):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+                let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.feed(feed)
+                let contentConcealModel = StatusView.ContentConcealViewModel(status: feed.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.filterContext)
                 configure(
                     context: context,
                     tableView: tableView,
                     cell: cell,
-                    viewModel: StatusTableViewCell.ViewModel(value: .feed(feed)),
+                    viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                     configuration: configuration
                 )
                 return cell
@@ -63,11 +65,13 @@ extension StatusSection {
                 return cell
             case .status(let status):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+                let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(status)
+                let contentConcealModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.filterContext)
                 configure(
                     context: context,
                     tableView: tableView,
                     cell: cell,
-                    viewModel: StatusTableViewCell.ViewModel(value: .status(status)),
+                    viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                     configuration: configuration
                 )
                 return cell
@@ -112,22 +116,26 @@ extension StatusSection {
         switch configuration.thread {
         case .root(let threadContext):
             let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusThreadRootTableViewCell.self), for: indexPath) as! StatusThreadRootTableViewCell
+            let contentConcealModel = StatusView.ContentConcealViewModel(status: threadContext.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: .thread)
             StatusSection.configure(
                 context: context,
                 tableView: tableView,
                 cell: cell,
-                viewModel: StatusThreadRootTableViewCell.ViewModel(value: .status(threadContext.status)),
+                viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: .status(threadContext.status), contentConcealModel: contentConcealModel),
                 configuration: configuration.configuration
             )
             return cell
         case .reply(let threadContext),
              .leaf(let threadContext):
             let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+            let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(threadContext.status)
+            let contentConcealModel = StatusView.ContentConcealViewModel(status: threadContext.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.configuration.filterContext)
+            assert(configuration.configuration.filterContext == .thread)
             StatusSection.configure(
                 context: context,
                 tableView: tableView,
                 cell: cell,
-                viewModel: StatusTableViewCell.ViewModel(value: .status(threadContext.status)),
+                viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                 configuration: configuration.configuration
             )
             return cell
@@ -201,7 +209,7 @@ extension StatusSection {
         context: AppContext,
         tableView: UITableView,
         cell: StatusTableViewCell,
-        viewModel: StatusTableViewCell.ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         setupStatusPollDataSource(
@@ -218,15 +226,13 @@ extension StatusSection {
             viewModel: viewModel,
             delegate: configuration.statusTableViewCellDelegate
         )
-        
-        cell.statusView.viewModel.filterContext = configuration.filterContext
     }
     
     static func configure(
         context: AppContext,
         tableView: UITableView,
         cell: StatusThreadRootTableViewCell,
-        viewModel: StatusThreadRootTableViewCell.ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         setupStatusPollDataSource(
@@ -243,7 +249,6 @@ extension StatusSection {
             viewModel: viewModel,
             delegate: configuration.statusTableViewCellDelegate
         )
-        cell.statusView.viewModel.filterContext = configuration.filterContext
     }
     
     static func configure(

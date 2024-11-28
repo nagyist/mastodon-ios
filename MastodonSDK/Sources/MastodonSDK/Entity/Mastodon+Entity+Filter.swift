@@ -12,7 +12,27 @@ extension Mastodon.Entity {
     public enum FilterResult {
         case notFiltered
         case warn(String)
-        case hide
+        case hide(String)
+        
+        public var isSensitive: Bool {
+            switch self {
+            case .notFiltered:
+                return false
+            case .hide, .warn:
+                return true
+            }
+        }
+        
+        public var filterDescription: String? {
+            switch self {
+            case .notFiltered:
+                return nil
+            case .hide:
+                return "hidden"
+            case .warn(let description):
+                return description
+            }
+        }
     }
     
     public enum FilterAction: RawRepresentable, Codable {
@@ -39,6 +59,7 @@ extension Mastodon.Entity {
     }
     
     public protocol FilterInfo {
+        var name: String { get }
         var expiresAt: Date? { get }
         var filterContexts: [FilterContext] { get }
         var filterAction: FilterAction { get }
@@ -72,6 +93,10 @@ extension Mastodon.Entity {
             case expiresAt = "expires_at"
             case irreversible
             case wholeWord = "whole_word"
+        }
+        
+        public var name: String {
+            return phrase
         }
         
         public var filterContexts: [Mastodon.Entity.FilterContext] {
@@ -139,6 +164,10 @@ extension Mastodon.Entity {
             case expiresAt = "expires_at"
             case filterAction = "filter_action"
             case keywords
+        }
+        
+        public var name: String {
+            return title
         }
         
         public var filterContexts: [Mastodon.Entity.FilterContext] {

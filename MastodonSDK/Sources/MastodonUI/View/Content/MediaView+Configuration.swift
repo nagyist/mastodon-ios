@@ -25,7 +25,7 @@ extension MediaView {
         public let index: Int
         public let total: Int
         
-        @Published public var isReveal = true
+        public var isReveal = true
         @Published public var previewImage: UIImage?
         @Published public var blurhashImage: UIImage?
         public var blurhashImageDisposeBag = Set<AnyCancellable>()
@@ -235,7 +235,6 @@ extension MediaView {
             }()
             
             configuration.load()
-            configuration.isReveal = status.entity.sensitive == true ? status.isSensitiveToggled : true
             
             return configuration
         }

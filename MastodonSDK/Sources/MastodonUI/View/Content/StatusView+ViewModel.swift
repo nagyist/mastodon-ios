@@ -29,6 +29,7 @@ extension StatusView {
         public var authenticationBox: MastodonAuthenticationBox?
         public var originalStatus: MastodonStatus? {
             didSet {
+                // Note: the originalStatus is created fresh every time, so never canceling this subscription is ok for now.
                 originalStatus?.$entity
                     .receive(on: DispatchQueue.main)
                     .sink(receiveValue: { status in
@@ -38,6 +39,9 @@ extension StatusView {
                     .store(in: &disposeBag)
             }
         }
+        
+        // Sensitive
+        public var contentDisplayMode: StatusView.ContentDisplayMode = .neverConceal
 
         // Header
         @Published public var header: Header = .none
@@ -94,14 +98,6 @@ extension StatusView {
         // Visibility
         @Published public var visibility: MastodonVisibility = .public
         
-        // Sensitive
-        @Published public var isContentSensitive: Bool = false
-        @Published public var isMediaSensitive: Bool = false
-        @Published public var isSensitiveToggled = false
-        
-        @Published public var isContentReveal: Bool = true
-        @Published public var isMediaReveal: Bool = true
-        
         // Toolbar
         @Published public var isReblog: Bool = false
         @Published public var isReblogEnabled: Bool = true
@@ -114,10 +110,6 @@ extension StatusView {
         
         @Published public var editedAt: Date? = nil
         
-        // Filter
-        public var filterContext: Mastodon.Entity.FilterContext?
-        @Published public var isFiltered: Mastodon.Entity.FilterResult = .notFiltered
-
         @Published public var groupedAccessibilityLabel = ""
         @Published public var contentAccessibilityLabel = ""
 
@@ -150,25 +142,12 @@ extension StatusView {
         }
         
         public func prepareForReuse() {
+            contentDisplayMode = .neverConceal
             authenticationBox = nil
-            
             authorAvatarImageURL = nil
-            
-            isContentSensitive = false
-            isMediaSensitive = false
-            isSensitiveToggled = false
             isCurrentlyTranslating = false
             isBookmark = false
             translation = nil
-
-            filterContext = nil
-        }
-        
-        func applyFilters(_ filterBox: Mastodon.Entity.FilterApplication?, to status: Mastodon.Entity.Status) -> Mastodon.Entity.FilterResult {
-            guard let filterBox, let filterContext = filterContext else { return .notFiltered }
-            let status = status.reblog ?? status
-            guard let content = status.content?.lowercased() else { return .notFiltered }
-            return filterBox.apply(to: content, in: filterContext)
         }
         
         init() {
@@ -188,22 +167,6 @@ extension StatusView {
                 }
             }
             .assign(to: &$isReblogEnabled)
-            // isContentSensitive
-            $spoilerContent
-                .map { $0 != nil }
-                .assign(to: &$isContentSensitive)
-            // isReveal
-            Publishers.CombineLatest3(
-                $isContentSensitive,
-                $isMediaSensitive,
-                $isSensitiveToggled
-            )
-            .sink { [weak self] isContentSensitive, isMediaSensitive, isSensitiveToggled in
-                guard let self = self else { return }
-                self.isContentReveal = isContentSensitive ? isSensitiveToggled : true
-                self.isMediaReveal = isMediaSensitive ? isSensitiveToggled : true
-            }
-            .store(in: &disposeBag)
         }
     }
 }
@@ -220,7 +183,6 @@ extension StatusView.ViewModel {
         bindToolbar(statusView: statusView)
         bindMetric(statusView: statusView)
         bindMenu(statusView: statusView)
-        bindFilter(statusView: statusView)
         bindAccessibility(statusView: statusView)
     }
     
@@ -296,32 +258,15 @@ extension StatusView.ViewModel {
     }
     
     private func bindContent(statusView: StatusView) {
-        Publishers.CombineLatest4(
+        Publishers.CombineLatest3(
             $spoilerContent,
             $content,
-            $language,
-            $isContentReveal.removeDuplicates()
+            $language
         )
-        .sink { spoilerContent, content, language, isContentReveal in
-            if let spoilerContent = spoilerContent {
-                statusView.spoilerOverlayView.spoilerMetaLabel.configure(content: spoilerContent)
-                // statusView.spoilerBannerView.label.configure(content: spoilerContent)
-                // statusView.setSpoilerBannerViewHidden(isHidden: !isContentReveal)
-
-            } else {
-                statusView.spoilerOverlayView.spoilerMetaLabel.reset()
-                // statusView.spoilerBannerView.label.reset()
-            }
+        .sink { spoilerContent, content, language in
             
             if statusView.style == .editHistory {
                 statusView.setContentSensitiveeToggleButtonDisplay(isDisplay: false)
-            }
-            if let spoilerContent = spoilerContent, !spoilerContent.string.isEmpty {
-                statusView.historyContentWarningLabel.configure(content: spoilerContent)
-                statusView.historyContentWarningAdaptiveMarginContainerView.isHidden = statusView.style != .editHistory
-            } else {
-                statusView.historyContentWarningLabel.reset()
-                statusView.historyContentWarningAdaptiveMarginContainerView.isHidden = true
             }
             
             let paragraphStyle = statusView.contentMetaText.paragraphStyle
@@ -346,30 +291,8 @@ extension StatusView.ViewModel {
                 statusView.contentMetaText.textView.accessibilityLabel = ""
                 statusView.contentMetaText.textView.isHidden = true
             }
-            
-            statusView.contentMetaText.textView.alpha = isContentReveal ? 1 : 0     // keep the frame size and only display when revealing
-            statusView.statusCardControl.alpha = isContentReveal ? 1 : 0
-            
-            statusView.setSpoilerOverlayViewHidden(isHidden: isContentReveal)
         }
         .store(in: &disposeBag)
-
-        $isMediaSensitive
-            .sink { isSensitive in
-                guard isSensitive else { return }
-                statusView.setContentSensitiveeToggleButtonDisplay()
-            }
-            .store(in: &disposeBag)
-        
-        $isSensitiveToggled
-            .sink { isSensitiveToggled in
-                // The button indicator go-to state for button action direction
-                // eye: when media is hidden
-                // eye-slash: when media display
-                let image = isSensitiveToggled ? UIImage(systemName: "eye.slash.fill") : UIImage(systemName: "eye.fill")
-                statusView.authorView.contentSensitiveeToggleButton.setImage(image, for: .normal)
-            }
-            .store(in: &disposeBag)
 
         $isCurrentlyTranslating
             .receive(on: DispatchQueue.main)
@@ -419,24 +342,6 @@ extension StatusView.ViewModel {
                 if needsDisplay {
                     statusView.setMediaDisplay()
                 }
-            }
-            .store(in: &disposeBag)
-        
-        Publishers.CombineLatest(
-            $mediaViewConfigurations,
-            $isMediaReveal
-        )
-        .sink { configurations, isMediaReveal in
-            for configuration in configurations {
-                configuration.isReveal = isMediaReveal
-            }
-        }
-        .store(in: &disposeBag)
-        
-        $isMediaReveal
-            .sink { isMediaReveal in
-                statusView.mediaGridContainerView.hideContentWarning(isMediaReveal)
-                statusView.mediaGridContainerView.viewModel.isSensitiveToggleButtonDisplay = isMediaReveal
             }
             .store(in: &disposeBag)
     }
@@ -758,24 +663,6 @@ extension StatusView.ViewModel {
             }
             .store(in: &disposeBag)
     }
-
-    private func bindFilter(statusView: StatusView) {
-        $isFiltered
-            .sink { [weak self] isFiltered in
-                switch isFiltered {
-                case .notFiltered:
-                    break
-                case .warn(let reason):
-                    self?.isContentSensitive = true
-                    self?.isMediaSensitive = true
-                    self?.spoilerContent = PlaintextMetaContent(string: reason)
-                case .hide:
-                    self?.isContentSensitive = true
-                    self?.isMediaSensitive = true
-                }
-            }
-            .store(in: &disposeBag)
-    }
     
     private func bindAccessibility(statusView: StatusView) {
         let shortAuthorAccessibilityLabel = Publishers.CombineLatest4(
@@ -844,23 +731,23 @@ extension StatusView.ViewModel {
         .assign(to: \.accessibilityLabel, on: statusView.authorView)
         .store(in: &disposeBag)
 
-        Publishers.CombineLatest3(
-            $isContentReveal,
+        Publishers.CombineLatest(
             $spoilerContent,
             $content
         )
-        .map { isContentReveal, spoilerContent, content in
+        .map { [weak self] spoilerContent, content in
+            guard let self else { return "" }
+            
             var strings: [String?] = []
             
             if let spoilerContent = spoilerContent, !spoilerContent.string.isEmpty {
                 strings.append(L10n.Common.Controls.Status.contentWarning)
                 strings.append(spoilerContent.string)
                 
-                // TODO: replace with "Tap to reveal"
                 strings.append(L10n.Common.Controls.Status.mediaContentWarning)
             }
 
-            if isContentReveal {
+            if !self.contentDisplayMode.shouldConcealText {
                 strings.append(content?.string)
             }
             
@@ -868,18 +755,9 @@ extension StatusView.ViewModel {
         }
         .assign(to: &$contentAccessibilityLabel)
         
-        $isContentReveal
-            .map { isContentReveal in
-                isContentReveal ? L10n.Scene.Compose.Accessibility.enableContentWarning : L10n.Scene.Compose.Accessibility.disableContentWarning
-            }
-            .sink { label in
-                statusView.authorView.contentSensitiveeToggleButton.accessibilityLabel = label
-            }
-            .store(in: &disposeBag)
-        
         $contentAccessibilityLabel
             .sink { contentAccessibilityLabel in
-                statusView.spoilerOverlayView.accessibilityLabel = contentAccessibilityLabel
+                statusView.contentConcealExplainView.accessibilityLabel = contentAccessibilityLabel
             }
             .store(in: &disposeBag)
 
@@ -986,12 +864,9 @@ extension StatusView.ViewModel {
             }
             .store(in: &disposeBag)
 
-        Publishers.CombineLatest(
-            $content,
-            $isContentReveal.removeDuplicates()
-        )
-        .map { content, isRevealed in
-            guard isRevealed, let entities = content?.entities else { return [] }
+        $content
+        .map { [weak self] content in
+            guard let self, !self.contentDisplayMode.shouldConcealText, let entities = content?.entities else { return [] }
             return entities.compactMap { entity in
                 guard let name = entity.meta.accessibilityLabel else { return nil }
                 return UIAccessibilityCustomAction(name: name) { action in

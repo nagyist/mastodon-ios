@@ -9,6 +9,12 @@ import UIKit
 import MastodonSDK
 
 extension HomeTimelineViewController: DataSourceProvider {
+    var filterContext: Mastodon.Entity.FilterContext? { .home }
+
+    func didToggleContentWarningDisplayStatus(status: MastodonSDK.MastodonStatus) {
+        tableView.reloadData()
+    }
+    
     func item(from source: DataSourceItem.Source) async -> DataSourceItem? {
         var _indexPath = source.indexPath
         if _indexPath == nil, let cell = source.tableViewCell {

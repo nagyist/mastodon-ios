@@ -292,6 +292,7 @@ extension HomeTimelineViewController {
         tableView.delegate = self
         viewModel?.setupDiffableDataSource(
             tableView: tableView,
+            filterContext: filterContext,
             statusTableViewCellDelegate: self,
             timelineMiddleLoaderTableViewCellDelegate: self
         )

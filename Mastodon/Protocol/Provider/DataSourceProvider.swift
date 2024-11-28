@@ -39,4 +39,7 @@ extension DataSourceItem {
 protocol DataSourceProvider: ViewControllerWithDependencies {
     func item(from source: DataSourceItem.Source) async -> DataSourceItem?
     func update(status: MastodonStatus, intent: MastodonStatus.UpdateIntent)
+    
+    var filterContext: Mastodon.Entity.FilterContext? { get }
+    func didToggleContentWarningDisplayStatus(status: MastodonStatus)
 }

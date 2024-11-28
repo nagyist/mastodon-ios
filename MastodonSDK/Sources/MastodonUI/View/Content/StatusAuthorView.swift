@@ -234,6 +234,7 @@ extension StatusAuthorView {
 extension StatusAuthorView {
     // author container: H - [ avatarButton | authorMetaContainer ]
     private func layoutBase() {
+        assert(arrangedSubviews.count == 0)
         // avatarButton
         avatarButton.size = CGSize.authorAvatarButtonSize
         avatarButton.avatarImageView.imageViewSize = CGSize.authorAvatarButtonSize

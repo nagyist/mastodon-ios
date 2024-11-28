@@ -239,9 +239,9 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & MediaPrev
                 return
             }
             
-            let needsToggleMediaSensitive = await !statusView.viewModel.isMediaReveal
+            let hasConcealedContent = await statusView.contentDisplayMode.shouldConcealSomething
             
-            guard !needsToggleMediaSensitive else {
+            guard !hasConcealedContent else {
                 try await DataSourceFacade.responseToToggleSensitiveAction(
                     dependency: self,
                     status: status
@@ -455,7 +455,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider {
     func tableViewCell(
         _ cell: UITableViewCell,
         statusView: StatusView,
-        spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView
+        contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView
     ) {
         Task {
             let source = DataSourceItem.Source(tableViewCell: cell, indexPath: nil)

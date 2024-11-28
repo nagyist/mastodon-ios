@@ -28,14 +28,14 @@ protocol NotificationTableViewCellDelegate: AnyObject, AutoGenerateProtocolDeleg
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, acceptFollowRequestButtonDidPressed button: UIButton)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, rejectFollowRequestButtonDidPressed button: UIButton)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, statusView: StatusView, metaText: MetaText, didSelectMeta meta: Meta)
-    func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, statusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView)
+    func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, statusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, statusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaView: MediaView, didSelectMediaViewAt index: Int)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, pollTableView tableView: UITableView, didSelectRowAt indexPath: IndexPath)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, pollVoteButtonPressed button: UIButton)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, statusView: StatusView, actionToolbarContainer: ActionToolbarContainer, buttonDidPressed button: UIButton, action: ActionToolbarContainer.Action)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, quoteStatusView: StatusView, authorAvatarButtonDidPressed button: AvatarButton)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, quoteStatusView: StatusView, metaText: MetaText, didSelectMeta meta: Meta)
-    func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, quoteStatusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView)
+    func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, quoteStatusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, quoteStatusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaView: MediaView, didSelectMediaViewAt index: Int)
     func tableViewCell(_ cell: UITableViewCell, notificationView: NotificationView, accessibilityActivate: Void)
     // sourcery:end
@@ -65,8 +65,8 @@ extension NotificationViewDelegate where Self: NotificationViewContainerTableVie
         delegate?.tableViewCell(self, notificationView: notificationView, statusView: statusView, metaText: metaText, didSelectMeta: meta)
     }
 
-    func notificationView(_ notificationView: NotificationView, statusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView) {
-        delegate?.tableViewCell(self, notificationView: notificationView, statusView: statusView, spoilerOverlayViewDidPressed: overlayView)
+    func notificationView(_ notificationView: NotificationView, statusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView) {
+        delegate?.tableViewCell(self, notificationView: notificationView, statusView: statusView, contentConcealExplainViewDidPressed: contentConcealExplainView)
     }
 
     func notificationView(_ notificationView: NotificationView, statusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaView: MediaView, didSelectMediaViewAt index: Int) {
@@ -93,8 +93,8 @@ extension NotificationViewDelegate where Self: NotificationViewContainerTableVie
         delegate?.tableViewCell(self, notificationView: notificationView, quoteStatusView: quoteStatusView, metaText: metaText, didSelectMeta: meta)
     }
 
-    func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView) {
-        delegate?.tableViewCell(self, notificationView: notificationView, quoteStatusView: quoteStatusView, spoilerOverlayViewDidPressed: overlayView)
+    func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView) {
+        delegate?.tableViewCell(self, notificationView: notificationView, quoteStatusView: quoteStatusView, contentConcealExplainViewDidPressed: contentConcealExplainView)
     }
 
     func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaView: MediaView, didSelectMediaViewAt index: Int) {

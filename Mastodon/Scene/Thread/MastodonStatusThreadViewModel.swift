@@ -83,12 +83,12 @@ extension MastodonStatusThreadViewModel {
     
     func appendAncestor(
         nodes: [Node]
-    ) async {
+    ) {
         var newItems: [StatusItem] = []
         for node in nodes {
             
-            if let filterContext, let filterApplication = await StatusFilterService.shared.activeFilterApplication {
-                let filterResult = filterApplication.apply(to: node.status, in: filterContext)
+            if let filterContext, let filterBox = StatusFilterService.shared.activeFilterBox {
+                let filterResult = filterBox.apply(to: node.status, in: filterContext)
                 switch filterResult {
                 case .hide:
                     continue
@@ -107,14 +107,14 @@ extension MastodonStatusThreadViewModel {
     
     func appendDescendant(
         nodes: [Node]
-    ) async {
+    ) {
 
         var newItems: [StatusItem] = []
 
         for node in nodes {
             
-            if let filterContext, let filterApplication = await StatusFilterService.shared.activeFilterApplication {
-                let filterResult = filterApplication.apply(to: node.status, in: filterContext)
+            if let filterContext, let filterBox = StatusFilterService.shared.activeFilterBox {
+                let filterResult = filterBox.apply(to: node.status, in: filterContext)
                 switch filterResult {
                 case .hide:
                     continue

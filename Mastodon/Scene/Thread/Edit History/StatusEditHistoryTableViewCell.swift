@@ -72,9 +72,9 @@ class StatusEditHistoryTableViewCell: UITableViewCell {
         NSLayoutConstraint.activate(constraints)
     }
 
-    func configure(status: MastodonStatus, statusEdit: Mastodon.Entity.StatusEdit, dateText: String) {
+    func configure(status: MastodonStatus, statusEdit: Mastodon.Entity.StatusEdit, dateText: String, contentDisplayMode: StatusView.ContentDisplayMode) {
         dateLabel.text = dateText
-        statusHistoryView.statusView.configure(status: status, statusEdit: statusEdit)
+        statusHistoryView.statusView.configure(status: status, statusEdit: statusEdit, contentDisplayMode: contentDisplayMode)
     }
     
     override func prepareForReuse() {

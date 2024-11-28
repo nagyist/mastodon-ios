@@ -60,8 +60,7 @@ extension ComposeContentViewModel {
             cell.statusView.frame.size.width = tableView.frame.width
 
             // configure status
-            cell.statusView.configure(status: status)
-
+            cell.statusView.configure(status: status, contentDisplayMode: .neverConceal)
         }
     }
 }

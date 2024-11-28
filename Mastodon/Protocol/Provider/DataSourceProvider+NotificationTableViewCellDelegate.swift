@@ -197,7 +197,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Med
                     guard let sensitive = status.entity.sensitive else {
                         return false
                     }
-                    return status.isSensitiveToggled ? !sensitive : sensitive
+                    return status.showDespiteContentWarning ? !sensitive : sensitive
                 }()
                 return NotificationMediaTransitionContext(
                     status: status,
@@ -250,7 +250,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Med
                 guard let status = record.status?.reblog ?? record.status else { return nil }
                 return NotificationMediaTransitionContext(
                     status: status,
-                    needsToggleMediaSensitive: status.entity.sensitive == true ? !status.isSensitiveToggled : false
+                    needsToggleMediaSensitive: status.entity.sensitive == true ? !status.showDespiteContentWarning : false
                 )
             }()
 
@@ -383,7 +383,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
         _ cell: UITableViewCell,
         notificationView: NotificationView,
         statusView: StatusView,
-        spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView
+        contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView
     ) {
         Task {
             let source = DataSourceItem.Source(tableViewCell: cell, indexPath: nil)
@@ -443,7 +443,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
         _ cell: UITableViewCell,
         notificationView: NotificationView,
         quoteStatusView: StatusView,
-        spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView
+        contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView
     ) {
         Task {
             let source = DataSourceItem.Source(tableViewCell: cell, indexPath: nil)

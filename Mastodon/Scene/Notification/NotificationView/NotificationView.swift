@@ -23,7 +23,7 @@ public protocol NotificationViewDelegate: AnyObject {
     func notificationView(_ notificationView: NotificationView, rejectFollowRequestButtonDidPressed button: UIButton)
     
     func notificationView(_ notificationView: NotificationView, statusView: StatusView, metaText: MetaText, didSelectMeta meta: Meta)
-    func notificationView(_ notificationView: NotificationView, statusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView)
+    func notificationView(_ notificationView: NotificationView, statusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView)
     func notificationView(_ notificationView: NotificationView, statusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaView: MediaView, didSelectMediaViewAt index: Int)
     func notificationView(_ notificationView: NotificationView, statusView: StatusView, pollTableView tableView: UITableView, didSelectRowAt indexPath: IndexPath)
     func notificationView(_ notificationView: NotificationView, statusView: StatusView, pollVoteButtonPressed button: UIButton)
@@ -31,7 +31,7 @@ public protocol NotificationViewDelegate: AnyObject {
 
     func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, authorAvatarButtonDidPressed button: AvatarButton)
     func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, metaText: MetaText, didSelectMeta meta: Meta)
-    func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView)
+    func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView)
     func notificationView(_ notificationView: NotificationView, quoteStatusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaView: MediaView, didSelectMediaViewAt index: Int)
     
     // a11y
@@ -560,12 +560,12 @@ extension NotificationView: StatusViewDelegate {
         assertionFailure()
     }
     
-    public func statusView(_ statusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView) {
+    public func statusView(_ statusView: StatusView, contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView) {
         switch statusView {
         case self.statusView:
-            delegate?.notificationView(self, statusView: statusView, spoilerOverlayViewDidPressed: overlayView)
+            delegate?.notificationView(self, statusView: statusView, contentConcealExplainViewDidPressed: contentConcealExplainView)
         case quoteStatusView:
-            delegate?.notificationView(self, quoteStatusView: statusView, spoilerOverlayViewDidPressed: overlayView)
+            delegate?.notificationView(self, quoteStatusView: statusView, contentConcealExplainViewDidPressed: contentConcealExplainView)
         default:
             assertionFailure()
         }

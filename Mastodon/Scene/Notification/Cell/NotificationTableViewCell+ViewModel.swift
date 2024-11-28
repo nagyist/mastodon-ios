@@ -47,22 +47,6 @@ extension NotificationTableViewCell {
         }
         
         self.delegate = delegate
-
-        Publishers.CombineLatest(
-            notificationView.statusView.viewModel.$isContentReveal.removeDuplicates(),
-            notificationView.quoteStatusView.viewModel.$isContentReveal.removeDuplicates()
-        )
-        .dropFirst()
-        .receive(on: DispatchQueue.main)
-        .sink { [weak tableView] _, _ in
-            guard let tableView = tableView else { return }
-
-            UIView.performWithoutAnimation {
-                tableView.beginUpdates()
-                tableView.endUpdates()
-            }
-        }
-        .store(in: &disposeBag)
     }
     
 }

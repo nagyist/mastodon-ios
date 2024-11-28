@@ -19,14 +19,15 @@ extension StatusView {
     
     static let statusFilterWorkingQueue = DispatchQueue(label: "StatusFilterWorkingQueue")
     
-    public func configure(feed: MastodonFeed) {
+    public func configure(feed: MastodonFeed, contentMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentMode
         switch feed.kind {
         case .home:
             guard let status = feed.status else {
                 assertionFailure()
                 return
             }
-            configure(status: status)
+            configure(status: status, contentDisplayMode: contentMode)
         case .notificationAll:
             assertionFailure("TODO")
         case .notificationMentions:
@@ -34,13 +35,15 @@ extension StatusView {
         case .none:
             break
         }
-        
+        configureForContentDisplayMode()
     }
 }
 
 extension StatusView {
 
-    public func configure(status: MastodonStatus, statusEdit: Mastodon.Entity.StatusEdit) {
+    public func configure(status: MastodonStatus, statusEdit: Mastodon.Entity.StatusEdit, contentDisplayMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentDisplayMode
+        
         configureHeader(status: status)
         let author = (status.reblog ?? status).entity.account
         configureAuthor(author: author)
@@ -50,17 +53,16 @@ extension StatusView {
         configurePollHistory(statusEdit: statusEdit)
         configureCard(status: status)
         configureToolbar(status: status)
-        configureFilter(status: status)
         configureContent(statusEdit: statusEdit, status: status)
         configureMedia(status: statusEdit)
         actionToolbarAdaptiveMarginContainerView.isHidden = true
         authorView.menuButton.isHidden = true
         headerAdaptiveMarginContainerView.isHidden = true
-        viewModel.isSensitiveToggled = true
-        viewModel.isContentReveal = true
     }
 
-    public func configure(status: MastodonStatus) {
+    public func configure(status: MastodonStatus, contentDisplayMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentDisplayMode
+        
         configureHeader(status: status)
         let author = (status.reblog ?? status).entity.account
         configureAuthor(author: author)
@@ -72,7 +74,6 @@ extension StatusView {
         configurePoll(status: status)
         configureCard(status: status)
         configureToolbar(status: status)
-        configureFilter(status: status)
         viewModel.originalStatus = status
 
         viewModel.$translation
@@ -81,10 +82,122 @@ extension StatusView {
                 self?.configureTranslated(status: status)
             }
             .store(in: &disposeBag)
+        
+        configureForContentDisplayMode()
     }
 }
 
 extension StatusView {
+    private func configureForContentDisplayMode() {
+        let hideAll: Bool
+        let hideMediaOnly: Bool
+        let explainationText: String
+        let canToggle: Bool
+
+        switch contentDisplayMode {
+        case .alwaysConceal:
+            hideAll = true
+            hideMediaOnly = false
+            explainationText = ""
+            canToggle = false
+        case .concealAll(let reason, let showAnyway):
+            hideAll = !showAnyway
+            hideMediaOnly = false
+            explainationText = reason
+            canToggle = true
+        case .concealMediaOnly(let showAnyway):
+            hideAll = false
+            hideMediaOnly = !showAnyway
+            explainationText = ""
+            canToggle = true
+        case .neverConceal:
+            hideAll = false
+            hideMediaOnly = false
+            explainationText = ""
+            canToggle = false
+        case .UNDETERMINED:
+            hideAll = false
+            hideMediaOnly = false
+            explainationText = ""
+            canToggle = false
+        }
+        
+        // Show/hide text
+        contentMetaText.textView.isHidden = hideAll
+        setStatusCardControlDisplay(isDisplay: !hideAll)
+        setContentConcealExplainView(isHidden: !hideAll)
+
+        // Show/hide toggle button
+        // The button indicator go-to state for button action direction
+        // eye: when media is hidden
+        // eye-slash: when media display
+        let image = contentDisplayMode.shouldConcealSomething ? UIImage(systemName: "eye.fill") : UIImage(systemName: "eye.slash.fill")
+        authorView.contentSensitiveeToggleButton.setImage(image, for: .normal)
+        if canToggle {
+            setContentSensitiveeToggleButtonDisplay()
+        }
+        
+        // Set label on contentConcealView
+        if !explainationText.isEmpty {
+            let label = PlaintextMetaContent(string: explainationText)
+            contentConcealExplainView.spoilerMetaLabel.configure(content: label)
+            historyContentWarningLabel.configure(content: label)
+            historyContentWarningAdaptiveMarginContainerView.isHidden = style != .editHistory
+        } else {
+            contentConcealExplainView.spoilerMetaLabel.reset()
+            historyContentWarningLabel.reset()
+            historyContentWarningAdaptiveMarginContainerView.isHidden = true
+        }
+        
+        // Configure media views
+        let okToShowMedia = !hideAll && !hideMediaOnly
+        mediaGridContainerView.hideContentWarning(okToShowMedia)
+        mediaGridContainerView.viewModel.isSensitiveToggleButtonDisplay = okToShowMedia
+        for configuration in viewModel.mediaViewConfigurations {
+            configuration.isReveal = okToShowMedia
+        }
+
+        // Accessibility:
+        
+        var strings: [String] = []
+        
+        if !explainationText.isEmpty {
+            strings.append(L10n.Common.Controls.Status.contentWarning)
+            strings.append(explainationText)
+        }
+        if !okToShowMedia {
+            // TODO: important to check whether there IS any media?
+            strings.append(L10n.Common.Controls.Status.mediaContentWarning)
+        }
+        
+        if !hideAll, let content = viewModel.content?.string {
+            strings.append(content)
+        }
+        let oneString = strings.joined(separator: ", ")
+        viewModel.contentAccessibilityLabel = oneString
+        contentConcealExplainView.accessibilityLabel = oneString
+        
+        let hidingSomething = (hideAll || hideMediaOnly)
+        let toggleButtonAccessibilityLabel = hidingSomething ? L10n.Scene.Compose.Accessibility.disableContentWarning : L10n.Scene.Compose.Accessibility.enableContentWarning
+        authorView.contentSensitiveeToggleButton.accessibilityLabel = toggleButtonAccessibilityLabel
+        
+        var contentAccessibilityActions = [UIAccessibilityCustomAction]()
+        if !hidingSomething, let entities = viewModel.content?.entities {
+            contentAccessibilityActions = entities.compactMap { entity in
+                if let name = entity.meta.accessibilityLabel {
+                    return UIAccessibilityCustomAction(name: name) { [weak self] action in
+                        guard let self else { return false }
+                        self.delegate?.statusView(self, metaText: self.contentMetaText, didSelectMeta: entity.meta)
+                        return true
+                    }
+                } else {
+                    return nil
+                }
+            }
+        }
+        contentMetaText.textView.accessibilityCustomActions = contentAccessibilityActions
+    }
+    
     private func configureHeader(status: MastodonStatus) {
         if status.entity.reblogged == true, 
             let authenticationBox = viewModel.authenticationBox,
@@ -264,7 +377,7 @@ extension StatusView {
         guard let originalStatus = viewModel.originalStatus else { return }
         
         viewModel.translation = nil
-        configure(status: originalStatus)
+        configure(status: originalStatus, contentDisplayMode: contentDisplayMode)
     }
     
     func configureTranslated(status: MastodonStatus) {
@@ -290,7 +403,7 @@ extension StatusView {
         statusEdit.spoilerText.map {
             viewModel.spoilerContent = PlaintextMetaContent(string: $0)
         }
-        
+
         // language
         viewModel.language = (status.reblog ?? status).entity.language
         // content
@@ -306,6 +419,7 @@ extension StatusView {
     }
 
     private func configureContent(status: MastodonStatus) {
+        
         guard viewModel.translation == nil else {
             return configureTranslated(status: status)
         }
@@ -325,6 +439,7 @@ extension StatusView {
         } else {
             viewModel.spoilerContent = nil
         }
+
         // language
         viewModel.language = (status.reblog ?? status).entity.language
         // content
@@ -339,25 +454,15 @@ extension StatusView {
         }
         // visibility
         viewModel.visibility = status.entity.mastodonVisibility
-
-        // sensitive
-        viewModel.isContentSensitive = status.entity.sensitive == true
-        viewModel.isSensitiveToggled = status.isSensitiveToggled
-
     }
     
     private func configureMedia(status: MastodonStatus) {
         let status = status.reblog ?? status
-        
-        viewModel.isMediaSensitive = status.entity.sensitive == true
-        
         let configurations = MediaView.configuration(status: status)
         viewModel.mediaViewConfigurations = configurations
     }
     
     private func configureMedia(status: Mastodon.Entity.StatusEdit) {
-        viewModel.isMediaSensitive = status.sensitive
-        
         let configurations = MediaView.configuration(status: status)
         viewModel.mediaViewConfigurations = configurations
     }
@@ -444,17 +549,6 @@ extension StatusView {
         viewModel.isReblog = status.entity.reblogged == true
         viewModel.isFavorite = status.entity.favourited == true
         viewModel.isBookmark = status.entity.bookmarked == true
-    }
-    
-    private func configureFilter(status: MastodonStatus) {
-        StatusFilterService.shared.$activeFilterApplication
-        .receive(on: StatusView.statusFilterWorkingQueue)
-        .map { [weak self] filterBox in
-            return self?.viewModel.applyFilters(filterBox, to: status.entity) ?? .notFiltered
-        }
-        .receive(on: DispatchQueue.main)
-        .assign(to: \.isFiltered, on: viewModel)
-        .store(in: &disposeBag)
     }
 
 }

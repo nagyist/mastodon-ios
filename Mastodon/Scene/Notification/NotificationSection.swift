@@ -105,9 +105,6 @@ extension NotificationSection {
             delegate: configuration.notificationTableViewCellDelegate,
             authenticationBox: configuration.authenticationBox
         )
-        
-        cell.notificationView.statusView.viewModel.filterContext = configuration.filterContext
-        cell.notificationView.quoteStatusView.viewModel.filterContext = configuration.filterContext
     }
     
 }

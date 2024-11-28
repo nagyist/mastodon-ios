@@ -57,11 +57,13 @@ extension SearchResultSection {
                 return cell
             case .status(let status):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+                let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(status)
+                let contentConcealModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: nil) // no filters in search results
                 configure(
                     context: context,
                     tableView: tableView,
                     cell: cell,
-                    viewModel: StatusTableViewCell.ViewModel(value: .status(status)),
+                    viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                     configuration: configuration
                 )
                 return cell
@@ -92,7 +94,7 @@ extension SearchResultSection {
         context: AppContext,
         tableView: UITableView,
         cell: StatusTableViewCell,
-        viewModel: StatusTableViewCell.ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         StatusSection.setupStatusPollDataSource(

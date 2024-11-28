@@ -14,6 +14,7 @@ extension HomeTimelineViewModel {
     
     func setupDiffableDataSource(
         tableView: UITableView,
+        filterContext: Mastodon.Entity.FilterContext?,
         statusTableViewCellDelegate: StatusTableViewCellDelegate,
         timelineMiddleLoaderTableViewCellDelegate: TimelineMiddleLoaderTableViewCellDelegate
     ) {
@@ -25,7 +26,7 @@ extension HomeTimelineViewModel {
                 authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: timelineMiddleLoaderTableViewCellDelegate,
-                filterContext: .home
+                filterContext: filterContext  // should be .home
             )
         )
 

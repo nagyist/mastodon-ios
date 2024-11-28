@@ -55,8 +55,10 @@ private extension DataSourceFacade {
         ).value
 
         let newStatus: MastodonStatus = .fromEntity(updatedStatus)
-        newStatus.reblog?.isSensitiveToggled = status.isSensitiveToggled
-        newStatus.isSensitiveToggled = status.isSensitiveToggled
+        newStatus.reblog?.showDespiteContentWarning = status.showDespiteContentWarning
+        newStatus.reblog?.showDespiteFilter = status.showDespiteFilter
+        newStatus.showDespiteContentWarning = status.showDespiteContentWarning
+        newStatus.showDespiteFilter = status.showDespiteFilter
         
         provider.update(status: newStatus, intent: .reblog(updatedStatus.reblogged == true))
     }

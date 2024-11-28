@@ -1048,9 +1048,21 @@ private extension ProfileViewController {
 }
 
 extension ProfileViewController: DataSourceProvider {
+    var filterContext: MastodonSDK.Mastodon.Entity.FilterContext? {
+        .none
+    }
+    
+    func didToggleContentWarningDisplayStatus(status: MastodonSDK.MastodonStatus) {
+        reloadTables()
+    }
+    
     func item(from source: DataSourceItem.Source) async -> DataSourceItem? {
         assertionFailure("Not required")
         return nil
+    }
+    
+    func reloadTables() {
+        profilePagingViewController?.reloadTables()
     }
     
     func update(status: MastodonStatus, intent: MastodonStatus.UpdateIntent) {

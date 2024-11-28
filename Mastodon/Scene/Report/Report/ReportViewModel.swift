@@ -15,6 +15,7 @@ import OrderedCollections
 import UIKit
 import MastodonCore
 import MastodonLocalization
+import MastodonUI
 
 class ReportViewModel {
     
@@ -24,6 +25,7 @@ class ReportViewModel {
     let reportServerRulesViewModel: ReportServerRulesViewModel
     let reportStatusViewModel: ReportStatusViewModel
     let reportSupplementaryViewModel: ReportSupplementaryViewModel
+    let contentDisplayMode: StatusView.ContentDisplayMode
 
     // input
     let context: AppContext
@@ -42,8 +44,10 @@ class ReportViewModel {
         authenticationBox: MastodonAuthenticationBox,
         account: Mastodon.Entity.Account,
         relationship: Mastodon.Entity.Relationship,
-        status: MastodonStatus?
+        status: MastodonStatus?,
+        contentDisplayMode: StatusView.ContentDisplayMode
     ) {
+        self.contentDisplayMode = contentDisplayMode
         self.context = context
         self.authenticationBox = authenticationBox
         self.account = account

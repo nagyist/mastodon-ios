@@ -22,12 +22,12 @@ final public class FeedDataController {
         self.authenticationBox = authenticationBox
         self.kind = kind
         
-        StatusFilterService.shared.$activeFilterApplication
-            .sink { filterApplication in
-                if let filterApplication {
+        StatusFilterService.shared.$activeFilterBox
+            .sink { filterBox in
+                if let filterBox {
                     Task { [weak self] in
                         guard let self else { return }
-                        self.records = await self.filter(self.records, forFeed: kind, with: filterApplication)
+                        self.records = await self.filter(self.records, forFeed: kind, with: filterBox)
                     }
                 }
             }
@@ -37,8 +37,8 @@ final public class FeedDataController {
     public func loadInitial(kind: MastodonFeed.Kind) {
         Task {
             let unfilteredRecords = try await load(kind: kind, maxID: nil)
-            if let filterApplication = StatusFilterService.shared.activeFilterApplication {
-                records = await filter(unfilteredRecords, forFeed: kind, with: filterApplication)
+            if let filterBox = StatusFilterService.shared.activeFilterBox {
+                records = await filter(unfilteredRecords, forFeed: kind, with: filterBox)
             } else {
                 records = unfilteredRecords
             }
@@ -52,19 +52,19 @@ final public class FeedDataController {
             }
 
             let unfiltered = try await load(kind: kind, maxID: lastId)
-            if let filterApplication = StatusFilterService.shared.activeFilterApplication {
-                records += await filter(unfiltered, forFeed: kind, with: filterApplication)
+            if let filterBox = StatusFilterService.shared.activeFilterBox {
+                records += await filter(unfiltered, forFeed: kind, with: filterBox)
             } else {
                 records += unfiltered
             }
         }
     }
     
-    private func filter(_ records: [MastodonFeed], forFeed feedKind: MastodonFeed.Kind, with filterApplication: Mastodon.Entity.FilterApplication) async -> [MastodonFeed] {
+    private func filter(_ records: [MastodonFeed], forFeed feedKind: MastodonFeed.Kind, with filterBox: Mastodon.Entity.FilterBox) async -> [MastodonFeed] {
         
         let filteredRecords = records.filter { feedRecord in
             guard let status = feedRecord.status else { return true }
-            let filterResult = filterApplication.apply(to: status, in: feedKind.filterContext)
+            let filterResult = filterBox.apply(to: status, in: feedKind.filterContext)
             switch filterResult {
             case .hide:
                 return false

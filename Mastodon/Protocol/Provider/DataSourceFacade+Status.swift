@@ -241,7 +241,8 @@ extension DataSourceFacade {
                 authenticationBox: dependency.authenticationBox,
                 account: menuContext.author,
                 relationship: relationship,
-                status: menuContext.statusViewModel?.originalStatus
+                status: menuContext.statusViewModel?.originalStatus,
+                contentDisplayMode: .neverConceal
             )
 
             _ = dependency.coordinator.present(
@@ -434,11 +435,9 @@ extension DataSourceFacade {
         status: MastodonStatus
     ) async throws {
         let _status = status.reblog ?? status
-        
-        let newStatus: MastodonStatus = .fromEntity(_status.entity)
-        newStatus.isSensitiveToggled = !_status.isSensitiveToggled
-        
-        dependency.update(status: newStatus, intent: .toggleSensitive(newStatus.isSensitiveToggled))
+        let model = StatusView.ContentConcealViewModel(status: _status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: .home)
+        model.toggleConcealed(for: _status)
+        dependency.didToggleContentWarningDisplayStatus(status: _status)
     }
     
 }

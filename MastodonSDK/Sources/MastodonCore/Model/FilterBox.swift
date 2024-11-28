@@ -1,5 +1,5 @@
 //
-//  FilterApplication.swift
+//  FilterBox.swift
 //  MastodonSDK
 //
 //  Created by Shannon Hughes on 11/22/24.
@@ -9,24 +9,32 @@ import MastodonSDK
 import NaturalLanguage
 
 public extension Mastodon.Entity {
-    struct FilterApplication: Equatable {
-        let hideAnyMatch: [FilterContext : [String]]
-        let warnAnyMatch: [FilterContext : [String]]
-        let hideWholeWordMatch: [FilterContext : [String]]
-        let warnWholeWordMatch: [FilterContext : [String]]
+    struct FilterString: Equatable {
+        let string: String
+        let responsibleFilter: String
+    }
+    struct FilterBox: Equatable {
+        let hideAnyMatch: [FilterContext : [FilterString]]
+        let warnAnyMatch: [FilterContext : [FilterString]]
+        let hideWholeWordMatch: [FilterContext : [FilterString]]
+        let warnWholeWordMatch: [FilterContext : [FilterString]]
         
         public init?(filters: [Mastodon.Entity.FilterInfo]) {
             guard !filters.isEmpty else { return nil }
             
-            var _hideAnyMatch = [FilterContext : [String]]()
-            var _warnAnyMatch = [FilterContext : [String]]()
-            var _hideWholeWordMatch = [FilterContext : [String]]()
-            var _warnWholeWordMatch = [FilterContext : [String]]()
+            var _hideAnyMatch = [FilterContext : [FilterString]]()
+            var _warnAnyMatch = [FilterContext : [FilterString]]()
+            var _hideWholeWordMatch = [FilterContext : [FilterString]]()
+            var _warnWholeWordMatch = [FilterContext : [FilterString]]()
             
             for filter in filters {
                 for context in filter.filterContexts {
-                    let partialWords = filter.matchAll
-                    let wholeWords = filter.matchWholeWordOnly
+                    let partialWords = filter.matchAll.map { word in
+                        return FilterString(string: word, responsibleFilter: filter.name)
+                    }
+                    let wholeWords = filter.matchWholeWordOnly.map { word in
+                        return FilterString(string: word, responsibleFilter: filter.name)
+                    }
                     switch filter.filterAction {
                     case .hide:
                         var words = _hideWholeWordMatch[context] ?? []
@@ -69,15 +77,15 @@ public extension Mastodon.Entity {
             
             if let warnAny = warnAnyMatch[context] {
                 for partialMatchable in warnAny {
-                    if content.contains(partialMatchable) {
-                        return .warn(partialMatchable)
+                    if content.contains(partialMatchable.string) {
+                        return .warn(partialMatchable.responsibleFilter)
                     }
                 }
             }
             if let hideAny = hideAnyMatch[context] {
                 for partialMatchable in hideAny {
-                    if content.contains(partialMatchable) {
-                        return .hide
+                    if content.contains(partialMatchable.string) {
+                        return .hide(partialMatchable.responsibleFilter)
                     }
                 }
             }
@@ -91,11 +99,11 @@ public extension Mastodon.Entity {
             
             tokenizer.enumerateTokens(in: content.startIndex..<content.endIndex) { range, _ in
                 let word = String(content[range])
-                if hideWholeWord?.contains(word) ?? false {
-                    filterResult = .hide
+                if let hideHit = hideWholeWord?.first(where: { $0.string == word }) {
+                    filterResult = .hide(hideHit.responsibleFilter)
                     return false
-                } else if warnWholeWord?.contains(word) ?? false {
-                    filterResult = .warn(word)
+                } else if let warnHit = warnWholeWord?.first(where: { $0.string == word }) {
+                    filterResult = .warn(warnHit.responsibleFilter)
                     return false
                 } else {
                     return true

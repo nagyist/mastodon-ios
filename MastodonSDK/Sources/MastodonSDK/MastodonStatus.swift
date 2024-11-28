@@ -4,6 +4,47 @@ import Foundation
 import Combine
 import CoreDataStack
 
+public enum ContentWarning {
+    case warnNothing
+    case warnMediaOnly
+    case warnWholePost(message: String)
+    
+    public init(status: MastodonStatus) {
+        let entity = status.entity.reblog ?? status.entity
+        let hasSpoilerText = entity.spoilerText != nil && !entity.spoilerText!.isEmpty
+        let isMarkedSensitive = entity.sensitive ?? false
+        let fallbackWarningText = ""
+        switch (hasSpoilerText, isMarkedSensitive) {
+        case (true, true):
+            self = .warnWholePost(message: entity.spoilerText ?? fallbackWarningText)
+        case (true, false):
+            self = .warnWholePost(message: entity.spoilerText ?? fallbackWarningText)
+        case (false, true):
+            self = .warnMediaOnly
+        case (false, false):
+            self = .warnNothing
+        }
+    }
+    
+    public init(statusEdit: Mastodon.Entity.StatusEdit) {
+        let entity = statusEdit
+        let hasSpoilerText = entity.spoilerText != nil && !entity.spoilerText!.isEmpty
+        let isMarkedSensitive = entity.sensitive
+        let fallbackWarningText = ""
+        switch (hasSpoilerText, isMarkedSensitive) {
+        case (true, true):
+            self = .warnWholePost(message: entity.spoilerText ?? fallbackWarningText)
+        case (true, false):
+            self = .warnWholePost(message: entity.spoilerText ?? fallbackWarningText)
+        case (false, true):
+            self = .warnMediaOnly
+        case (false, false):
+            self = .warnNothing
+        }
+    }
+    
+}
+
 public final class MastodonStatus: ObservableObject {
     public typealias ID = Mastodon.Entity.Status.ID
     
@@ -14,13 +55,14 @@ public final class MastodonStatus: ObservableObject {
     @Published public var entity: Mastodon.Entity.Status
     @Published public var reblog: MastodonStatus?
     
-    @Published public var isSensitiveToggled: Bool = false
+    @Published public var showDespiteContentWarning: Bool = false
+    @Published public var showDespiteFilter: Bool = false
     
     @Published public var poll: MastodonPoll?
     
-    init(entity: Mastodon.Entity.Status, isSensitiveToggled: Bool) {
+    init(entity: Mastodon.Entity.Status, showDespiteContentWarning: Bool) {
         self.entity = entity
-        self.isSensitiveToggled = isSensitiveToggled
+        self.showDespiteContentWarning = showDespiteContentWarning
         
         if let poll = entity.poll {
             self.poll = .init(poll: poll, status: self)
@@ -40,12 +82,12 @@ public final class MastodonStatus: ObservableObject {
 
 extension MastodonStatus {
     public static func fromEntity(_ entity: Mastodon.Entity.Status) -> MastodonStatus {
-        return MastodonStatus(entity: entity, isSensitiveToggled: false)
+        return MastodonStatus(entity: entity, showDespiteContentWarning: false)
     }
     
     public func inheritSensitivityToggled(from status: MastodonStatus?) -> MastodonStatus {
-        self.isSensitiveToggled = status?.isSensitiveToggled ?? false
-        self.reblog?.isSensitiveToggled = status?.reblog?.isSensitiveToggled ?? false
+        self.showDespiteContentWarning = status?.showDespiteContentWarning ?? false
+        self.reblog?.showDespiteContentWarning = status?.reblog?.showDespiteContentWarning ?? false
         return self
     }
     
@@ -68,8 +110,8 @@ extension MastodonStatus: Hashable {
         lhs.reblog?.entity == rhs.reblog?.entity &&
         lhs.reblog?.poll == rhs.reblog?.poll &&
         lhs.reblog?.entity.poll == rhs.reblog?.entity.poll &&
-        lhs.isSensitiveToggled == rhs.isSensitiveToggled &&
-        lhs.reblog?.isSensitiveToggled == rhs.reblog?.isSensitiveToggled
+        lhs.showDespiteContentWarning == rhs.showDespiteContentWarning &&
+        lhs.reblog?.showDespiteContentWarning == rhs.reblog?.showDespiteContentWarning
     }
     
     public func hash(into hasher: inout Hasher) {
@@ -77,8 +119,8 @@ extension MastodonStatus: Hashable {
         hasher.combine(poll)
         hasher.combine(reblog?.entity)
         hasher.combine(reblog?.poll)
-        hasher.combine(isSensitiveToggled)
-        hasher.combine(reblog?.isSensitiveToggled)
+        hasher.combine(showDespiteContentWarning)
+        hasher.combine(reblog?.showDespiteContentWarning)
     }
 }
 

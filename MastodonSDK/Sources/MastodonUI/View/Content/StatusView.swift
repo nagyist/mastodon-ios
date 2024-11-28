@@ -29,7 +29,7 @@ public protocol StatusViewDelegate: AnyObject {
     func statusView(_ statusView: StatusView, pollVoteButtonPressed button: UIButton)
     func statusView(_ statusView: StatusView, actionToolbarContainer: ActionToolbarContainer, buttonDidPressed button: UIButton, action: ActionToolbarContainer.Action)
     func statusView(_ statusView: StatusView, menuButton button: UIButton, didSelectAction action: MastodonMenu.Action)
-    func statusView(_ statusView: StatusView, spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView)
+    func statusView(_ statusView: StatusView, contentConcealExplainViewDidPressed contentConcealView: ContentConcealExplainView)
     func statusView(_ statusView: StatusView, mediaGridContainerView: MediaGridContainerView, mediaSensitiveButtonDidPressed button: UIButton)
     func statusView(_ statusView: StatusView, statusMetricView: StatusMetricView, reblogButtonDidPressed button: UIButton)
     func statusView(_ statusView: StatusView, statusMetricView: StatusMetricView, favoriteButtonDidPressed button: UIButton)
@@ -43,6 +43,167 @@ public protocol StatusViewDelegate: AnyObject {
 }
 
 public final class StatusView: UIView {
+    
+    public struct ContentConcealViewModel {
+        private let filtered: ContentDisplayMode
+        private let contentWarned: ContentDisplayMode
+        
+        private init(filtered: ContentDisplayMode, contentWarned: ContentDisplayMode) {
+            self.filtered = filtered
+            self.contentWarned = contentWarned
+        }
+        
+        public init(status: MastodonStatus?, filterBox: Mastodon.Entity.FilterBox?, filterContext: Mastodon.Entity.FilterContext?) {
+             
+            let status = (status?.reblog ?? status)
+            
+            if let status, let filterContext, let filterBox {
+                // TODO: L10 string
+                let filterPrefix = "Matches filter \""
+                let filterResult = filterBox.apply(to: status, in: filterContext)
+                switch filterResult {
+                case .notFiltered:
+                    filtered = .neverConceal
+                case .hide(let reason):
+                    filtered = .concealAll(reason: filterPrefix + reason, showAnyway: status.showDespiteFilter)
+                case .warn(let reason):
+                    filtered = .concealAll(reason: filterPrefix + reason, showAnyway: status.showDespiteFilter)
+                }
+            } else {
+                filtered = .neverConceal
+            }
+            
+            if let status {
+                let contentWarning = ContentWarning(status: status)
+                switch contentWarning {
+                case .warnNothing:
+                    contentWarned = .neverConceal
+                case .warnMediaOnly:
+                    contentWarned = .concealMediaOnly(showAnyway: status.showDespiteContentWarning)
+                case .warnWholePost(let message):
+                    contentWarned = .concealAll(reason: message, showAnyway: status.showDespiteContentWarning)
+                }
+            } else {
+                contentWarned = .neverConceal
+            }
+        }
+        
+        public var effectiveDisplayMode: ContentDisplayMode {
+            if filtered.shouldConcealSomething {
+                return filtered
+            } else {
+                return contentWarned
+            }
+        }
+        
+        public func byShowingAll() -> ContentConcealViewModel {
+            guard effectiveDisplayMode.shouldConcealSomething else { return self }
+            let newFiltered = filtered.shouldConcealSomething ? filtered.byTogglingReveal() : filtered
+            let newContentWarned = contentWarned.shouldConcealSomething ? contentWarned.byTogglingReveal() : contentWarned
+            let newModel = ContentConcealViewModel(filtered: newFiltered, contentWarned: newContentWarned)
+            return newModel
+        }
+        
+        // TODO: effect would be clearer if we require getting a new ContentConcealViewModel with the desired changes and then applying it to a status
+        public func toggleConcealed(for status: MastodonStatus) {
+            if effectiveDisplayMode.shouldConcealSomething {
+                // stepwise reveal
+                if filtered.shouldConcealSomething {
+                    status.showDespiteFilter = true
+                } else {
+                    status.showDespiteContentWarning = true
+                }
+            } else {
+                // back all the way out
+                if !filtered.shouldConcealSomething {
+                    switch filtered {
+                    case .neverConceal:
+                        break
+                    case .concealAll:
+                        if status.showDespiteFilter {
+                            status.showDespiteFilter = false
+                        }
+                    case .concealMediaOnly:
+                        assert(false, "filters always affect the whole post")
+                        if status.showDespiteFilter {
+                            status.showDespiteFilter = false
+                        }
+                    case .alwaysConceal:
+                        assert(false)
+                        break
+                    case .UNDETERMINED:
+                        break
+                    }
+                }
+                if !contentWarned.shouldConcealSomething {
+                    switch contentWarned {
+                    case .neverConceal:
+                        break
+                    case .concealAll, .concealMediaOnly:
+                        if status.showDespiteContentWarning {
+                            status.showDespiteContentWarning = false
+                        }
+                    case .alwaysConceal:
+                        assert(false)
+                        break
+                    case .UNDETERMINED:
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    public enum ContentDisplayMode {
+        case neverConceal
+        case concealAll(reason: String, showAnyway: Bool)
+        case concealMediaOnly(showAnyway: Bool)
+        case alwaysConceal
+        case UNDETERMINED
+        
+        public var shouldConcealSomething: Bool {
+            switch self {
+            case .neverConceal: return false
+            case .concealAll(_, let showAnyway): return !showAnyway
+            case .concealMediaOnly(let showAnyway): return !showAnyway
+            case .alwaysConceal: return true
+            case .UNDETERMINED: return false
+            }
+        }
+        
+        public var shouldConcealText: Bool {
+            switch self {
+            case .neverConceal: return false
+            case .concealAll(_, let showAnyway): return !showAnyway
+            case .concealMediaOnly: return false
+            case .alwaysConceal: return true
+            case .UNDETERMINED: return false
+            }
+        }
+        
+        public var shouldConcealMedia: Bool {
+            return shouldConcealSomething
+        }
+        
+        func byTogglingReveal() -> ContentDisplayMode {
+            switch self {
+            case .neverConceal:
+                return self
+            case .concealAll(let reason, let showAnyway):
+                return .concealAll(reason: reason, showAnyway: !showAnyway)
+            case .concealMediaOnly(let showAnyway):
+                return .concealMediaOnly(showAnyway: !showAnyway)
+            case .alwaysConceal:
+                return self
+            case .UNDETERMINED:
+                return self
+            }
+        }
+    }
+    
+    public var contentDisplayMode: ContentDisplayMode {
+        return viewModel.contentDisplayMode
+    }
     
     public static let containerLayoutMargin: CGFloat = 16
     
@@ -167,7 +328,7 @@ public final class StatusView: UIView {
     public let statusCardControl = StatusCardControl()
     
     // content warning
-    public let spoilerOverlayView = SpoilerOverlayView()
+    public let contentConcealExplainView = ContentConcealExplainView()
 
     // media
     public let mediaContainerView = UIView()
@@ -301,6 +462,8 @@ public final class StatusView: UIView {
     // metric
     public let statusMetricView = StatusMetricView()
     
+    private var contentConcealExplainViewHeightConstraint: NSLayoutConstraint?
+    
     public func prepareForReuse() {
         disposeBag.removeAll()
         
@@ -316,7 +479,6 @@ public final class StatusView: UIView {
         mediaGridContainerView.hideContentWarning(true)
         setHeaderDisplay(isDisplay: false)
         setContentSensitiveeToggleButtonDisplay(isDisplay: false)
-        setSpoilerOverlayViewHidden(isHidden: true)
         setMediaDisplay(isDisplay: false)
         setPollDisplay(isDisplay: false)
         setStatusCardControlDisplay(isDisplay: false)
@@ -356,9 +518,9 @@ extension StatusView {
         authorView.statusView = self
 
         // content warning
-        let spoilerOverlayViewTapGestureRecognizer = UITapGestureRecognizer.singleTapGestureRecognizer
-        spoilerOverlayView.addGestureRecognizer(spoilerOverlayViewTapGestureRecognizer)
-        spoilerOverlayViewTapGestureRecognizer.addTarget(self, action: #selector(StatusView.spoilerOverlayViewTapGestureRecognizerHandler(_:)))
+        let contentConcealExplainViewTapGestureRecognizer = UITapGestureRecognizer.singleTapGestureRecognizer
+        contentConcealExplainView.addGestureRecognizer(contentConcealExplainViewTapGestureRecognizer)
+        contentConcealExplainViewTapGestureRecognizer.addTarget(self, action: #selector(StatusView.contentConcealExplainViewTapGestureRecognizerHandler(_:)))
         
         // content
         contentMetaText.textView.delegate = self
@@ -398,8 +560,8 @@ extension StatusView {
         delegate?.statusView(self, pollVoteButtonPressed: pollVoteButton)
     }
     
-    @objc private func spoilerOverlayViewTapGestureRecognizerHandler(_ sender: UITapGestureRecognizer) {
-        delegate?.statusView(self, spoilerOverlayViewDidPressed: spoilerOverlayView)
+    @objc private func contentConcealExplainViewTapGestureRecognizerHandler(_ sender: UITapGestureRecognizer) {
+        delegate?.statusView(self, contentConcealExplainViewDidPressed: contentConcealExplainView)
     }
 }
 
@@ -502,10 +664,7 @@ extension StatusView.Style {
         // link preview card
         statusView.contentContainer.addArrangedSubview(statusView.statusCardControl)
 
-        statusView.containerStackView.addArrangedSubview(statusView.spoilerOverlayView)
-        NSLayoutConstraint.activate([
-            statusView.spoilerOverlayView.heightAnchor.constraint(equalToConstant: 100).priority(.defaultHigh)
-        ])
+        statusView.containerStackView.addArrangedSubview(statusView.contentConcealExplainView)
 
         // media container: V - [ mediaGridContainerView ]
         statusView.mediaContainerView.translatesAutoresizingMaskIntoConstraints = false
@@ -594,7 +753,6 @@ extension StatusView.Style {
         base(statusView: statusView)
         
         statusView.contentAdaptiveMarginContainerView.removeFromSuperview()
-        statusView.spoilerOverlayView.isHidden = true
         statusView.mediaContainerView.removeFromSuperview()
         statusView.pollAdaptiveMarginContainerView.removeFromSuperview()
         statusView.actionToolbarAdaptiveMarginContainerView.removeFromSuperview()
@@ -614,11 +772,6 @@ extension StatusView {
         authorView.contentSensitiveeToggleButton.isHidden = !isDisplay
     }
     
-    func setSpoilerOverlayViewHidden(isHidden: Bool) {
-        spoilerOverlayView.isHidden = isHidden
-        contentAdaptiveMarginContainerView.isHidden = !isHidden
-    }
-    
     func setMediaDisplay(isDisplay: Bool = true) {
         mediaContainerView.isHidden = !isDisplay
     }
@@ -628,7 +781,23 @@ extension StatusView {
     }
 
     func setStatusCardControlDisplay(isDisplay: Bool = true) {
-        statusCardControl.isHidden = !isDisplay
+        if viewModel.mediaViewConfigurations.isEmpty && viewModel.card != nil {
+            statusCardControl.isHidden = !isDisplay
+        } else {
+            statusCardControl.isHidden = true
+        }
+    }
+    
+    func setContentConcealExplainView(isHidden: Bool) {
+        contentConcealExplainView.isHidden = isHidden
+        if contentConcealExplainViewHeightConstraint == nil {
+            contentConcealExplainViewHeightConstraint = contentConcealExplainView.heightAnchor.constraint(equalToConstant: 100).priority(.defaultHigh)
+        }
+        if isHidden {
+            contentConcealExplainViewHeightConstraint?.deactivate()
+        } else {
+            contentConcealExplainViewHeightConstraint?.activate()
+        }
     }
     
     // container width

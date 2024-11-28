@@ -81,8 +81,10 @@ extension MastodonFeed: Hashable {
         lhs.status?.poll == rhs.status?.poll &&
         lhs.status?.reblog?.entity == rhs.status?.reblog?.entity &&
         lhs.status?.reblog?.poll == rhs.status?.reblog?.poll &&
-        lhs.status?.isSensitiveToggled == rhs.status?.isSensitiveToggled &&
-        lhs.status?.reblog?.isSensitiveToggled == rhs.status?.reblog?.isSensitiveToggled &&
+        lhs.status?.showDespiteContentWarning == rhs.status?.showDespiteContentWarning &&
+        lhs.status?.reblog?.showDespiteContentWarning == rhs.status?.reblog?.showDespiteContentWarning &&
+        lhs.status?.showDespiteFilter == rhs.status?.showDespiteFilter &&
+        lhs.status?.reblog?.showDespiteFilter == rhs.status?.reblog?.showDespiteFilter &&
         lhs.status?.poll == rhs.status?.poll &&
         lhs.status?.reblog?.poll == rhs.status?.reblog?.poll &&
         lhs.status?.poll?.entity == rhs.status?.poll?.entity &&
@@ -96,8 +98,10 @@ extension MastodonFeed: Hashable {
         hasher.combine(status?.poll)
         hasher.combine(status?.reblog?.entity)
         hasher.combine(status?.reblog?.poll)
-        hasher.combine(status?.isSensitiveToggled)
-        hasher.combine(status?.reblog?.isSensitiveToggled)
+        hasher.combine(status?.showDespiteContentWarning)
+        hasher.combine(status?.reblog?.showDespiteContentWarning)
+        hasher.combine(status?.showDespiteFilter)
+        hasher.combine(status?.reblog?.showDespiteFilter)
         hasher.combine(status?.poll)
         hasher.combine(status?.reblog?.poll)
         hasher.combine(status?.poll?.entity)

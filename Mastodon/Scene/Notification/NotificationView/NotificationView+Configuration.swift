@@ -36,6 +36,11 @@ extension NotificationView {
 extension NotificationView {
     public func configure(notification: MastodonNotification, authenticationBox: MastodonAuthenticationBox) {
         configureAuthor(notification: notification, authenticationBox: authenticationBox)
+        
+        func contentDisplayMode(_ status: MastodonStatus) -> StatusView.ContentDisplayMode {
+            let contentDisplayModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: .notifications)
+            return contentDisplayModel.effectiveDisplayMode
+        }
 
         switch notification.entity.type {
         case .follow:
@@ -44,12 +49,12 @@ extension NotificationView {
             setFollowRequestAdaptiveMarginContainerViewDisplay(isHidden: true)
         case .mention, .status:
             if let status = notification.status {
-                statusView.configure(status: status)
+                statusView.configure(status: status, contentDisplayMode: contentDisplayMode(status))
                 setStatusViewDisplay()
             }
         case .reblog, .favourite, .poll:
             if let status = notification.status {
-                quoteStatusView.configure(status: status)
+                quoteStatusView.configure(status: status, contentDisplayMode: contentDisplayMode(status))
                 setQuoteStatusViewDisplay()
             }
         case .moderationWarning:

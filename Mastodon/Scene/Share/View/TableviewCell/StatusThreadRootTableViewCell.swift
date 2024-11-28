@@ -96,11 +96,12 @@ extension StatusThreadRootTableViewCell {
     
     override var accessibilityElements: [Any]? {
         get {
+            let hideAnyText = statusView.viewModel.contentDisplayMode.shouldConcealText
+            
             var elements = [
                 statusView.authorView,
-                statusView.viewModel.isContentReveal
-                ? statusView.contentMetaText.textView
-                : statusView.spoilerOverlayView,
+                hideAnyText ? statusView.contentConcealExplainView :
+                    statusView.contentMetaText.textView,
                 statusView.translatedInfoView,
                 statusView.mediaGridContainerView,
                 statusView.pollTableView,
@@ -110,8 +111,8 @@ extension StatusThreadRootTableViewCell {
                 statusView.statusMetricView,
             ]
             
-            if statusView.viewModel.isContentReveal {
-                elements.removeAll(where: { $0 === statusView.spoilerOverlayView })
+            if !hideAnyText {
+                elements.removeAll(where: { $0 === statusView.contentConcealExplainView })
             } else {
                 elements.removeAll(where: { $0 === statusView.contentMetaText.textView })
             }
