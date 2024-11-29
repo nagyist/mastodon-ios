@@ -45,6 +45,8 @@ public protocol StatusViewDelegate: AnyObject {
 public final class StatusView: UIView {
     
     public struct ContentConcealViewModel {
+        // Treat this as a layered reveal, with the actual content at the bottom, a layer of contentWarned protection on top of it, and a layer of filtered on top of that.
+        // For a post that carries both, revealing content removes the filtered layer first, then the contentWarned layer. Concealing content replaces both layers at once.
         private let filtered: ContentDisplayMode
         private let contentWarned: ContentDisplayMode
         
@@ -65,9 +67,9 @@ public final class StatusView: UIView {
                 case .notFiltered:
                     filtered = .neverConceal
                 case .hide(let reason):
-                    filtered = .concealAll(reason: filterPrefix + reason, showAnyway: status.showDespiteFilter)
+                    filtered = .concealAll(reason: filterPrefix + reason + "\"", showAnyway: status.showDespiteFilter)
                 case .warn(let reason):
-                    filtered = .concealAll(reason: filterPrefix + reason, showAnyway: status.showDespiteFilter)
+                    filtered = .concealAll(reason: filterPrefix + reason + "\"", showAnyway: status.showDespiteFilter)
                 }
             } else {
                 filtered = .neverConceal
@@ -89,10 +91,20 @@ public final class StatusView: UIView {
         }
         
         public var effectiveDisplayMode: ContentDisplayMode {
-            if filtered.shouldConcealSomething {
+            switch (filtered.shouldConcealSomething, contentWarned.shouldConcealSomething) {
+            case (true, _):
                 return filtered
-            } else {
+            case (false, true):
                 return contentWarned
+            case (false, false):
+                switch (filtered.canToggleConcealed, contentWarned.canToggleConcealed) {
+                case (false, _):
+                    return contentWarned
+                case (true, true):
+                    return contentWarned
+                case (_, false):
+                    return filtered
+                }
             }
         }
         
@@ -167,6 +179,15 @@ public final class StatusView: UIView {
             case .concealAll(_, let showAnyway): return !showAnyway
             case .concealMediaOnly(let showAnyway): return !showAnyway
             case .alwaysConceal: return true
+            case .UNDETERMINED: return false
+            }
+        }
+        
+        public var canToggleConcealed: Bool {
+            switch self {
+            case .neverConceal: return false
+            case .concealAll, .concealMediaOnly: return true
+            case .alwaysConceal: return false
             case .UNDETERMINED: return false
             }
         }

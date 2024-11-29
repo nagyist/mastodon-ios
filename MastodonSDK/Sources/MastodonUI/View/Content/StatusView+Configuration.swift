@@ -94,34 +94,28 @@ extension StatusView {
         let hideAll: Bool
         let hideMediaOnly: Bool
         let explainationText: String
-        let canToggle: Bool
 
         switch contentDisplayMode {
         case .alwaysConceal:
             hideAll = true
             hideMediaOnly = false
             explainationText = ""
-            canToggle = false
         case .concealAll(let reason, let showAnyway):
             hideAll = !showAnyway
             hideMediaOnly = false
             explainationText = reason
-            canToggle = true
         case .concealMediaOnly(let showAnyway):
             hideAll = false
             hideMediaOnly = !showAnyway
             explainationText = ""
-            canToggle = true
         case .neverConceal:
             hideAll = false
             hideMediaOnly = false
             explainationText = ""
-            canToggle = false
         case .UNDETERMINED:
             hideAll = false
             hideMediaOnly = false
             explainationText = ""
-            canToggle = false
         }
         
         // Show/hide text
@@ -135,9 +129,8 @@ extension StatusView {
         // eye-slash: when media display
         let image = contentDisplayMode.shouldConcealSomething ? UIImage(systemName: "eye.fill") : UIImage(systemName: "eye.slash.fill")
         authorView.contentSensitiveeToggleButton.setImage(image, for: .normal)
-        if canToggle {
-            setContentSensitiveeToggleButtonDisplay()
-        }
+        
+        setContentSensitiveeToggleButtonDisplay(isDisplay: contentDisplayMode.canToggleConcealed)
         
         // Set label on contentConcealView
         if !explainationText.isEmpty {
