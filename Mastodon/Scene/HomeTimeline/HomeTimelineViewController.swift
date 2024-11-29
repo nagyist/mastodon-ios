@@ -483,6 +483,13 @@ extension HomeTimelineViewController {
                 self?.showDonationCampaignBanner(campaign)
             })
             .store(in: &disposeBag)
+        
+        StatusFilterService.shared.$activeFilterBox
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.tableView.reloadData()
+            }
+            .store(in: &disposeBag)
     }
 
     override func viewWillAppear(_ animated: Bool) {
