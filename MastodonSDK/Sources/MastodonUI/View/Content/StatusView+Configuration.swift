@@ -58,6 +58,8 @@ extension StatusView {
         actionToolbarAdaptiveMarginContainerView.isHidden = true
         authorView.menuButton.isHidden = true
         headerAdaptiveMarginContainerView.isHidden = true
+        
+        configureForContentDisplayMode()
     }
 
     public func configure(status: MastodonStatus, contentDisplayMode: ContentDisplayMode) {
