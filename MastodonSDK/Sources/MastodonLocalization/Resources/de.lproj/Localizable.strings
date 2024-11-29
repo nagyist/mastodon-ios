@@ -337,8 +337,8 @@ kann nicht auf Mastodon hochgeladen werden.";
 "Scene.Notification.Warning.MarkStatusesAsSensitive" = "Some of your posts have been marked as sensitive.";
 "Scene.Notification.Warning.None" = "Your account has received a moderation warning.";
 "Scene.Notification.Warning.Sensitive" = "Your posts will be marked as sensitive from now on.";
-"Scene.Notification.Warning.Silence" = "Your account has been limited.";
-"Scene.Notification.Warning.Suspend" = "Your account has been suspended.";
+"Scene.Notification.Warning.Silence" = "Dein Konto wurde eingeschränkt.";
+"Scene.Notification.Warning.Suspend" = "Dein Konto wurde gesperrt.";
 "Scene.Preview.Keyboard.ClosePreview" = "Vorschau schließen";
 "Scene.Preview.Keyboard.ShowNext" = "Nächstes anzeigen";
 "Scene.Preview.Keyboard.ShowPrevious" = "Vorheriges anzeigen";
@@ -441,7 +441,7 @@ If you disagree with the policy for **%@**, you can go back and pick a different
 "Scene.Report.StepFinal.Unfollowed" = "Entfolgt";
 "Scene.Report.StepFinal.WhenYouSeeSomethingYouDontLikeOnMastodonYouCanRemoveThePersonFromYourExperience." = "Wenn du etwas auf Mastodon nicht sehen willst, kannst du den Nutzer aus deiner Erfahrung streichen.";
 "Scene.Report.StepFinal.WhileWeReviewThisYouCanTakeActionAgainstUser" = "Während wir dies überprüfen, kannst du gegen %@ vorgehen";
-"Scene.Report.StepFinal.YouWontSeeTheirPostsOrReblogsInYourHomeFeedTheyWontKnowTheyVeBeenMuted" = "You won’t see their posts or boosts in your home feed. They won’t know they’ve been muted.";
+"Scene.Report.StepFinal.YouWontSeeTheirPostsOrReblogsInYourHomeFeedTheyWontKnowTheyVeBeenMuted" = "Du wirst die Beiträge vom Konto nicht mehr sehen. Das Konto kann dir immer noch folgen, und die Person hinter dem Konto wird deine Beiträge sehen können und nicht wissen, dass du sie stummgeschaltet hast.";
 "Scene.Report.StepFour.IsThereAnythingElseWeShouldKnow" = "Gibt es etwas anderes, was wir wissen sollten?";
 "Scene.Report.StepFour.Step4Of4" = "Schritt 4 von 4";
 "Scene.Report.StepOne.IDontLikeIt" = "Mir gefällt das nicht";
@@ -570,7 +570,7 @@ If you disagree with the policy for **%@**, you can go back and pick a different
 "Scene.Settings.Overview.SupportMastodon" = "Mastodon unterstützen";
 "Scene.Settings.Overview.Title" = "Einstellungen";
 "Scene.Settings.PrivacySafety.AppearInSearchEngines" = "In Suchmaschinen anzeigen";
-"Scene.Settings.PrivacySafety.DefaultPostVisibility.FollowersOnly" = "Followers Only";
+"Scene.Settings.PrivacySafety.DefaultPostVisibility.FollowersOnly" = "Nur für Follower";
 "Scene.Settings.PrivacySafety.DefaultPostVisibility.OnlyPeopleMentioned" = "Nur erwähnte Profile";
 "Scene.Settings.PrivacySafety.DefaultPostVisibility.Public" = "Öffentlich";
 "Scene.Settings.PrivacySafety.DefaultPostVisibility.Title" = "Standard-Sichtbarkeit von Beiträgen";

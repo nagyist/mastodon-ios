@@ -33,7 +33,7 @@ enum SettingsEntry: Hashable {
             case .makeDonation:
                 return L10n.Scene.Settings.Overview.supportMastodon
             case .manageDonations:
-                return L10n.Scene.Settings.Overview.manageDonations
+            return L10n.Scene.Settings.Donation.manage
             case .aboutMastodon:
                 return L10n.Scene.Settings.Overview.aboutMastodon
             case .logout(let accountName):
