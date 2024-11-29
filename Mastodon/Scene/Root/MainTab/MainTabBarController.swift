@@ -219,7 +219,9 @@ extension MainTabBarController {
                     }
                     .store(in: &self.disposeBag)
 
-                self.meProfileViewController.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
+                if let currentViewModel = self.meProfileViewController.viewModel, currentViewModel.account.id == account.id, !currentViewModel.isEditing {
+                    self.meProfileViewController.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
+                }
             }
             .store(in: &disposeBag)
         
