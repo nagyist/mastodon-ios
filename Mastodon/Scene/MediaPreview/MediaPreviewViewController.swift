@@ -13,10 +13,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class MediaPreviewViewController: UIViewController, NeedsDependency {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class MediaPreviewViewController: UIViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: MediaPreviewViewModel!
@@ -285,7 +282,7 @@ extension MediaPreviewViewController: MediaPreviewImageViewControllerDelegate {
                             title: L10n.Common.Alerts.SavePhotoFailure.title,
                             message: L10n.Common.Alerts.SavePhotoFailure.message
                         )
-                        _ = self.coordinator.present(
+                        _ = self.sceneCoordinator?.present(
                             scene: .alertController(alertController: alertController),
                             from: self,
                             transition: .alertController(animated: true, completion: nil)
@@ -296,7 +293,7 @@ extension MediaPreviewViewController: MediaPreviewImageViewControllerDelegate {
                 } receiveValue: { _ in
                     // do nothing
                 }
-                .store(in: &context.disposeBag)
+                .store(in: &AppContext.shared.disposeBag)
         case .copyPhoto:
             guard let assetURL = viewController.viewModel.item.assetURL else { return }
 
@@ -311,10 +308,10 @@ extension MediaPreviewViewController: MediaPreviewImageViewControllerDelegate {
                 } receiveValue: { _ in
                     // do nothing
                 }
-                .store(in: &context.disposeBag)
+                .store(in: &AppContext.shared.disposeBag)
         case .share:
             let applicationActivities: [UIActivity] = [
-                SafariActivity(sceneCoordinator: self.coordinator)
+                SafariActivity(sceneCoordinator: self.sceneCoordinator)
             ]
             let activityViewController = UIActivityViewController(
                 activityItems: {

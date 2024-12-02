@@ -10,14 +10,11 @@ import Combine
 import CoreDataStack
 import MastodonCore
 
-final class RootSplitViewController: UISplitViewController, NeedsDependency {
+final class RootSplitViewController: UISplitViewController {
     
     var disposeBag = Set<AnyCancellable>()
     
     static let sidebarWidth: CGFloat = 89
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var authenticationBox: MastodonAuthenticationBox?
     
@@ -25,8 +22,6 @@ final class RootSplitViewController: UISplitViewController, NeedsDependency {
     
     private(set) lazy var contentSplitViewController: ContentSplitViewController = {
         let contentSplitViewController = ContentSplitViewController()
-        contentSplitViewController.context = context
-        contentSplitViewController.coordinator = coordinator
         contentSplitViewController.authenticationBox = authenticationBox
         contentSplitViewController.delegate = self
         return contentSplitViewController
@@ -34,22 +29,17 @@ final class RootSplitViewController: UISplitViewController, NeedsDependency {
     
     private(set) lazy var searchViewController: SearchViewController = {
         let searchViewController = SearchViewController()
-        searchViewController.context = context
-        searchViewController.coordinator = coordinator
         searchViewController.viewModel = .init(
-            context: context,
             authenticationBox: authenticationBox
         )
         return searchViewController
     }()
     
-    lazy var compactMainTabBarViewController = MainTabBarController(context: context, coordinator: coordinator, authenticationBox: authenticationBox)
+    lazy var compactMainTabBarViewController = MainTabBarController(authenticationBox: authenticationBox)
     
     let separatorLine = UIView.separatorLine
     
-    init(context: AppContext, coordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox?) {
-        self.context = context
-        self.coordinator = coordinator
+    init(authenticationBox: MastodonAuthenticationBox?) {
         self.authenticationBox = authenticationBox
         super.init(style: .doubleColumn)
         

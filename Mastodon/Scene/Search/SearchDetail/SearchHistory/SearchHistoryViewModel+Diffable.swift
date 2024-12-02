@@ -17,7 +17,6 @@ extension SearchHistoryViewModel {
             viewModel: self,
             collectionView: collectionView,
             authenticationBox: authenticationBox,
-            context: context,
             configuration: SearchHistorySection.Configuration(
                 searchHistorySectionHeaderCollectionReusableViewDelegate: searchHistorySectionHeaderCollectionReusableViewDelegate
             )

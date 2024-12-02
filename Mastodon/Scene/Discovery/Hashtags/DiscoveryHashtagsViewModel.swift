@@ -18,7 +18,6 @@ final class DiscoveryHashtagsViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let viewDidAppeared = PassthroughSubject<Void, Never>()
 
@@ -26,8 +25,7 @@ final class DiscoveryHashtagsViewModel {
     var diffableDataSource: UITableViewDiffableDataSource<DiscoverySection, DiscoveryItem>?
     @Published var hashtags: [Mastodon.Entity.Tag] = []
     
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         // end init
         

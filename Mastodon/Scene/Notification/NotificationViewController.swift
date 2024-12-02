@@ -14,10 +14,7 @@ import Pageboy
 import MastodonCore
 import MastodonSDK
 
-final class NotificationViewController: TabmanViewController, NeedsDependency {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class NotificationViewController: TabmanViewController {
 
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
@@ -129,7 +126,7 @@ extension NotificationViewController {
             privateMentions: policy.filterPrivateMentions
         )
 
-        guard let policyViewController = coordinator.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
+        guard let policyViewController = self.sceneCoordinator?.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
 
         policyViewController.delegate = self
     }
@@ -156,12 +153,9 @@ extension NotificationViewController {
 
         let viewController = NotificationTimelineViewController(
             viewModel: NotificationTimelineViewModel(
-                context: context,
                 authenticationBox: viewModel.authenticationBox,
                 scope: scope, notificationPolicy: viewModel.notificationPolicy
-            ),
-            context: context,
-            coordinator: coordinator
+            )
         )
 
         return viewController

@@ -15,10 +15,8 @@ protocol SearchResultsOverviewTableViewControllerDelegate: AnyObject {
     func searchForPerson(_ viewController: SearchResultsOverviewTableViewController, username: String, domain: String)
 }
 
-class SearchResultsOverviewTableViewController: UIViewController, NeedsDependency, AuthContextProvider {
+class SearchResultsOverviewTableViewController: UIViewController, AuthContextProvider {
     let authenticationBox: MastodonAuthenticationBox
-    var context: AppContext!
-    var coordinator: SceneCoordinator!
 
     private let tableView: UITableView
     var dataSource: UITableViewDiffableDataSource<SearchResultOverviewSection, SearchResultOverviewItem>?
@@ -27,11 +25,9 @@ class SearchResultsOverviewTableViewController: UIViewController, NeedsDependenc
 
     var activeTask: Task<Void, Never>?
 
-    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator) {
+    init(authenticationBox: MastodonAuthenticationBox) {
 
         self.authenticationBox = authenticationBox
-        self.context = appContext
-        self.coordinator = sceneCoordinator
 
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.keyboardDismissMode = .onDrag

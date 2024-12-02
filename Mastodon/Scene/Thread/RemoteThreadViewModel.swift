@@ -13,12 +13,10 @@ import MastodonSDK
 final class RemoteThreadViewModel: ThreadViewModel {
         
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         statusID: Mastodon.Entity.Status.ID
     ) {
         super.init(
-            context: context,
             authenticationBox: authenticationBox,
             optionalRoot: nil
         )
@@ -36,12 +34,10 @@ final class RemoteThreadViewModel: ThreadViewModel {
     }
     
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         notificationID: Mastodon.Entity.Notification.ID
     ) {
         super.init(
-            context: context,
             authenticationBox: authenticationBox,
             optionalRoot: nil
         )

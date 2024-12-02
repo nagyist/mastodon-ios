@@ -126,7 +126,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                     await MainActor.run { [weak self] in
                         guard let s = self, let donationCampaign = s.settingsViewController.donationCampaign else { return }
                         
-                        let donationFlow = NewDonationNavigationFlow(flowPresenter: viewController, campaign: donationCampaign, appContext: s.appContext, authenticationBox: s.authenticationBox, sceneCoordinator: s.sceneCoordinator)
+                        let donationFlow = NewDonationNavigationFlow(flowPresenter: viewController, campaign: donationCampaign, authenticationBox: s.authenticationBox, sceneCoordinator: s.sceneCoordinator)
                         s.navigationFlow = donationFlow
                         donationFlow.presentFlow { [weak self] in
                             self?.navigationFlow = nil
@@ -301,7 +301,7 @@ extension SettingsCoordinator: MetaLabelDelegate {
                       let url = URL(string: href) else { return }
                 _ = sceneCoordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
             case .hashtag(_, let hashtag, _):
-                let hashtagTimelineViewModel = HashtagTimelineViewModel(context: appContext, authenticationBox: authenticationBox, hashtag: hashtag)
+                let hashtagTimelineViewModel = HashtagTimelineViewModel(authenticationBox: authenticationBox, hashtag: hashtag)
                 _ = sceneCoordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
             case .email(let email, _):
                 if let emailUrl = URL(string: "mailto:\(email)"), UIApplication.shared.canOpenURL(emailUrl) {

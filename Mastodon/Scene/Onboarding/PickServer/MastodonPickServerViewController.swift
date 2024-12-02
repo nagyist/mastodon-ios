@@ -14,11 +14,7 @@ import MastodonLocalization
 import MastodonUI
 import MastodonSDK
 
-final class MastodonPickServerViewController: UIViewController, NeedsDependency {
-    var context: AppContext! {
-        get { return AppContext.shared }
-        set {  }
-    }
+final class MastodonPickServerViewController: UIViewController {
     
     var coordinator: SceneCoordinator!
     

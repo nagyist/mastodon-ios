@@ -17,11 +17,8 @@ import MastodonUI
 import MastodonLocalization
 import MastodonSDK
 
-final class ComposeViewController: UIViewController, NeedsDependency {
+final class ComposeViewController: UIViewController {
     static let minAutoCompleteVisibleHeight: CGFloat = 100
-        
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: ComposeViewModel
@@ -48,7 +45,6 @@ final class ComposeViewController: UIViewController, NeedsDependency {
         }
 
         return ComposeContentViewModel(
-            context: context,
             authenticationBox: viewModel.authenticationBox,
             composeContext: composeContext,
             destination: viewModel.destination,
@@ -217,7 +213,7 @@ extension ComposeViewController {
             let alertController = UIAlertController(for: error, title: nil, preferredStyle: .alert)
             let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
             alertController.addAction(okAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
         
@@ -235,7 +231,7 @@ extension ComposeViewController {
                 self?.enqueuePublishStatus()
             }
             alertController.addAction(confirmAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
         
@@ -266,7 +262,7 @@ extension ComposeViewController {
             let alertController = UIAlertController(for: error, title: nil, preferredStyle: .alert)
             let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
             alertController.addAction(okAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
 
@@ -284,7 +280,7 @@ extension ComposeViewController {
                 self?.enqueuePublishStatusEdit()
             }
             alertController.addAction(confirmAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
         

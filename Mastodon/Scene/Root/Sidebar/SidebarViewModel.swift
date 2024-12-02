@@ -20,7 +20,6 @@ final class SidebarViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox?
     @Published private var isSidebarDataSourceReady = false
     @Published private var isAvatarButtonDataReady = false
@@ -35,8 +34,7 @@ final class SidebarViewModel {
         UIImage.SymbolConfiguration(weight: .bold)
     )
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox?) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox?) {
         self.authenticationBox = authenticationBox
         
         Publishers.CombineLatest(

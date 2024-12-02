@@ -16,16 +16,11 @@ final class WelcomeViewModel {
     var disposeBag = Set<AnyCancellable>()
     private(set) var defaultServers: [Mastodon.Entity.DefaultServer]?
     var randomDefaultServer: Mastodon.Entity.Server?
-
-    // input
-    let context: AppContext
     
     // output
     @Published var needsShowDismissEntry = false
     
-    init(context: AppContext) {
-        self.context = context
-        
+    init() {
         AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .map { !$0.isEmpty }
             .assign(to: &$needsShowDismissEntry)

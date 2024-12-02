@@ -13,10 +13,7 @@ import MastodonLocalization
 import MastodonUI
 import CoreDataStack
 
-final class RebloggedByViewController: UIViewController, NeedsDependency {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class RebloggedByViewController: UIViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: UserListViewModel!

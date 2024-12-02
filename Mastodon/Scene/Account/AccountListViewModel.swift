@@ -20,7 +20,6 @@ final class AccountListViewModel: NSObject {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     // output
@@ -28,8 +27,7 @@ final class AccountListViewModel: NSObject {
     
     var diffableDataSource: UITableViewDiffableDataSource<Section, Item>!
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
 
         super.init()

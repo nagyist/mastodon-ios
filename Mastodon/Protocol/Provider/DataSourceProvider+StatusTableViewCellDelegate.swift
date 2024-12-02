@@ -184,7 +184,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                         ],
                         applicationActivities: []
                     )
-                    self.coordinator.present(
+                    self.sceneCoordinator?.present(
                         scene: .activityViewController(
                             activityViewController: activityViewController,
                             sourceView: statusCardControl, barButtonItem: nil
@@ -200,9 +200,8 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                 image: UIImage(systemName: "square.and.pencil")
             ) {
                 DispatchQueue.main.async {
-                    self.coordinator.present(
+                    self.sceneCoordinator?.present(
                         scene: .compose(viewModel: ComposeViewModel(
-                            context: self.context,
                             authenticationBox: self.authenticationBox,
                             composeContext: .composeStatus,
                             destination: .topLevel,
@@ -534,12 +533,12 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                 assertionFailure("only works for status data provider")
                 return
             }
-            let userListViewModel = UserListViewModel(
-                context: context,
+            let userListViewModel = await UserListViewModel(
+                context: AppContext.shared,
                 authenticationBox: authenticationBox,
                 kind: .rebloggedBy(status: status)
             )
-            _ = await coordinator.present(
+            _ = await self.sceneCoordinator?.present(
                 scene: .rebloggedBy(viewModel: userListViewModel),
                 from: self,
                 transition: .show
@@ -558,12 +557,12 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                 assertionFailure("only works for status data provider")
                 return
             }
-            let userListViewModel = UserListViewModel(
-                context: context,
+            let userListViewModel = await UserListViewModel(
+                context: AppContext.shared,
                 authenticationBox: authenticationBox,
                 kind: .favoritedBy(status: status)
             )
-            _ = await coordinator.present(
+            _ = await self.sceneCoordinator?.present(
                 scene: .favoritedBy(viewModel: userListViewModel),
                 from: self,
                 transition: .show
@@ -574,7 +573,7 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
     func tableViewCell(_ cell: UITableViewCell, statusView: StatusView, statusMetricView: StatusMetricView, showEditHistory button: UIButton) {
         Task {
             
-            await coordinator.showLoading()
+            await self.sceneCoordinator?.showLoading()
             
             let source = DataSourceItem.Source(tableViewCell: cell, indexPath: nil)
             guard let item = await self.item(from: source),
@@ -586,12 +585,12 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
             do {
                 let edits = try await APIService.shared.getHistory(forStatusID: status.id, authenticationBox: authenticationBox).value
 
-                await coordinator.hideLoading()
+                await self.sceneCoordinator?.hideLoading()
 
-                let viewModel = StatusEditHistoryViewModel(status: status, edits: edits, appContext: context, authenticationBox: authenticationBox)
-                _ = await coordinator.present(scene: .editHistory(viewModel: viewModel), from: self, transition: .show)
+                let viewModel = await StatusEditHistoryViewModel(status: status, edits: edits, appContext: AppContext.shared, authenticationBox: authenticationBox)
+                _ = await self.sceneCoordinator?.present(scene: .editHistory(viewModel: viewModel), from: self, transition: .show)
             } catch {
-                await coordinator.hideLoading()
+                await self.sceneCoordinator?.hideLoading()
             }
         }
     }

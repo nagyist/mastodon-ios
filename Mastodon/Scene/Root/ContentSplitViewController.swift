@@ -15,14 +15,11 @@ protocol ContentSplitViewControllerDelegate: AnyObject {
     func contentSplitViewController(_ contentSplitViewController: ContentSplitViewController, sidebarViewController: SidebarViewController, didDoubleTapTab tab: Tab)
 }
 
-final class ContentSplitViewController: UIViewController, NeedsDependency {
+final class ContentSplitViewController: UIViewController {
 
     var disposeBag = Set<AnyCancellable>()
     
     static let sidebarWidth: CGFloat = 89
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var authenticationBox: MastodonAuthenticationBox?
     
@@ -30,16 +27,14 @@ final class ContentSplitViewController: UIViewController, NeedsDependency {
     
     private(set) lazy var sidebarViewController: SidebarViewController = {
         let sidebarViewController = SidebarViewController()
-        sidebarViewController.context = context
-        sidebarViewController.coordinator = coordinator
-        sidebarViewController.viewModel = SidebarViewModel(context: context, authenticationBox: authenticationBox)
+        sidebarViewController.viewModel = SidebarViewModel(authenticationBox: authenticationBox)
         sidebarViewController.delegate = self
         return sidebarViewController
     }()
     
     @Published var currentSupplementaryTab: Tab = .home
     private(set) lazy var mainTabBarController: MainTabBarController = {
-        let mainTabBarController = MainTabBarController(context: self.context, coordinator: self.coordinator, authenticationBox: self.authenticationBox)
+        let mainTabBarController = MainTabBarController(authenticationBox: self.authenticationBox)
         if let homeTimelineViewController = mainTabBarController.viewController(of: HomeTimelineViewController.self) {
             homeTimelineViewController.viewModel?.displaySettingBarButtonItem = false
         }
@@ -110,8 +105,8 @@ extension ContentSplitViewController: SidebarViewControllerDelegate {
         guard case let .tab(tab) = item, tab == .me else { return }
         guard let authenticationBox else { return }
         
-        let accountListViewModel = AccountListViewModel(context: context, authenticationBox: authenticationBox)
-        let accountListViewController = coordinator.present(
+        let accountListViewModel = AccountListViewModel(authenticationBox: authenticationBox)
+        let accountListViewController = self.sceneCoordinator?.present(
             scene: .accountList(viewModel: accountListViewModel),
             from: nil,
             transition: .popover(sourceView: sourceView)

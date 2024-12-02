@@ -33,7 +33,6 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
     let composeContentTableViewCell = ComposeContentTableViewCell()
     
     // input
-    let context: AppContext
     let composeContext: ComposeContext
     let destination: Destination
     weak var delegate: ComposeContentViewModelDelegate?
@@ -143,13 +142,11 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
     }
 
     public init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         composeContext: ComposeContext,
         destination: Destination,
         initialContent: String
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.destination = destination
         self.composeContext = composeContext

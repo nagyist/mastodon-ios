@@ -19,9 +19,6 @@ protocol ProfileAboutViewControllerDelegate: AnyObject {
 
 final class ProfileAboutViewController: UIViewController {
     
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
-    
     weak var delegate: ProfileAboutViewControllerDelegate?
     
     var disposeBag = Set<AnyCancellable>()

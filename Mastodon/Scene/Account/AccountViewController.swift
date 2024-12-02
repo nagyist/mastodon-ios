@@ -12,10 +12,7 @@ import MastodonAsset
 import MastodonLocalization
 import MastodonCore
 
-final class AccountListViewController: UIViewController, NeedsDependency {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class AccountListViewController: UIViewController {
 
     var disposeBag = Set<AnyCancellable>()
     var viewModel: AccountListViewModel!
@@ -83,7 +80,7 @@ extension AccountListViewController {
 extension AccountListViewController {
 
     @objc private func addBarButtonItem(_ sender: UIBarButtonItem) {
-        _ = coordinator.present(scene: .welcome, from: self, transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .welcome, from: self, transition: .modal(animated: true, completion: nil))
     }
 
     override func accessibilityPerformEscape() -> Bool {
@@ -115,7 +112,7 @@ extension AccountListViewController: UITableViewDelegate {
                         FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
                         FileManager.default.invalidateNotificationsAll(for: userIdentifier)
                         FileManager.default.invalidateNotificationsMentions(for: userIdentifier)
-                        self.coordinator.setup()
+                        self.sceneCoordinator?.setup()
 
                     } catch {
                         assertionFailure("Failed to delete Authentication: \(error)")
@@ -146,23 +143,23 @@ extension AccountListViewController: UITableViewDelegate {
             Task { @MainActor in
                 let isActive = AuthenticationServiceProvider.shared.activateExistingUser(record.userID, inDomain: record.domain)
                 guard isActive else { return }
-                self.coordinator.setup()
+                self.sceneCoordinator?.setup()
             }   // end Task
         case .addAccount:
             // TODO: add dismiss entry for welcome scene
-            _ = coordinator.present(scene: .welcome, from: self, transition: .modal(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .welcome, from: self, transition: .modal(animated: true, completion: nil))
         case .logoutOfAllAccounts:
             let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 
             let logoutAction = UIAlertAction(title: L10n.Scene.AccountList.logoutAllAccounts, style: .destructive) { _ in
                 Task { @MainActor in
-                    self.coordinator.showLoading()
+                    self.sceneCoordinator?.showLoading()
                     for authenticationBox in AuthenticationServiceProvider.shared.mastodonAuthenticationBoxes {
                         try? await AuthenticationServiceProvider.shared.signOutMastodonUser(authentication: authenticationBox.authentication)
                     }
-                    self.coordinator.hideLoading()
+                    self.sceneCoordinator?.hideLoading()
 
-                    self.coordinator.setup()
+                    self.sceneCoordinator?.setup()
                 }
             }
 

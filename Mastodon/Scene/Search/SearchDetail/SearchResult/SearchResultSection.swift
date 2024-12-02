@@ -30,7 +30,6 @@ extension SearchResultSection {
     
     static func tableViewDiffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<SearchResultSection, SearchResultItem> {
@@ -60,7 +59,6 @@ extension SearchResultSection {
                 let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(status)
                 let contentConcealModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: nil) // no filters in search results
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
                     viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
@@ -91,19 +89,16 @@ extension SearchResultSection {
 extension SearchResultSection {
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: StatusTableViewCell,
         viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         StatusSection.setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(

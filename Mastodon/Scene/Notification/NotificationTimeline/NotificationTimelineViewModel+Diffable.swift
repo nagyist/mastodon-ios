@@ -18,7 +18,6 @@ extension NotificationTimelineViewModel {
     ) {
         diffableDataSource = NotificationSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             configuration: NotificationSection.Configuration(
                 authenticationBox: authenticationBox,
                 notificationTableViewCellDelegate: notificationTableViewCellDelegate,

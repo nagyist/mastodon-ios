@@ -13,7 +13,7 @@ import MastodonSDK
 
 extension DataSourceFacade {
     static func coordinateToStatusThreadScene(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController,
         target: StatusTarget,
         status: MastodonStatus
     ) async {
@@ -39,15 +39,16 @@ extension DataSourceFacade {
     
     @MainActor
     static func coordinateToStatusThreadScene(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController,
         root: StatusItem.Thread
     ) async {
+        guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
         let threadViewModel = ThreadViewModel(
-            context: provider.context,
-            authenticationBox: provider.authenticationBox,
+            authenticationBox: authBox,
             optionalRoot: root
         )
-        _ = provider.coordinator.present(
+        guard let coordinator = provider.sceneCoordinator else { return }
+        _ = coordinator.present(
             scene: .thread(viewModel: threadViewModel),
             from: provider,
             transition: .show

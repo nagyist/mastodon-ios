@@ -17,7 +17,7 @@ enum CategoryPickerSection: Equatable, Hashable {
 extension CategoryPickerSection {
     static func collectionViewDiffableDataSource(
         for collectionView: UICollectionView,
-        dependency: NeedsDependency,
+        dependency: UIViewController,
         viewModel: MastodonPickServerViewModel
     ) -> UICollectionViewDiffableDataSource<CategoryPickerSection, CategoryPickerItem> {
         UICollectionViewDiffableDataSource(collectionView: collectionView) { [weak dependency] collectionView, indexPath, item -> UICollectionViewCell? in

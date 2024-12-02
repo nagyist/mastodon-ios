@@ -26,7 +26,9 @@ extension DataSourceFacade {
             acct = status.entity.account.acct
         }
         
-        provider.coordinator.showLoading()
+        guard let coordinator = provider.sceneCoordinator else { return }
+        
+        coordinator.showLoading()
         
         let _redirectRecord = try? await Mastodon.API.Account.lookupAccount(
             session: .shared,
@@ -35,7 +37,7 @@ extension DataSourceFacade {
             authorization: provider.authenticationBox.userAuthorization
         ).singleOutput().value
         
-        provider.coordinator.hideLoading()
+        coordinator.hideLoading()
                 
         guard let redirectRecord = _redirectRecord else {
             assertionFailure()
@@ -50,11 +52,13 @@ extension DataSourceFacade {
 
     @MainActor
     static func coordinateToProfileScene(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController & AuthContextProvider,
         username: String,
         domain: String
     ) async {
-        provider.coordinator.showLoading()
+        guard let coordinator = provider.sceneCoordinator else { return }
+        
+        coordinator.showLoading()
 
         do {
             guard let account = try await APIService.shared.fetchUser(
@@ -62,24 +66,26 @@ extension DataSourceFacade {
                 domain: domain,
                 authenticationBox: provider.authenticationBox
             ) else {
-                return provider.coordinator.hideLoading()
+                return coordinator.hideLoading()
             }
 
-            provider.coordinator.hideLoading()
+            coordinator.hideLoading()
 
             await coordinateToProfileScene(provider: provider, account: account)
         } catch {
-            provider.coordinator.hideLoading()
+            coordinator.hideLoading()
         }
     }
 
     @MainActor
     static func coordinateToProfileScene(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController & AuthContextProvider,
         domain: String,
         accountID: String
     ) async {
-        provider.coordinator.showLoading()
+        guard let coordinator = provider.sceneCoordinator else { return }
+        
+        coordinator.showLoading()
 
             do {
                 let account = try await APIService.shared.accountInfo(
@@ -89,37 +95,40 @@ extension DataSourceFacade {
                     authorization: provider.authenticationBox.userAuthorization
                 )
 
-                provider.coordinator.hideLoading()
+                coordinator.hideLoading()
 
                 await coordinateToProfileScene(provider: provider, account: account)
             } catch {
-                provider.coordinator.hideLoading()
+                coordinator.hideLoading()
         }
     }
 
     @MainActor
     public static func coordinateToProfileScene(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController & AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async {
-        provider.coordinator.showLoading()
+        
+        guard let coordinator = provider.sceneCoordinator else { return }
+        
+        coordinator.showLoading()
 
         guard let me = provider.authenticationBox.cachedAccount,
               let relationship = try? await APIService.shared.relationship(forAccounts: [account], authenticationBox: provider.authenticationBox).value.first else {
-            return provider.coordinator.hideLoading()
+            return coordinator.hideLoading()
         }
 
-        provider.coordinator.hideLoading()
+        coordinator.hideLoading()
 
         let profileViewModel = ProfileViewModel(
-            context: provider.context,
+            context: AppContext.shared,
             authenticationBox: provider.authenticationBox,
             account: account,
             relationship: relationship,
             me: me
         )
 
-        _ = provider.coordinator.present(
+        _ = coordinator.present(
             scene: .profile(viewModel: profileViewModel),
             from: provider,
             transition: .show
@@ -146,13 +155,13 @@ extension DataSourceFacade {
         }
         let mentions = status.entity.mentions
 
+        guard let coordinator = provider.sceneCoordinator else { return }
         guard let mention = mentions.first(where: { $0.url == href }) else {
-            _ = provider.coordinator.present(
+            _ = coordinator.present(
                 scene: .safari(url: url),
                 from: provider,
                 transition: .safariPresent(animated: true, completion: nil)
             )
-
             return
         }
 
@@ -163,21 +172,21 @@ extension DataSourceFacade {
 
 extension DataSourceFacade {
     static func createActivityViewController(
-        dependency: NeedsDependency,
+        dependency: UIViewController,
         account: Mastodon.Entity.Account
     ) -> UIActivityViewController {
 
         let activityViewController = UIActivityViewController(
             activityItems: [account.url],
-            applicationActivities: [SafariActivity(sceneCoordinator: dependency.coordinator)]
+            applicationActivities: [SafariActivity(sceneCoordinator: dependency.sceneCoordinator)]
         )
         return activityViewController
     }
     
-    static func createActivityViewControllerForMastodonUser(status: Status, dependency: NeedsDependency) -> UIActivityViewController {
+    static func createActivityViewControllerForMastodonUser(status: Status, dependency: UIViewController) -> UIActivityViewController {
         let activityViewController = UIActivityViewController(
             activityItems: status.activityItems,
-            applicationActivities: [SafariActivity(sceneCoordinator: dependency.coordinator)]
+            applicationActivities: [SafariActivity(sceneCoordinator: dependency.sceneCoordinator)]
         )
         return activityViewController
     }

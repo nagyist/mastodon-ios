@@ -10,10 +10,7 @@ import Combine
 import MastodonCore
 import MastodonUI
 
-final class DiscoveryNewsViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class DiscoveryNewsViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: DiscoveryNewsViewModel!
@@ -85,7 +82,7 @@ extension DiscoveryNewsViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard case let .link(link) = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else { return }
         guard let url = URL(string: link.url) else { return }
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .safari(url: url),
             from: self,
             transition: .safariPresent(animated: true, completion: nil)
@@ -182,7 +179,7 @@ extension DiscoveryNewsViewController: TableViewControllerNavigateable {
         
         guard case let .link(link) = item else { return }
         guard let url = URL(string: link.url) else { return }
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .safari(url: url),
             from: self,
             transition: .safariPresent(animated: true, completion: nil)

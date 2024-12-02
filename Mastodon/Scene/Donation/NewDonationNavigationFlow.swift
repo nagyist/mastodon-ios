@@ -10,17 +10,15 @@ import UIKit
 class NewDonationNavigationFlow: NavigationFlow {
 
     private let campaign: DonationCampaignViewModel
-    private let appContext: AppContext
     private let authenticationBox: MastodonAuthenticationBox
     private let sceneCoordinator: SceneCoordinator
 
     init(
         flowPresenter: NavigationFlowPresenter,
-        campaign: DonationCampaignViewModel, appContext: AppContext,
+        campaign: DonationCampaignViewModel,
         authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator
     ) {
         self.campaign = campaign
-        self.appContext = appContext
         self.authenticationBox = authenticationBox
         self.sceneCoordinator = sceneCoordinator
         super.init(flowPresenter: flowPresenter)
@@ -106,7 +104,6 @@ class NewDonationNavigationFlow: NavigationFlow {
 
     private func composeDonationSuccessPost(_ suggestedText: String) {
         let composeViewModel = ComposeViewModel(
-            context: appContext,
             authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel,

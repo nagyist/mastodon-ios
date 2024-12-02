@@ -397,7 +397,6 @@
 		DB87D4452609BE0500D12C0D /* ComposeStatusPollOptionCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB87D4442609BE0500D12C0D /* ComposeStatusPollOptionCollectionViewCell.swift */; };
 		DB87D4512609CF1E00D12C0D /* ComposeStatusPollOptionAppendEntryCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB87D4502609CF1E00D12C0D /* ComposeStatusPollOptionAppendEntryCollectionViewCell.swift */; };
 		DB8AF54425C13647002E6C99 /* SceneCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AF54225C13647002E6C99 /* SceneCoordinator.swift */; };
-		DB8AF54525C13647002E6C99 /* NeedsDependency.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AF54325C13647002E6C99 /* NeedsDependency.swift */; };
 		DB8AF55025C13703002E6C99 /* MainTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AF54F25C13703002E6C99 /* MainTabBarController.swift */; };
 		DB8AF55D25C138B7002E6C99 /* UIViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AF55C25C138B7002E6C99 /* UIViewController.swift */; };
 		DB8F7076279E954700E1225B /* DataSourceFacade+Follow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8F7075279E954700E1225B /* DataSourceFacade+Follow.swift */; };
@@ -1100,7 +1099,6 @@
 		DB87D4502609CF1E00D12C0D /* ComposeStatusPollOptionAppendEntryCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposeStatusPollOptionAppendEntryCollectionViewCell.swift; sourceTree = "<group>"; };
 		DB89BA1025C10FF5008580ED /* Mastodon.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Mastodon.entitlements; sourceTree = "<group>"; };
 		DB8AF54225C13647002E6C99 /* SceneCoordinator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SceneCoordinator.swift; sourceTree = "<group>"; };
-		DB8AF54325C13647002E6C99 /* NeedsDependency.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NeedsDependency.swift; sourceTree = "<group>"; };
 		DB8AF54F25C13703002E6C99 /* MainTabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
 		DB8AF55C25C138B7002E6C99 /* UIViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UIViewController.swift; sourceTree = "<group>"; };
 		DB8D8E3128196FA0009FD90F /* sv */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = sv; path = sv.lproj/Intents.strings; sourceTree = "<group>"; };
@@ -2588,7 +2586,6 @@
 			isa = PBXGroup;
 			children = (
 				DB8AF54225C13647002E6C99 /* SceneCoordinator.swift */,
-				DB8AF54325C13647002E6C99 /* NeedsDependency.swift */,
 				D8F9170E2A4B47EF008A5370 /* Coordinator.swift */,
 			);
 			path = Coordinator;
@@ -3812,7 +3809,6 @@
 				2D364F7825E66D8300204FDC /* MastodonResendEmailViewModel.swift in Sources */,
 				DBEFCD7B282A162400C0ABEA /* ReportReasonView.swift in Sources */,
 				D8E5C346296DAB84007E76A7 /* DataSourceFacade+Status+History.swift in Sources */,
-				DB8AF54525C13647002E6C99 /* NeedsDependency.swift in Sources */,
 				DB63F77B279ACAE500455B82 /* DataSourceFacade+Favorite.swift in Sources */,
 				DB9D6BF825E4F5690051B173 /* NotificationViewController.swift in Sources */,
 				2DAC9E46262FC9FD0062E1A6 /* SuggestionAccountTableViewCell.swift in Sources */,

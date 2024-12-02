@@ -22,7 +22,6 @@ final class HashtagTimelineViewModel {
     var needLoadMiddleIndex: Int? = nil
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
     let isFetchingLatestTimeline = CurrentValueSubject<Bool, Never>(false)
@@ -50,8 +49,7 @@ final class HashtagTimelineViewModel {
     }()
     
     @MainActor
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, hashtag: String) {
-        self.context  = context
+    init(authenticationBox: MastodonAuthenticationBox, hashtag: String) {
         self.authenticationBox = authenticationBox
         self.hashtag = hashtag
         self.dataController = StatusDataController()

@@ -13,10 +13,7 @@ import MastodonCore
 import MastodonLocalization
 import Pageboy
 
-final class SearchViewController: UIViewController, NeedsDependency {
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
-
+final class SearchViewController: UIViewController {
     var searchTransitionController = SearchTransitionController()
 
     var disposeBag = Set<AnyCancellable>()
@@ -30,17 +27,16 @@ final class SearchViewController: UIViewController, NeedsDependency {
     let searchBarTapPublisher = PassthroughSubject<String, Never>()
     
     private(set) lazy var discoveryViewController: DiscoveryViewController? = {
-        guard let authenticationBox = viewModel?.authenticationBox else { return nil }
-        let viewController = DiscoveryViewController()
-        viewController.context = context
-        viewController.coordinator = coordinator
-        viewController.viewModel = .init(
-            context: context,
-            coordinator: coordinator,
-            authenticationBox: authenticationBox
-        )
-        viewController.delegate = self
-        return viewController
+        if let authenticationBox = viewModel?.authenticationBox {
+            let viewController = DiscoveryViewController()
+            viewController.viewModel = .init(
+                authenticationBox: authenticationBox
+            )
+            viewController.delegate = self
+            return viewController
+        } else {
+            return nil
+        }
     }()
 
     let segmentedControl: UISegmentedControl
@@ -142,7 +138,7 @@ final class SearchViewController: UIViewController, NeedsDependency {
                 // FIXME:
                 // use `.customPush(animated: false)` false to disable navigation bar animation for searchBar layout
                 // but that should be a fade transition whe fixed size searchBar
-                _ = self.coordinator.present(scene: .searchDetail(viewModel: searchDetailViewModel), from: self, transition: .customPush(animated: false))
+                _ = self.sceneCoordinator?.present(scene: .searchDetail(viewModel: searchDetailViewModel), from: self, transition: .customPush(animated: false))
             }
             .store(in: &disposeBag)
     }

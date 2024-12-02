@@ -18,9 +18,6 @@ class MainTabBarController: UITabBarController {
 
     public var disposeBag = Set<AnyCancellable>()
     
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
-    
     var authenticationBox: MastodonAuthenticationBox?
     
     private let largeContentViewerInteraction = UILargeContentViewerInteraction()
@@ -50,44 +47,32 @@ class MainTabBarController: UITabBarController {
     private let feedbackGenerator = FeedbackGenerator.shared
     
     init(
-        context: AppContext,
-        coordinator: SceneCoordinator,
         authenticationBox: MastodonAuthenticationBox?
     ) {
-        self.context = context
-        self.coordinator = coordinator
         self.authenticationBox = authenticationBox
 
         homeTimelineViewController = HomeTimelineViewController()
         homeTimelineViewController.configureTabBarItem(with: .home)
-        homeTimelineViewController.context = context
-        homeTimelineViewController.coordinator = coordinator
 
         searchViewController = SearchViewController()
         searchViewController.configureTabBarItem(with: .search)
-        searchViewController.context = context
-        searchViewController.coordinator = coordinator
 
         composeViewController = UIViewController()
         composeViewController.configureTabBarItem(with: .compose)
 
         notificationViewController = NotificationViewController()
         notificationViewController.configureTabBarItem(with: .notifications)
-        notificationViewController.context = context
-        notificationViewController.coordinator = coordinator
 
         meProfileViewController = ProfileViewController()
-        meProfileViewController.context = context
-        meProfileViewController.coordinator = coordinator
         meProfileViewController.configureTabBarItem(with: .me)
 
         if let authenticationBox {
-            notificationViewController.viewModel = NotificationViewModel(context: context, authenticationBox: authenticationBox)
-            homeTimelineViewController.viewModel = HomeTimelineViewModel(context: context, authenticationBox: authenticationBox)
-            searchViewController.viewModel = SearchViewModel(context: context, authenticationBox: authenticationBox)
+            notificationViewController.viewModel = NotificationViewModel(context: AppContext.shared, authenticationBox: authenticationBox)
+            homeTimelineViewController.viewModel = HomeTimelineViewModel(authenticationBox: authenticationBox)
+            searchViewController.viewModel = SearchViewModel(authenticationBox: authenticationBox)
 
             if let account = authenticationBox.cachedAccount {
-                meProfileViewController.viewModel = ProfileViewModel(context: context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
+                meProfileViewController.viewModel = ProfileViewModel(context: AppContext.shared, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
         }
 
@@ -113,7 +98,7 @@ extension MainTabBarController {
             if let profileView = (newValue as? UINavigationController)?.topViewController as? ProfileViewController{
                 guard let authenticationBox,
                       let account = authenticationBox.cachedAccount else { return }
-                profileView.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
+                profileView.viewModel = ProfileViewModel(context: AppContext.shared, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
         }
     }
@@ -139,7 +124,7 @@ extension MainTabBarController {
         APIService.shared.error
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
-                guard let self, let coordinator = self.coordinator else { return }
+                guard let self, let coordinator = self.sceneCoordinator else { return }
                 switch error {
                 case .implicit:
                     break
@@ -220,7 +205,7 @@ extension MainTabBarController {
                     .store(in: &self.disposeBag)
 
                 if let currentViewModel = self.meProfileViewController.viewModel, currentViewModel.account.id == account.id, !currentViewModel.isEditing {
-                    self.meProfileViewController.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
+                    self.meProfileViewController.viewModel = ProfileViewModel(context: AppContext.shared, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
                 }
             }
             .store(in: &disposeBag)
@@ -268,12 +253,11 @@ extension MainTabBarController {
         feedbackGenerator.generate(.impact(.medium))
         guard let authenticationBox else { return }
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), transition: .modal(animated: true, completion: nil))
     }
     
     private func touchedTab(by sender: UIGestureRecognizer) -> Tab? {
@@ -312,8 +296,8 @@ extension MainTabBarController {
         switch tab {
         case .me:
             guard let authenticationBox else { return }
-            let accountListViewModel = AccountListViewModel(context: context, authenticationBox: authenticationBox)
-            _ = coordinator.present(scene: .accountList(viewModel: accountListViewModel), from: self, transition: .formSheet)
+            let accountListViewModel = AccountListViewModel(authenticationBox: authenticationBox)
+            _ = self.sceneCoordinator?.present(scene: .accountList(viewModel: accountListViewModel), from: self, transition: .formSheet)
         default:
             break
         }
@@ -558,25 +542,24 @@ extension MainTabBarController {
     
     @objc private func showFavoritesKeyCommandHandler(_ sender: UIKeyCommand) {
         guard let authenticationBox else { return }
-        let favoriteViewModel = FavoriteViewModel(context: context, authenticationBox: authenticationBox)
-        _ = coordinator.present(scene: .favorite(viewModel: favoriteViewModel), from: nil, transition: .show)
+        let favoriteViewModel = FavoriteViewModel(authenticationBox: authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .favorite(viewModel: favoriteViewModel), from: nil, transition: .show)
     }
     
     @objc private func openSettingsKeyCommandHandler(_ sender: UIKeyCommand) {
         guard let setting = SettingService.shared.currentSetting.value else { return }
 
-        _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
+        _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
     
     @objc private func composeNewPostKeyCommandHandler(_ sender: UIKeyCommand) {
         guard let authenticationBox else { return }
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), from: nil, transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), from: nil, transition: .modal(animated: true, completion: nil))
     }
     
 }

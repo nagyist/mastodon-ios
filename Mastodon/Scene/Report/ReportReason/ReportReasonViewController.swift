@@ -17,10 +17,7 @@ protocol ReportReasonViewControllerDelegate: AnyObject {
     func reportReasonViewController(_ viewController: ReportReasonViewController, nextButtonPressed button: UIButton)
 }
 
-final class ReportReasonViewController: UIViewController, NeedsDependency, ReportViewControllerAppearance {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class ReportReasonViewController: UIViewController, ReportViewControllerAppearance {
         
     var disposeBag = Set<AnyCancellable>()
     private var observations = Set<NSKeyValueObservation>()

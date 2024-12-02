@@ -19,15 +19,13 @@ final class SearchViewModel: NSObject {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox?
     
     // output
     var diffableDataSource: UICollectionViewDiffableDataSource<SearchSection, SearchItem>?
     @Published var hashtags: [Mastodon.Entity.Tag] = []
     
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox?) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox?) {
         self.authenticationBox = authenticationBox
         super.init()
     }

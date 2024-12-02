@@ -22,7 +22,6 @@ final class MastodonStatusThreadViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let filterContext: Mastodon.Entity.FilterContext?
     @Published private(set) var deletedObjectIDs: Set<MastodonStatus.ID> = Set()
 
@@ -33,8 +32,7 @@ final class MastodonStatusThreadViewModel {
     @Published var __descendants: [StatusItem] = []
     @Published var descendants: [StatusItem] = []
     
-    init(context: AppContext, filterContext: Mastodon.Entity.FilterContext?) {
-        self.context = context
+    init(filterContext: Mastodon.Entity.FilterContext?) {
         self.filterContext = filterContext
         
         Publishers.CombineLatest(

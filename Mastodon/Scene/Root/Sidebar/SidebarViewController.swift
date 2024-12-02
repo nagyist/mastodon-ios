@@ -17,10 +17,8 @@ protocol SidebarViewControllerDelegate: AnyObject {
     func sidebarViewController(_ sidebarViewController: SidebarViewController, didDoubleTapItem item: SidebarViewModel.Item, sourceView: UIView)
 }
 
-final class SidebarViewController: UIViewController, NeedsDependency {
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
-    
+final class SidebarViewController: UIViewController {
+   
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
     var viewModel: SidebarViewModel!
@@ -200,7 +198,7 @@ extension SidebarViewController: UICollectionViewDelegate {
             case .setting:
                 guard let setting = SettingService.shared.currentSetting.value else { return }
 
-                _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
+                _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
             case .compose:
                 assertionFailure()
             }
@@ -212,12 +210,11 @@ extension SidebarViewController: UICollectionViewDelegate {
             switch item {
             case .compose:
                 let composeViewModel = ComposeViewModel(
-                    context: context,
                     authenticationBox: authenticationBox,
                     composeContext: .composeStatus,
                     destination: .topLevel
                 )
-                _ = coordinator.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
+                _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
             default:
                 assertionFailure()
             }

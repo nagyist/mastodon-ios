@@ -11,14 +11,12 @@ final public class FeedDataController {
 
     @Published public var records: [MastodonFeed] = []
     
-    private let context: AppContext
     private let authenticationBox: MastodonAuthenticationBox
     private let kind: MastodonFeed.Kind
     
     private var subscriptions = Set<AnyCancellable>()
     
-    public init(context: AppContext, authenticationBox: MastodonAuthenticationBox, kind: MastodonFeed.Kind) {
-        self.context = context
+    public init(authenticationBox: MastodonAuthenticationBox, kind: MastodonFeed.Kind) {
         self.authenticationBox = authenticationBox
         self.kind = kind
         

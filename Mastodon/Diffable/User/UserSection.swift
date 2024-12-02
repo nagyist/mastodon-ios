@@ -21,7 +21,6 @@ enum UserSection: Hashable {
 extension UserSection {
     static func diffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         userTableViewCellDelegate: UserTableViewCellDelegate?
     ) -> UITableViewDiffableDataSource<UserSection, UserItem> {

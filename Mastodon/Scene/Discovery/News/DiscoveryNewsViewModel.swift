@@ -18,7 +18,6 @@ final class DiscoveryNewsViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     // output
@@ -40,8 +39,7 @@ final class DiscoveryNewsViewModel {
     let didLoadLatest = PassthroughSubject<Void, Never>()
     @Published var isServerSupportEndpoint = true
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         // end init
         

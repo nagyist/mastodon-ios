@@ -20,7 +20,6 @@ final class SuggestionAccountViewModel: NSObject {
     weak var delegate: SuggestionAccountViewModelDelegate?
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     @Published var accounts: [Mastodon.Entity.V2.SuggestionAccount]
     var relationships: [Mastodon.Entity.Relationship]
@@ -31,10 +30,8 @@ final class SuggestionAccountViewModel: NSObject {
     var tableViewDiffableDataSource: UITableViewDiffableDataSource<RecommendAccountSection, RecommendAccountItem>?
     
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
 
         accounts = []
@@ -80,7 +77,6 @@ final class SuggestionAccountViewModel: NSObject {
     ) {
         tableViewDiffableDataSource = RecommendAccountSection.tableViewDiffableDataSource(
             tableView: tableView,
-            context: context,
             configuration: RecommendAccountSection.Configuration(
                 authenticationBox: authenticationBox,
                 suggestionAccountTableViewCellDelegate: suggestionAccountTableViewCellDelegate
@@ -110,12 +106,12 @@ final class SuggestionAccountViewModel: NSObject {
             .store(in: &disposeBag)
     }
 
-    func followAllSuggestedAccounts(_ dependency: ViewControllerWithDependencies & AuthContextProvider, presentedOn: UIViewController?, completion: (() -> Void)? = nil) {
+    func followAllSuggestedAccounts(_ dependency: UIViewController & AuthContextProvider, presentedOn: UIViewController?, completion: (() -> Void)? = nil) {
 
         let tmpAccounts = accounts.compactMap { $0.account }
 
         Task {
-            await dependency.coordinator.showLoading(on: presentedOn)
+            await dependency.sceneCoordinator?.showLoading(on: presentedOn)
             await withTaskGroup(of: Void.self, body: { taskGroup in
                 for account in tmpAccounts {
                     taskGroup.addTask {

@@ -25,13 +25,10 @@ protocol ProfileHeaderViewControllerDelegate: AnyObject {
     func profileHeaderViewController(_ profileHeaderViewController: ProfileHeaderViewController, profileHeaderView: ProfileHeaderView, metaTextView: MetaTextView, metaDidPressed meta: Meta)
 }
 
-final class ProfileHeaderViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
+final class ProfileHeaderViewController: UIViewController, MediaPreviewableViewController {
     
     static let segmentedControlHeight: CGFloat = 50
     static let headerMinHeight: CGFloat = segmentedControlHeight
-    
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var disposeBag = Set<AnyCancellable>()
     let viewModel: ProfileHeaderViewModel
@@ -82,10 +79,8 @@ final class ProfileHeaderViewController: UIViewController, NeedsDependency, Medi
         return documentPickerController
     }()
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator, profileViewModel: ProfileViewModel) {
-        self.context = context
-        self.coordinator = coordinator
-        self.viewModel = ProfileHeaderViewModel(context: context, authenticationBox: authenticationBox, account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
+    init(authenticationBox: MastodonAuthenticationBox, profileViewModel: ProfileViewModel) {
+        self.viewModel = ProfileHeaderViewModel(authenticationBox: authenticationBox, account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
         self.profileHeaderView = ProfileHeaderView(account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
 
         super.init(nibName: nil, bundle: nil)
@@ -341,12 +336,11 @@ extension ProfileHeaderViewController: ProfileHeaderViewDelegate {
             guard let domain = viewModel.account.domain else { return }
             let userID = viewModel.account.id
             let followerListViewModel = FollowerListViewModel(
-                context: context,
                 authenticationBox: viewModel.authenticationBox,
                 domain: domain,
                 userID: userID
             )
-            _ = coordinator.present(
+            _ = self.sceneCoordinator?.present(
                 scene: .follower(viewModel: followerListViewModel),
                 from: self,
                 transition: .show
@@ -357,12 +351,11 @@ extension ProfileHeaderViewController: ProfileHeaderViewDelegate {
 
             let userID = viewModel.account.id
             let followingListViewModel = FollowingListViewModel(
-                context: context,
                 authenticationBox: viewModel.authenticationBox,
                 domain: domain,
                 userID: userID
             )
-            _ = coordinator.present(
+            _ = self.sceneCoordinator?.present(
                 scene: .following(viewModel: followingListViewModel),
                 from: self,
                 transition: .show

@@ -22,13 +22,10 @@ protocol ProfileViewModelEditable {
     var isEdited: Bool { get }
 }
 
-final class ProfileViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
+final class ProfileViewController: UIViewController, MediaPreviewableViewController {
     
     public static let containerViewMarginForRegularHorizontalSizeClass: CGFloat = 64
     public static let containerViewMarginForCompactHorizontalSizeClass: CGFloat = 16
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var disposeBag = Set<AnyCancellable>()
 
@@ -144,7 +141,7 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
     }
     
     private func createProfileHeaderViewController(viewModel: ProfileViewModel) -> ProfileHeaderViewController {
-        let viewController = ProfileHeaderViewController(context: context, authenticationBox: viewModel.authenticationBox, coordinator: coordinator, profileViewModel: viewModel)
+        let viewController = ProfileHeaderViewController(authenticationBox: viewModel.authenticationBox, profileViewModel: viewModel)
         return viewController
     }
     
@@ -159,12 +156,6 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
                 mediaUserTimelineViewModel: viewModel.mediaUserTimelineViewModel,
                 profileAboutViewModel: viewModel.profileAboutViewModel
             )
-            profilePagingViewModel.viewControllers.forEach { viewController in
-                if let viewController = viewController as? NeedsDependency {
-                    viewController.context = context
-                    viewController.coordinator = coordinator
-                }
-            }
             return profilePagingViewModel
         }()
         return profilePagingViewController
@@ -553,15 +544,15 @@ extension ProfileViewController {
         switch meta {
         case .url(_, _, let url, _):
             guard let url = URL(string: url) else { return }
-            _ = coordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
         case .mention(_, _, let userInfo):
             guard let href = userInfo?["href"] as? String,
                   let url = URL(string: href) else { return }
-            _ = coordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
         case .hashtag(_, let hashtag, _):
             guard let viewModel = viewModel else { break }
-            let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: hashtag)
-            _ = coordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
+            let hashtagTimelineViewModel = HashtagTimelineViewModel(authenticationBox: viewModel.authenticationBox, hashtag: hashtag)
+            _ = self.sceneCoordinator?.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
         case .email, .emoji:
             break
         }
@@ -578,7 +569,7 @@ extension ProfileViewController {
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard let setting = SettingService.shared.currentSetting.value else { return }
 
-        _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
+        _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
 
     @objc private func shareBarButtonItemPressed(_ sender: UIBarButtonItem) {
@@ -588,7 +579,7 @@ extension ProfileViewController {
             dependency: self,
             account: viewModel.account
         )
-        _ = self.coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .activityViewController(
                 activityViewController: activityViewController,
                 sourceView: nil,
@@ -602,15 +593,15 @@ extension ProfileViewController {
     @objc private func favoriteBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard let viewModel = viewModel else { return }
         
-        let favoriteViewModel = FavoriteViewModel(context: context, authenticationBox: viewModel.authenticationBox)
-        _ = coordinator.present(scene: .favorite(viewModel: favoriteViewModel), from: self, transition: .show)
+        let favoriteViewModel = FavoriteViewModel(authenticationBox: viewModel.authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .favorite(viewModel: favoriteViewModel), from: self, transition: .show)
     }
     
     @objc private func bookmarkBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard let viewModel = viewModel else { return }
         
-        let bookmarkViewModel = BookmarkViewModel(context: context, authenticationBox: viewModel.authenticationBox)
-        _ = coordinator.present(scene: .bookmark(viewModel: bookmarkViewModel), from: self, transition: .show)
+        let bookmarkViewModel = BookmarkViewModel(authenticationBox: viewModel.authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .bookmark(viewModel: bookmarkViewModel), from: self, transition: .show)
     }
 
     @objc private func replyBarButtonItemPressed(_ sender: UIBarButtonItem) {
@@ -619,20 +610,19 @@ extension ProfileViewController {
         let mention = "@" + viewModel.account.acct
         UITextChecker.learnWord(mention)
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: viewModel.authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel,
             initialContent: mention
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
     }
     
     @objc private func followedTagsItemPressed(_ sender: UIBarButtonItem) {
         guard let viewModel = viewModel else { return }
         
-        let followedTagsViewModel = FollowedTagsViewModel(context: context, authenticationBox: viewModel.authenticationBox)
-        _ = coordinator.present(scene: .followedTags(viewModel: followedTagsViewModel), from: self, transition: .show)
+        let followedTagsViewModel = FollowedTagsViewModel(authenticationBox: viewModel.authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .followedTags(viewModel: followedTagsViewModel), from: self, transition: .show)
     }
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
@@ -840,7 +830,7 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
                         let alertController = UIAlertController(for: error, title: L10n.Common.Alerts.EditProfileFailure.title, preferredStyle: .alert)
                         let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default)
                         alertController.addAction(okAction)
-                        _ = self.coordinator.present(
+                        _ = self.sceneCoordinator?.present(
                             scene: .alertController(alertController: alertController),
                             from: nil,
                             transition: .alertController(animated: true, completion: nil)
@@ -900,7 +890,7 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
             alertController.addAction(unblockAction)
             let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
             alertController.addAction(cancelAction)
-            coordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
+            self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
         } else if relationship.domainBlocking {
             guard let domain = account.domain else { return }
 
@@ -930,7 +920,7 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
             alertController.addAction(unblockAction)
             let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
             alertController.addAction(cancelAction)
-            coordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
+            self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
 
         } else if relationship.muting {
             let name = account.displayNameWithFallback
@@ -950,7 +940,7 @@ extension ProfileViewController: ProfileHeaderViewControllerDelegate {
             alertController.addAction(unmuteAction)
             let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
             alertController.addAction(cancelAction)
-            coordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
+            self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
         } else {
             Task { [weak self] in
                 guard let self else { return }

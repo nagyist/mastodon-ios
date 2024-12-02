@@ -24,7 +24,6 @@ enum StatusSection: Equatable, Hashable {
 extension StatusSection {
 
     struct Configuration {
-        let context: AppContext
         let authenticationBox: MastodonAuthenticationBox
         weak var statusTableViewCellDelegate: StatusTableViewCellDelegate?
         weak var timelineMiddleLoaderTableViewCellDelegate: TimelineMiddleLoaderTableViewCellDelegate?
@@ -33,7 +32,6 @@ extension StatusSection {
 
     static func diffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<StatusSection, StatusItem> {
         tableView.register(StatusTableViewCell.self, forCellReuseIdentifier: String(describing: StatusTableViewCell.self))
@@ -48,7 +46,6 @@ extension StatusSection {
                 let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.feed(feed)
                 let contentConcealModel = StatusView.ContentConcealViewModel(status: feed.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.filterContext)
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
                     viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
@@ -68,7 +65,6 @@ extension StatusSection {
                 let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(status)
                 let contentConcealModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.filterContext)
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
                     viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
@@ -77,7 +73,6 @@ extension StatusSection {
                 return cell
             case .thread(let thread):
                 let cell = dequeueConfiguredReusableCell(
-                    context: context,
                     tableView: tableView,
                     indexPath: indexPath,
                     configuration: ThreadCellRegistrationConfiguration(
@@ -108,7 +103,6 @@ extension StatusSection {
     }
 
     static func dequeueConfiguredReusableCell(
-        context: AppContext,
         tableView: UITableView,
         indexPath: IndexPath,
         configuration: ThreadCellRegistrationConfiguration
@@ -118,7 +112,6 @@ extension StatusSection {
             let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusThreadRootTableViewCell.self), for: indexPath) as! StatusThreadRootTableViewCell
             let contentConcealModel = StatusView.ContentConcealViewModel(status: threadContext.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: .thread)
             StatusSection.configure(
-                context: context,
                 tableView: tableView,
                 cell: cell,
                 viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: .status(threadContext.status), contentConcealModel: contentConcealModel),
@@ -132,9 +125,7 @@ extension StatusSection {
             let contentConcealModel = StatusView.ContentConcealViewModel(status: threadContext.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.configuration.filterContext)
             assert(configuration.configuration.filterContext == .thread)
             StatusSection.configure(
-                context: context,
-                tableView: tableView,
-                cell: cell,
+                tableView: tableView, cell: cell,
                 viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                 configuration: configuration.configuration
             )
@@ -147,7 +138,6 @@ extension StatusSection {
 extension StatusSection {
     
     public static func setupStatusPollDataSource(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         statusView: StatusView
     ) {
@@ -206,19 +196,16 @@ extension StatusSection {
 extension StatusSection {
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: StatusTableViewCell,
         viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = configuration.context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
@@ -229,19 +216,16 @@ extension StatusSection {
     }
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: StatusThreadRootTableViewCell,
         viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = configuration.context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(

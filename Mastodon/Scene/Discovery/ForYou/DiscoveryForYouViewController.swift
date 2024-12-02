@@ -11,10 +11,7 @@ import MastodonUI
 import MastodonCore
 import MastodonSDK
 
-final class DiscoveryForYouViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class DiscoveryForYouViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: DiscoveryForYouViewModel!
@@ -137,7 +134,7 @@ extension DiscoveryForYouViewController: ProfileCardTableViewCellDelegate {
         guard let indexPath = tableView.indexPath(for: cell) else { return }
         guard case let .account(account, _) = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else { return }
 
-        coordinator.showLoading()
+        self.sceneCoordinator?.showLoading()
 
         Task { [weak self] in
 
@@ -147,16 +144,15 @@ extension DiscoveryForYouViewController: ProfileCardTableViewCellDelegate {
                 let familiarFollowers = viewModel.familiarFollowers.first(where: { $0.id == userID })?.accounts ?? []
                 let relationships = try await APIService.shared.relationship(forAccounts: familiarFollowers, authenticationBox: authenticationBox).value
 
-                coordinator.hideLoading()
+                self.sceneCoordinator?.hideLoading()
 
                 let familiarFollowersViewModel = FamiliarFollowersViewModel(
-                    context: context,
                     authenticationBox: authenticationBox,
                     accounts: familiarFollowers,
                     relationships: relationships
                 )
 
-                _ = coordinator.present(
+                _ = self.sceneCoordinator?.present(
                     scene: .familiarFollowers(viewModel: familiarFollowersViewModel),
                     from: self,
                     transition: .show

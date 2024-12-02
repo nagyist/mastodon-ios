@@ -25,7 +25,6 @@ extension StatusView {
         public var objects = Set<MastodonStatus>()
         public var managedObjects = Set<NSManagedObject>()
 
-        public var context: AppContext?
         public var authenticationBox: MastodonAuthenticationBox?
         public var originalStatus: MastodonStatus? {
             didSet {
@@ -601,7 +600,7 @@ extension StatusView.ViewModel {
                 let (isBookmark, isFavorite, isBoosted) = tupleTwo
                 let (translatedFromLanguage, language) = tupleThree
 
-                guard let name = authorName?.string, let authorId = authorId, let context = self.context, let authenticationBox = self.authenticationBox else {
+                guard let name = authorName?.string, let authorId = authorId, let authenticationBox = self.authenticationBox else {
                     statusView.authorView.menuButton.menu = nil
                     return
                 }

@@ -8,7 +8,7 @@ import CoreDataStack
 extension DataSourceFacade {
     public static func getEditHistory(
         forStatus status: Status,
-        provider: NeedsDependency & AuthContextProvider
+        provider: AuthContextProvider
     ) async throws -> [Mastodon.Entity.StatusEdit] {
         let reponse = try await APIService.shared.getHistory(forStatusID: status.id, authenticationBox: provider.authenticationBox)
 

@@ -11,10 +11,7 @@ import CoreDataStack
 import MastodonCore
 import MastodonUI
 
-final class SearchHistoryViewController: UIViewController, NeedsDependency {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class SearchHistoryViewController: UIViewController {
 
     var disposeBag = Set<AnyCancellable>()
     var viewModel: SearchHistoryViewModel!

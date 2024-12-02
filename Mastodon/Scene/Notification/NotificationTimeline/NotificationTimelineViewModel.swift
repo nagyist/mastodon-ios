@@ -19,7 +19,6 @@ final class NotificationTimelineViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let scope: Scope
     var notificationPolicy: Mastodon.Entity.NotificationPolicy?
@@ -47,15 +46,13 @@ final class NotificationTimelineViewModel {
     
     @MainActor
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         scope: Scope,
         notificationPolicy: Mastodon.Entity.NotificationPolicy? = nil
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.scope = scope
-        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox, kind: scope.feedKind)
+        self.dataController = FeedDataController(authenticationBox: authenticationBox, kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
 
         switch scope {

@@ -32,7 +32,6 @@ extension NotificationSection {
     
     static func diffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<NotificationSection, NotificationItem> {
         tableView.register(NotificationTableViewCell.self, forCellReuseIdentifier: String(describing: NotificationTableViewCell.self))
@@ -50,7 +49,6 @@ extension NotificationSection {
                 } else {
                     let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: NotificationTableViewCell.self), for: indexPath) as! NotificationTableViewCell
                     configure(
-                        context: context,
                         tableView: tableView,
                         cell: cell,
                         viewModel: NotificationTableViewCell.ViewModel(value: .feed(feed)),
@@ -81,20 +79,17 @@ extension NotificationSection {
 extension NotificationSection {
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: NotificationTableViewCell,
         viewModel: NotificationTableViewCell.ViewModel,
         configuration: Configuration
     ) {
         StatusSection.setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.notificationView.statusView
         )
         
         StatusSection.setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.notificationView.quoteStatusView
         )

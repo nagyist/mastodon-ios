@@ -23,7 +23,6 @@ class ThreadViewModel {
     var rootItemObserver: AnyCancellable?
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let mastodonStatusThreadViewModel: MastodonStatusThreadViewModel
     
@@ -50,14 +49,12 @@ class ThreadViewModel {
     @Published var navigationBarTitle: MastodonMetaContent?
     
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         optionalRoot: StatusItem.Thread?
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.root = optionalRoot
-        self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(context: context, filterContext: .thread)
+        self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(filterContext: .thread)
         // end init
 
         $root

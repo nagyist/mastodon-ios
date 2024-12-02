@@ -11,10 +11,7 @@ import CoreDataStack
 import MastodonCore
 import MastodonLocalization
 
-class NotificationTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
+class NotificationTimelineViewController: UIViewController, MediaPreviewableViewController {
     
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
 
@@ -39,10 +36,8 @@ class NotificationTimelineViewController: UIViewController, NeedsDependency, Med
     
     let cellFrameCache = NSCache<NSNumber, NSValue>()
 
-    init(viewModel: NotificationTimelineViewModel, context: AppContext, coordinator: SceneCoordinator) {
+    init(viewModel: NotificationTimelineViewModel) {
         self.viewModel = viewModel
-        self.context = context
-        self.coordinator = coordinator
 
         super.init(nibName: nil, bundle: nil)
 
@@ -288,11 +283,10 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
                 
                 if let status = notification.status {
                     let threadViewModel = ThreadViewModel(
-                        context: self.context,
                         authenticationBox: self.viewModel.authenticationBox,
                         optionalRoot: .root(context: .init(status: .fromEntity(status)))
                     )
-                    _ = self.coordinator.present(
+                    _ = self.sceneCoordinator?.present(
                         scene: .thread(viewModel: threadViewModel),
                         from: self,
                         transition: .show

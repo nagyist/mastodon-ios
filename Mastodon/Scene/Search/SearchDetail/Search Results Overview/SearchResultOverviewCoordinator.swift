@@ -12,20 +12,16 @@ protocol SearchResultOverviewCoordinatorDelegate: AnyObject {
 class SearchResultOverviewCoordinator: Coordinator {
 
     let overviewViewController: SearchResultsOverviewTableViewController
-    let sceneCoordinator: SceneCoordinator
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     weak var delegate: SearchResultOverviewCoordinatorDelegate?
 
     var activeTask: Task<Void, Never>?
 
-    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, sceneCoordinator: SceneCoordinator) {
-        self.sceneCoordinator = sceneCoordinator
-        self.context = appContext
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
 
-        overviewViewController = SearchResultsOverviewTableViewController(appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
+        overviewViewController = SearchResultsOverviewTableViewController(authenticationBox: authenticationBox)
     }
 
     func start() {
@@ -36,9 +32,9 @@ class SearchResultOverviewCoordinator: Coordinator {
 extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControllerDelegate {
     @MainActor
     func searchForPosts(_ viewController: SearchResultsOverviewTableViewController, withSearchText searchText: String) {
-        let searchResultViewModel = SearchResultViewModel(context: context, authenticationBox: authenticationBox, searchScope: .posts, searchText: searchText)
+        let searchResultViewModel = SearchResultViewModel(authenticationBox: authenticationBox, searchScope: .posts, searchText: searchText)
 
-        sceneCoordinator.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
+        viewController.sceneCoordinator?.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
     }
 
     func showPosts(_ viewController: SearchResultsOverviewTableViewController, tag: Mastodon.Entity.Tag) {
@@ -55,9 +51,9 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
 
     @MainActor
     func searchForPeople(_ viewController: SearchResultsOverviewTableViewController, withName searchText: String) {
-        let searchResultViewModel = SearchResultViewModel(context: context, authenticationBox: authenticationBox, searchScope: .people, searchText: searchText)
+        let searchResultViewModel = SearchResultViewModel(authenticationBox: authenticationBox, searchScope: .people, searchText: searchText)
 
-        sceneCoordinator.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
+        viewController.sceneCoordinator?.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
     }
 
     func goTo(_ viewController: SearchResultsOverviewTableViewController, urlString: String) {
@@ -98,7 +94,7 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
 
                 guard let prefixedURL else { return }
 
-                await sceneCoordinator.present(scene: .safari(url: prefixedURL), transition: .safariPresent(animated: true))
+                await viewController.sceneCoordinator?.present(scene: .safari(url: prefixedURL), transition: .safariPresent(animated: true))
             }
         }
     }
@@ -139,7 +135,7 @@ extension SearchResultOverviewCoordinator: SearchResultsOverviewTableViewControl
                     let alertController = UIAlertController(title: alertTitle, message: alertMessage, preferredStyle: .alert)
                     let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default)
                     alertController.addAction(okAction)
-                    sceneCoordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
+                    viewController.sceneCoordinator?.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
                 }
             }
         }

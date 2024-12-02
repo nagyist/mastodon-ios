@@ -15,7 +15,7 @@ final class SafariActivity: UIActivity {
     weak var sceneCoordinator: SceneCoordinator?
     var url: NSURL?
     
-    init(sceneCoordinator: SceneCoordinator) {
+    init(sceneCoordinator: SceneCoordinator?) {
         self.sceneCoordinator = sceneCoordinator
     }
     

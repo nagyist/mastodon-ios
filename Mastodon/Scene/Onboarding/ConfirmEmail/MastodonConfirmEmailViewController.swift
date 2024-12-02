@@ -13,12 +13,9 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class MastodonConfirmEmailViewController: UIViewController, NeedsDependency {
+final class MastodonConfirmEmailViewController: UIViewController {
     
     var disposeBag = Set<AnyCancellable>()
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
 
     var viewModel: MastodonConfirmEmailViewModel!
 
@@ -126,10 +123,10 @@ extension MastodonConfirmEmailViewController {
                                 } receiveValue: { _ in
                                     // do nothing
                                 }
-                                .store(in: &self.context.disposeBag)    // execute in the background
+                                .store(in: &AppContext.shared.disposeBag)    // execute in the background
                         }   // end switch
                     } receiveValue: { _ in
-                        self.coordinator.setup()
+                        self.sceneCoordinator?.setup()
                         // self.dismiss(animated: true, completion: nil)
                     }
                     .store(in: &self.disposeBag)
@@ -208,13 +205,13 @@ extension MastodonConfirmEmailViewController {
         let resendAction = UIAlertAction(title: L10n.Scene.ConfirmEmail.DontReceiveEmail.resendEmail, style: .default) { _ in
             let url = Mastodon.API.resendEmailURL(domain: self.viewModel.authenticateInfo.domain)
             let viewModel = MastodonResendEmailViewModel(resendEmailURL: url, email: self.viewModel.email)
-            _ = self.coordinator.present(scene: .mastodonResendEmail(viewModel: viewModel), from: self, transition: .modal(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .mastodonResendEmail(viewModel: viewModel), from: self, transition: .modal(animated: true, completion: nil))
         }
         let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default) { _ in
         }
         alertController.addAction(resendAction)
         alertController.addAction(okAction)
-        _ = self.coordinator.present(scene: .alertController(alertController: alertController), from: self, transition: .alertController(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: self, transition: .alertController(animated: true, completion: nil))
     }
 }
 

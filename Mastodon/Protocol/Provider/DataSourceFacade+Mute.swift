@@ -11,7 +11,7 @@ import MastodonCore
 
 extension DataSourceFacade {
     static func responseToUserMuteAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Relationship {
         FeedbackGenerator.shared.generate(.selectionChanged)

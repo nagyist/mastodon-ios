@@ -33,7 +33,7 @@ public final class ComposeContentViewController: UIViewController {
     // auto complete
     private(set) lazy var autoCompleteViewController: AutoCompleteViewController = {
         let viewController = AutoCompleteViewController()
-        viewController.viewModel = AutoCompleteViewModel(context: viewModel.context, authenticationBox: viewModel.authenticationBox)
+        viewController.viewModel = AutoCompleteViewModel(authenticationBox: viewModel.authenticationBox)
         viewController.delegate = self
         // viewController.viewModel.customEmojiViewModel.value = viewModel.customEmojiViewModel
         return viewController

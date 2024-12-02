@@ -20,7 +20,7 @@ import MastodonSDK
 extension DataSourceFacade {
     
     static func responseToDeleteStatus(
-        dependency: NeedsDependency & AuthContextProvider & DataSourceProvider,
+        dependency: AuthContextProvider & DataSourceProvider,
         status: MastodonStatus
     ) async throws {
         let deletedStatus = try await APIService.shared.deleteStatus(
@@ -46,7 +46,8 @@ extension DataSourceFacade {
             dependency: provider,
             status: status
         )
-        _ = provider.coordinator.present(
+        guard let coordinator = provider.sceneCoordinator else { /* TODO: throw? */ return }
+        _ = coordinator.present(
             scene: .activityViewController(
                 activityViewController: activityViewController,
                 sourceView: button,
@@ -58,7 +59,7 @@ extension DataSourceFacade {
     }
     
     private static func createActivityViewController(
-        dependency: NeedsDependency,
+        dependency: UIViewController,
         status: MastodonStatus
     ) async throws -> UIActivityViewController {
         var activityItems: [Any] = {
@@ -68,8 +69,8 @@ extension DataSourceFacade {
             ]
         }()
 
-        var applicationActivities: [UIActivity] = [
-            SafariActivity(sceneCoordinator: dependency.coordinator),     // open URL
+        var applicationActivities: [UIActivity] = await [
+            SafariActivity(sceneCoordinator: dependency.sceneCoordinator),     // open URL
         ]
         
         if let provider = dependency as? ShareActivityProvider {
@@ -95,18 +96,19 @@ extension DataSourceFacade {
         sender: UIButton
     ) async throws {
         let _status = status.reblog ?? status
+        
+        guard let coordinator = provider.sceneCoordinator else { return }
 
         switch action {
         case .reply:
             FeedbackGenerator.shared.generate(.selectionChanged)
 
             let composeViewModel = ComposeViewModel(
-                context: provider.context,
                 authenticationBox: provider.authenticationBox,
                 composeContext: .composeStatus,
                 destination: .reply(parent: _status)
             )
-            _ = provider.coordinator.present(
+            _ = coordinator.present(
                 scene: .compose(viewModel: composeViewModel),
                 from: provider,
                 transition: .modal(animated: true, completion: nil)
@@ -144,7 +146,7 @@ extension DataSourceFacade {
     
     @MainActor
     static func responseToMenuAction<T>(
-        dependency: UIViewController & NeedsDependency & AuthContextProvider & DataSourceProvider,
+        dependency: AuthContextProvider & DataSourceProvider,
         action: MastodonMenu.Action,
         menuContext: MenuContext,
         completion: ((T) -> Void)? = { (param: Void) in }
@@ -237,7 +239,7 @@ extension DataSourceFacade {
             guard let relationship = try? await APIService.shared.relationship(forAccounts: [menuContext.author], authenticationBox: dependency.authenticationBox).value.first else { return }
 
             let reportViewModel = ReportViewModel(
-                context: dependency.context,
+                context: AppContext.shared,
                 authenticationBox: dependency.authenticationBox,
                 account: menuContext.author,
                 relationship: relationship,
@@ -245,7 +247,8 @@ extension DataSourceFacade {
                 contentDisplayMode: .neverConceal
             )
 
-            _ = dependency.coordinator.present(
+            guard let coordinator = dependency.sceneCoordinator else { return }
+            _ = coordinator.present(
                 scene: .report(viewModel: reportViewModel),
                 from: dependency,
                 transition: .modal(animated: true, completion: nil)
@@ -256,7 +259,8 @@ extension DataSourceFacade {
                 account: menuContext.author
             )
 
-            _ = dependency.coordinator.present(
+            guard let coordinator = dependency.sceneCoordinator else { return }
+            _ = coordinator.present(
                 scene: .activityViewController(
                     activityViewController: activityViewController,
                     sourceView: menuContext.button,
@@ -284,8 +288,8 @@ extension DataSourceFacade {
                 dependency: dependency,
                 status: status
             )
-
-            _ = dependency.coordinator.present(
+            guard let coordinator = dependency.sceneCoordinator else { return }
+            _ = coordinator.present(
                 scene: .activityViewController(
                     activityViewController: activityViewController,
                     sourceView: menuContext.button,
@@ -321,7 +325,7 @@ extension DataSourceFacade {
             guard let status = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus else { return }
 
             do {
-                let translation = try await DataSourceFacade.translateStatus(provider: dependency,status: status)
+                let translation = try await DataSourceFacade.translateStatus(provider: dependency, status: status)
 
                 menuContext.statusViewModel?.translation = translation
             } catch TranslationFailure.emptyOrInvalidResponse {
@@ -340,11 +344,11 @@ extension DataSourceFacade {
             ).value
 
             let editStatusViewModel = ComposeViewModel(
-                context: dependency.coordinator.appContext,
                 authenticationBox: dependency.authenticationBox,
                 composeContext: .editStatus(status: status, statusSource: statusSource),
                 destination: .topLevel)
-            _ = dependency.coordinator.present(scene: .editStatus(viewModel: editStatusViewModel), transition: .modal(animated: true))
+            guard let coordinator = dependency.sceneCoordinator else { return }
+            _ = coordinator.present(scene: .editStatus(viewModel: editStatusViewModel), transition: .modal(animated: true))
 
         case .showOriginal:
             // do nothing, as the translation is reverted in `StatusTableViewCellDelegate` in `DataSourceProvider+StatusTableViewCellDelegate.swift`.
@@ -416,14 +420,13 @@ extension DataSourceFacade {
                 assertionFailure()
                 return
             }
-
-            dependency.coordinator.present(scene: .safari(url: url), transition: .safariPresent(animated: true))
+            guard let coordinator = dependency.sceneCoordinator else { return }
+            coordinator.present(scene: .safari(url: url), transition: .safariPresent(animated: true))
         case .copyProfileLink(let url):
             UIPasteboard.general.string = url?.absoluteString
         case .openUserInBrowser(let url):
-            guard let url else { return }
-
-            dependency.coordinator.present(scene: .safari(url: url), transition: .safariPresent(animated: true))
+            guard let url, let coordinator = dependency.sceneCoordinator else { return }
+            coordinator.present(scene: .safari(url: url), transition: .safariPresent(animated: true))
         }
     }
 }
@@ -431,7 +434,7 @@ extension DataSourceFacade {
 extension DataSourceFacade {
     @MainActor
     static func responseToToggleSensitiveAction(
-        dependency: NeedsDependency & DataSourceProvider,
+        dependency: DataSourceProvider,
         status: MastodonStatus
     ) async throws {
         let _status = status.reblog ?? status
@@ -443,7 +446,7 @@ extension DataSourceFacade {
 }
 
 private extension DataSourceFacade {
-    static func performDeletion(of status: MastodonStatus, with dependency: NeedsDependency & AuthContextProvider & DataSourceProvider) {
+    static func performDeletion(of status: MastodonStatus, with dependency: AuthContextProvider & DataSourceProvider) {
         Task {
             try await DataSourceFacade.responseToDeleteStatus(
                 dependency: dependency,

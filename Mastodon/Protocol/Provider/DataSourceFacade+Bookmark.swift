@@ -14,7 +14,7 @@ import MastodonSDK
 extension DataSourceFacade {
     @MainActor
     public static func responseToStatusBookmarkAction(
-        provider: NeedsDependency & AuthContextProvider & DataSourceProvider,
+        provider: AuthContextProvider & DataSourceProvider,
         status: MastodonStatus
     ) async throws {
         FeedbackGenerator.shared.generate(.selectionChanged)

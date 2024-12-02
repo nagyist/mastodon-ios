@@ -14,10 +14,7 @@ import TabBarPager
 import XLPagerTabStrip
 import MastodonCore
 
-final class UserTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController, StatusReloadable {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class UserTimelineViewController: UIViewController, MediaPreviewableViewController, StatusReloadable {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: UserTimelineViewModel!

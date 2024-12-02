@@ -16,7 +16,6 @@ final class DiscoveryForYouViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     @MainActor
@@ -29,8 +28,7 @@ final class DiscoveryForYouViewModel {
     var diffableDataSource: UITableViewDiffableDataSource<DiscoverySection, DiscoveryItem>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
     
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.accounts = []
         self.relationships = []

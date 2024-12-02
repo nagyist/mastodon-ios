@@ -16,11 +16,9 @@ final class FollowedTagsViewModel: NSObject {
     var diffableDataSource: UITableViewDiffableDataSource<Section, Item>?
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.followedTags = []
 

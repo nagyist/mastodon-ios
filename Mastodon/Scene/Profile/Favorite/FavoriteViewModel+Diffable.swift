@@ -15,9 +15,7 @@ extension FavoriteViewModel {
     ) {
         diffableDataSource = StatusSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             configuration: StatusSection.Configuration(
-                context: context,
                 authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: nil,

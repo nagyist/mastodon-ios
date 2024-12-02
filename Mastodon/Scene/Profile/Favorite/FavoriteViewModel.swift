@@ -17,7 +17,6 @@ final class FavoriteViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
 
@@ -37,8 +36,7 @@ final class FavoriteViewModel {
     }()
     
     @MainActor
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.dataController = StatusDataController()
     }

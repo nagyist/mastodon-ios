@@ -23,7 +23,6 @@ final class ProfileHeaderViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     
     @Published var me: Mastodon.Entity.Account
@@ -45,8 +44,7 @@ final class ProfileHeaderViewModel {
     @Published var isTitleViewDisplaying = false
     @Published var isTitleViewContentOffsetSet = false    
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
         self.authenticationBox = authenticationBox
         self.account = account
         self.me = me

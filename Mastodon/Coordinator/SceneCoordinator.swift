@@ -17,11 +17,14 @@ import MBProgressHUD
 @MainActor
 final public class SceneCoordinator {
     
+    fileprivate static func coordinator(for view: UIView) -> SceneCoordinator? {
+        return SceneDelegate.delegate(for: view)?.coordinator
+    }
+    
     private var disposeBag = Set<AnyCancellable>()
     
     private weak var scene: UIScene!
     private weak var sceneDelegate: SceneDelegate!
-    private(set) weak var appContext: AppContext!
     
     var authenticationBox: MastodonAuthenticationBox? {
         AuthenticationServiceProvider.shared.currentActiveUser.value
@@ -45,7 +48,6 @@ final public class SceneCoordinator {
     ) {
         self.scene = scene
         self.sceneDelegate = sceneDelegate
-        self.appContext = appContext
 
         NotificationService.shared.requestRevealNotificationPublisher
             .receive(on: DispatchQueue.main)
@@ -118,7 +120,6 @@ final public class SceneCoordinator {
                                 break
                             case .mention, .reblog, .favourite, .poll, .status:
                                 let threadViewModel = RemoteThreadViewModel(
-                                    context: appContext,
                                     authenticationBox: authenticationBox,
                                     notificationID: notificationID
                                 )
@@ -250,17 +251,18 @@ extension SceneCoordinator {
 
         switch UIDevice.current.userInterfaceIdiom {
             case .phone:
-                let viewController = MainTabBarController(context: appContext, coordinator: self, authenticationBox: authenticationBox)
+                let viewController = MainTabBarController(authenticationBox: authenticationBox)
                 self.splitViewController = nil
                 self.tabBarController = viewController
                 rootViewController = viewController
             default:
-                let splitViewController = RootSplitViewController(context: appContext, coordinator: self, authenticationBox: authenticationBox)
+                let splitViewController = RootSplitViewController(authenticationBox: authenticationBox)
                 self.splitViewController = splitViewController
                 self.tabBarController = splitViewController.contentSplitViewController.mainTabBarController
                 rootViewController = splitViewController
         }
         
+        // this feels wrong
         sceneDelegate.window?.rootViewController = rootViewController                   // base: main
         self.rootViewController = rootViewController
 
@@ -268,7 +270,7 @@ extension SceneCoordinator {
             DispatchQueue.main.async {
                 _ = self.present(
                     scene: .welcome,
-                    from: self.sceneDelegate.window?.rootViewController,
+                    from: rootViewController, // self.sceneDelegate.window?.rootViewController,
                     transition: .modal(animated: true, completion: nil)
                 )
             }
@@ -422,13 +424,11 @@ private extension SceneCoordinator {
             let _viewController = WebViewController(viewModel)
             viewController = _viewController
         case .searchDetail(let viewModel):
-            let _viewController = SearchDetailViewController(appContext: appContext, sceneCoordinator: self, authenticationBox: viewModel.authenticationBox)
+            let _viewController = SearchDetailViewController(authenticationBox: viewModel.authenticationBox)
             _viewController.viewModel = viewModel
             viewController = _viewController
         case .searchResult(let viewModel):
             let searchResultViewController = SearchResultViewController()
-            searchResultViewController.context = appContext
-            searchResultViewController.coordinator = self
             searchResultViewController.viewModel = viewModel
             viewController = searchResultViewController
         case .compose(let viewModel):
@@ -460,19 +460,19 @@ private extension SceneCoordinator {
         case .followedTags(let viewModel):
             guard let authenticationBox else { return nil }
 
-            viewController = FollowedTagsViewController(appContext: appContext, sceneCoordinator: self, authenticationBox: authenticationBox, viewModel: viewModel)
+            viewController = FollowedTagsViewController(authenticationBox: authenticationBox, viewModel: viewModel)
         case .favorite(let viewModel):
             let _viewController = FavoriteViewController()
             _viewController.viewModel = viewModel
             viewController = _viewController
         case .follower(let viewModel):
-            let followerListViewController = FollowerListViewController(viewModel: viewModel, coordinator: self, context: appContext)
+            let followerListViewController = FollowerListViewController(viewModel: viewModel)
             viewController = followerListViewController
         case .following(let viewModel):
-            let followingListViewController = FollowingListViewController(viewModel: viewModel, coordinator: self, context: appContext)
+            let followingListViewController = FollowingListViewController(viewModel: viewModel)
             viewController = followingListViewController
         case .familiarFollowers(let viewModel):
-            viewController = FamiliarFollowersViewController(viewModel: viewModel, context: appContext, coordinator: self)
+            viewController = FamiliarFollowersViewController(viewModel: viewModel)
         case .rebloggedBy(let viewModel):
             let _viewController = RebloggedByViewController()
             _viewController.viewModel = viewModel
@@ -539,7 +539,7 @@ private extension SceneCoordinator {
             let settingsCoordinator = SettingsCoordinator(presentedOn: presentedOn,
                                                           accountName: accountName,
                                                           setting: setting,
-                                                          appContext: appContext,
+                                                          appContext: AppContext.shared,
                                                           authenticationBox: authenticationBox,
                                                           sceneCoordinator: self
             )
@@ -557,17 +557,10 @@ private extension SceneCoordinator {
         case .notificationPolicy(let viewModel):
             viewController = NotificationPolicyViewController(viewModel: viewModel)
         case .accountNotificationTimeline(let viewModel, let request):
-            viewController = AccountNotificationTimelineViewController(viewModel: viewModel, context: appContext, coordinator: self, notificationRequest: request)
+            viewController = AccountNotificationTimelineViewController(viewModel: viewModel, notificationRequest: request)
         }
 
-        setupDependency(for: viewController as? NeedsDependency)
-
         return viewController
-    }
-
-    private func setupDependency(for needs: NeedsDependency?) {
-        needs?.context = appContext
-        needs?.coordinator = self
     }
 }
 
@@ -690,5 +683,12 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
         authenticationController.authenticationSession?.start()
 
         self.mastodonAuthenticationController = authenticationController
+    }
+}
+
+public extension UIViewController {
+    var sceneCoordinator: SceneCoordinator? {
+        guard let view = viewIfLoaded else { assert(false); return nil }
+        return SceneCoordinator.coordinator(for: view)
     }
 }

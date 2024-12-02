@@ -12,7 +12,7 @@ import MastodonCore
 import MastodonLocalization
 import MastodonSDK
 
-final class WelcomeViewController: UIViewController, NeedsDependency {
+final class WelcomeViewController: UIViewController {
     
     private enum Constants {
         static let topAnchorInset: CGFloat = 20
@@ -28,16 +28,13 @@ final class WelcomeViewController: UIViewController, NeedsDependency {
         }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
 
     private let authenticationViewModel = AuthenticationViewModel()
     private var authenticationStateTask: Task<(), Never>?
     
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
-    private(set) lazy var viewModel = WelcomeViewModel(context: context)
+    private(set) lazy var viewModel = WelcomeViewModel()
     
     let welcomeIllustrationView = WelcomeIllustrationView()
     let separatorView = WelcomeSeparatorView(frame: .zero)
@@ -137,7 +134,7 @@ extension WelcomeViewController {
         let alertController = UIAlertController(for: error, title: "Error", preferredStyle: .alert)
         let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
         alertController.addAction(okAction)
-        _ = self.coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .alertController(alertController: alertController),
             from: nil,
             transition: .alertController(animated: true, completion: nil)
@@ -151,25 +148,25 @@ extension WelcomeViewController {
         case .error(let error):
             displayError(error)
         case .logInToExistingAccountRequested:
-            _ = coordinator.present(scene: .mastodonLogin(authenticationViewModel: authenticationViewModel, suggestedDomain: viewModel.randomDefaultServer?.domain), from: self, transition: .show)
+            _ = self.sceneCoordinator?.present(scene: .mastodonLogin(authenticationViewModel: authenticationViewModel, suggestedDomain: viewModel.randomDefaultServer?.domain), from: self, transition: .show)
         case .joiningServer:
             break
         case .showingRules(let viewModel):
             if let viewModel {
-                _ = coordinator.present(scene: .mastodonServerRules(viewModel: viewModel), from: self, transition: .show)
+                _ = self.sceneCoordinator?.present(scene: .mastodonServerRules(viewModel: viewModel), from: self, transition: .show)
             } else {
                 popBack()
             }
         case .registering(let viewModel):
-            _ = coordinator.present(scene: .mastodonRegister(viewModel: viewModel), from: self, transition: .show)
+            _ = self.sceneCoordinator?.present(scene: .mastodonRegister(viewModel: viewModel), from: self, transition: .show)
         case .showingPrivacyPolicy(let viewModel):
-            _ = coordinator.present(scene: .mastodonPrivacyPolicies(viewModel: viewModel), from: self, transition: .show)
+            _ = self.sceneCoordinator?.present(scene: .mastodonPrivacyPolicies(viewModel: viewModel), from: self, transition: .show)
         case .pickingServer:
-            _ = coordinator.present(scene: .mastodonPickServer(viewMode: MastodonPickServerViewModel(joinServer: { [weak self] server in try await self?.authenticationViewModel.joinServer(server) }, displayError: { [weak self] error in self?.displayError(error) })), from: self, transition: .show)
+            _ = self.sceneCoordinator?.present(scene: .mastodonPickServer(viewMode: MastodonPickServerViewModel(joinServer: { [weak self] server in try await self?.authenticationViewModel.joinServer(server) }, displayError: { [weak self] error in self?.displayError(error) })), from: self, transition: .show)
         case .confirmingEmail(let viewModel):
-            _ = coordinator.present(scene: .mastodonConfirmEmail(viewModel: viewModel), from: self, transition: .show)
+            _ = self.sceneCoordinator?.present(scene: .mastodonConfirmEmail(viewModel: viewModel), from: self, transition: .show)
         case .authenticatedUser(let authBox):
-            coordinator.setup()
+            self.sceneCoordinator?.setup()
             break
         case .authenticatingUser:
             break

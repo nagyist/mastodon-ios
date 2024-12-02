@@ -16,15 +16,12 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
-final class MastodonRegisterViewController: UIViewController, NeedsDependency, OnboardingViewControllerAppearance {
+final class MastodonRegisterViewController: UIViewController, OnboardingViewControllerAppearance {
     
     static let avatarImageMaxSizeInPixel = CGSize(width: 400, height: 400)
     
     var disposeBag = Set<AnyCancellable>()
     private var observations = Set<NSKeyValueObservation>()
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var viewModel: MastodonRegisterViewModel!
     private(set) lazy var mastodonRegisterView = MastodonRegisterView(viewModel: viewModel)
@@ -92,7 +89,7 @@ extension MastodonRegisterViewController {
                 let alertController = UIAlertController(for: error, title: L10n.Common.Alerts.SignUpFailure.title, preferredStyle: .alert)
                 let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
                 alertController.addAction(okAction)
-                _ = self.coordinator.present(
+                _ = self.sceneCoordinator?.present(
                     scene: .alertController(alertController: alertController),
                     from: nil,
                     transition: .alertController(animated: true, completion: nil)

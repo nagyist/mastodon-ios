@@ -14,6 +14,19 @@ import MastodonUI
 import MastodonSDK
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    
+    static private var delegates = [ ObjectIdentifier : SceneDelegate ]()
+    
+    static func assign(delegate: SceneDelegate, to windowScene: UIWindowScene) {
+        delegates[ObjectIdentifier(windowScene)] = delegate
+    }
+    
+    static func delegate(for view: UIView) -> SceneDelegate? {
+        guard let windowScene = view.window?.windowScene else {
+            return nil
+        }
+        return delegates[ObjectIdentifier(windowScene)]
+    }
 
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
@@ -46,6 +59,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.coordinator = sceneCoordinator
         
         sceneCoordinator.setup()
+        
+        SceneDelegate.assign(delegate: self, to: windowScene)
+        
         window.makeKeyAndVisible()
         
         if let urlContext = connectionOptions.urlContexts.first {
@@ -170,7 +186,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                     guard let statusOnMyInstance = try await APIService.shared.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authenticationBox).value.statuses.first else { return }
 
                     let threadViewModel = RemoteThreadViewModel(
-                        context: AppContext.shared,
                         authenticationBox: authenticationBox,
                         statusID: statusOnMyInstance.id
                     )
@@ -248,7 +263,6 @@ extension SceneDelegate {
         } else {
             if let authenticationBox = coordinator?.authenticationBox {
                 let composeViewModel = ComposeViewModel(
-                    context: AppContext.shared,
                     authenticationBox: authenticationBox,
                     composeContext: .composeStatus,
                     destination: .topLevel
@@ -321,7 +335,6 @@ extension SceneDelegate {
             let statusId = components[1]
             // View post from user
             let threadViewModel = RemoteThreadViewModel(
-                context: AppContext.shared,
                 authenticationBox: authenticationBox,
                 statusID: statusId
             )

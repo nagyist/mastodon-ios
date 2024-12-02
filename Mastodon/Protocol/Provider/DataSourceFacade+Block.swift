@@ -12,7 +12,7 @@ import MastodonSDK
 
 extension DataSourceFacade {
     static func responseToUserBlockAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Relationship {
         FeedbackGenerator.shared.generate(.selectionChanged)
@@ -35,7 +35,7 @@ extension DataSourceFacade {
     }
 
     static func responseToDomainBlockAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Empty {
         FeedbackGenerator.shared.generate(.selectionChanged)

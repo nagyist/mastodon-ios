@@ -18,9 +18,8 @@ protocol NotificationRequestsTableViewControllerDelegate: AnyObject {
     func notificationRequestsUpdated(_ viewController: NotificationRequestsTableViewController)
 }
 
-class NotificationRequestsTableViewController: UIViewController, NeedsDependency {
-    var context: AppContext!
-    var coordinator: SceneCoordinator!
+class NotificationRequestsTableViewController: UIViewController {
+
     weak var delegate: NotificationRequestsTableViewControllerDelegate?
 
     let tableView: UITableView
@@ -30,8 +29,6 @@ class NotificationRequestsTableViewController: UIViewController, NeedsDependency
     init(viewModel: NotificationRequestsViewModel) {
 
         self.viewModel = viewModel
-        self.context = viewModel.appContext
-        self.coordinator = viewModel.coordinator
 
         tableView = UITableView(frame: .zero)
         tableView.translatesAutoresizingMaskIntoConstraints = false

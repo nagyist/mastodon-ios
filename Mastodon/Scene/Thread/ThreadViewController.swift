@@ -16,10 +16,7 @@ import MastodonUI
 import MastodonLocalization
 import MastodonSDK
 
-final class ThreadViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class ThreadViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: ThreadViewModel!
@@ -115,12 +112,11 @@ extension ThreadViewController {
     @objc private func replyBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard case let .root(threadContext) = viewModel.root else { return }
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: viewModel.authenticationBox,
             composeContext: .composeStatus,
             destination: .reply(parent: threadContext.status)
         )
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .compose(viewModel: composeViewModel),
             from: self,
             transition: .modal(animated: true, completion: nil)

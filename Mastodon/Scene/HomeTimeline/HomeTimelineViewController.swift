@@ -19,10 +19,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class HomeTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class HomeTimelineViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: HomeTimelineViewModel?
@@ -616,9 +613,9 @@ extension HomeTimelineViewController {
     @objc private func findPeopleButtonPressed(_ sender: Any?) {
         guard let authenticationBox = viewModel?.authenticationBox else { return }
 
-        let suggestionAccountViewModel = SuggestionAccountViewModel(context: context, authenticationBox: authenticationBox)
+        let suggestionAccountViewModel = SuggestionAccountViewModel(authenticationBox: authenticationBox)
         suggestionAccountViewModel.delegate = viewModel
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .suggestionAccount(viewModel: suggestionAccountViewModel),
             from: self,
             transition: .modal(animated: true, completion: nil)
@@ -626,13 +623,13 @@ extension HomeTimelineViewController {
     }
     
     @objc private func manuallySearchButtonPressed(_ sender: UIButton) {
-        coordinator.switchToTabBar(tab: .search)
+        self.sceneCoordinator?.switchToTabBar(tab: .search)
     }
     
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
         guard let setting = SettingService.shared.currentSetting.value else { return }
 
-        _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
+        _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
@@ -650,7 +647,7 @@ extension HomeTimelineViewController {
             FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
             FileManager.default.invalidateNotificationsAll(for: userIdentifier)
             FileManager.default.invalidateNotificationsMentions(for: userIdentifier)
-            self.coordinator.setup()
+            self.sceneCoordinator?.setup()
         }
     }
 
@@ -741,7 +738,8 @@ extension HomeTimelineViewController {
     
     private func showDonationCampaign(_ campaign: Mastodon.Entity.DonationCampaign) {
         hideDonationCampaignBanner()
-        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, appContext: context, authenticationBox: authenticationBox, sceneCoordinator: coordinator)
+        guard let coordinator = self.sceneCoordinator else { return }
+        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, authenticationBox: authenticationBox, sceneCoordinator: coordinator)
         navigationFlow?.presentFlow { [weak self] in
             self?.navigationFlow = nil
         }
