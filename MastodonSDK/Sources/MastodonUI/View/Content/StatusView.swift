@@ -60,7 +60,6 @@ public final class StatusView: UIView {
             let status = (status?.reblog ?? status)
             
             if let status, let filterContext, let filterBox {
-                // TODO: L10 string
                 let filterPrefix = "\(L10n.Common.Controls.Timeline.filtered) \""
                 let filterResult = filterBox.apply(to: status, in: filterContext)
                 switch filterResult {
