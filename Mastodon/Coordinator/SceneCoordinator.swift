@@ -46,8 +46,6 @@ final public class SceneCoordinator {
         self.scene = scene
         self.sceneDelegate = sceneDelegate
         self.appContext = appContext
-        
-        scene.session.sceneCoordinator = self
 
         NotificationService.shared.requestRevealNotificationPublisher
             .receive(on: DispatchQueue.main)
