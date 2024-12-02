@@ -35,7 +35,7 @@ extension HomeTimelineViewModel {
 
             do {
                 let campaign = try await APIService.shared
-                    .getDonationCampaign(seed: seed, source: nil).value
+                    .getDonationCampaign(seed: seed, source: .banner).value
                 guard !Mastodon.Entity.DonationCampaign.hasPreviouslyDismissed(campaign.id) && !Mastodon.Entity.DonationCampaign.hasPreviouslyContributed(campaign.id) else { return }
                 onPresentDonationCampaign.send(campaign)
             } catch {

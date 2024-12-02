@@ -49,7 +49,7 @@ class SettingsCoordinator: NSObject, Coordinator {
             let userAuthentication = s.authenticationBox.authentication
             let seed = Mastodon.Entity.DonationCampaign.donationSeed(username: userAuthentication.username, domain: userAuthentication.domain)
             do {
-                let campaign = try await APIService.shared.getDonationCampaign(seed: seed, source: nil).value
+                let campaign = try await APIService.shared.getDonationCampaign(seed: seed, source: .menu).value
                 
                 await MainActor.run {
                     s.settingsViewController.donationCampaign = campaign
