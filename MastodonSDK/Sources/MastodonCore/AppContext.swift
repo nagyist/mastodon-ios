@@ -18,9 +18,6 @@ public class AppContext: ObservableObject {
 
     public let placeholderImageCacheService = PlaceholderImageCacheService()
     public let blurhashImageCacheService = BlurhashImageCacheService.shared
-
-    public let documentStore: DocumentStore
-    private var documentStoreSubscription: AnyCancellable!
     
     let overrideTraitCollection = CurrentValueSubject<UITraitCollection?, Never>(nil)
     let timestampUpdatePublisher = Timer.publish(every: 1.0, on: .main, in: .common)
@@ -29,12 +26,6 @@ public class AppContext: ObservableObject {
         .eraseToAnyPublisher()
     
     private init() {
-        documentStore = DocumentStore()
-        documentStoreSubscription = documentStore.objectWillChange
-            .receive(on: DispatchQueue.main)
-            .sink { [unowned self] in
-                self.objectWillChange.send()
-            }
     }
 }
 
