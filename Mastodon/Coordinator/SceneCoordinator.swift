@@ -689,6 +689,12 @@ extension SceneCoordinator: SettingsCoordinatorDelegate {
 public extension UIViewController {
     var sceneCoordinator: SceneCoordinator? {
         guard let view = viewIfLoaded else { assert(false); return nil }
-        return SceneCoordinator.coordinator(for: view)
+        if let coordinator = SceneCoordinator.coordinator(for: view) {
+            return coordinator
+        }
+        if let navView = navigationController?.view {
+            return SceneCoordinator.coordinator(for: navView)
+        }
+        return nil
     }
 }
