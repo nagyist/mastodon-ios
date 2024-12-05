@@ -103,15 +103,9 @@ final public class SceneCoordinator {
 
                                 let relationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: authenticationBox).value.first
 
-                                let profileViewModel = ProfileViewModel(
-                                    context: appContext,
-                                    authenticationBox: authenticationBox,
-                                    account: account,
-                                    relationship: relationship,
-                                    me: me
-                                )
+                                let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
                                 _ = self.present(
-                                    scene: .profile(viewModel: profileViewModel),
+                                    scene: .profile(profileType),
                                     from: from,
                                     transition: .show
                                 )
@@ -190,7 +184,7 @@ extension SceneCoordinator {
 
         // profile
         case accountList(viewModel: AccountListViewModel)
-        case profile(viewModel: ProfileViewModel)
+        case profile(ProfileViewController.ProfileType)
         case favorite(viewModel: FavoriteViewModel)
         case follower(viewModel: FollowerListViewModel)
         case following(viewModel: FollowingListViewModel)
@@ -449,9 +443,8 @@ private extension SceneCoordinator {
             let accountListViewController = AccountListViewController()
             accountListViewController.viewModel = viewModel
             viewController = accountListViewController
-        case .profile(let viewModel):
-            let _viewController = ProfileViewController()
-            _viewController.viewModel = viewModel
+        case .profile(let profileType):
+            let _viewController = ProfileViewController(profileType, authenticationBox: AuthenticationServiceProvider.shared.currentActiveUser.value!)
             viewController = _viewController
         case .bookmark(let viewModel):
             let _viewController = BookmarkViewController()

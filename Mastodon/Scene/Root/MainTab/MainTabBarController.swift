@@ -36,7 +36,7 @@ class MainTabBarController: UITabBarController {
     let searchViewController: SearchViewController
     let composeViewController: UIViewController // placeholder
     let notificationViewController: NotificationViewController
-    let meProfileViewController: ProfileViewController
+    var meProfileViewController: UIViewController // placeholder
 
     private(set) var isReadyForWizardAvatarButton = false
     
@@ -63,17 +63,13 @@ class MainTabBarController: UITabBarController {
         notificationViewController = NotificationViewController()
         notificationViewController.configureTabBarItem(with: .notifications)
 
-        meProfileViewController = ProfileViewController()
+        meProfileViewController = UIViewController()
         meProfileViewController.configureTabBarItem(with: .me)
 
         if let authenticationBox {
             notificationViewController.viewModel = NotificationViewModel(context: AppContext.shared, authenticationBox: authenticationBox)
             homeTimelineViewController.viewModel = HomeTimelineViewModel(authenticationBox: authenticationBox)
             searchViewController.viewModel = SearchViewModel(authenticationBox: authenticationBox)
-
-            if let account = authenticationBox.cachedAccount {
-                meProfileViewController.viewModel = ProfileViewModel(context: AppContext.shared, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
-            }
         }
 
         super.init(nibName: nil, bundle: nil)
@@ -84,6 +80,12 @@ class MainTabBarController: UITabBarController {
         layoutAvatarButton()
     }
     
+    private func replace(_ oldVC: UIViewController, with newVC: UIViewController) {
+        guard let navControllers = viewControllers as? [UINavigationController] else { return }
+        guard let toReplace = navControllers.first(where: { $0.viewControllers[0] == oldVC }) else { return }
+        toReplace.viewControllers = [newVC]
+    }
+    
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 }
 
@@ -91,16 +93,6 @@ extension MainTabBarController {
     
     open override var childForStatusBarStyle: UIViewController? {
         return selectedViewController
-    }
-    
-    override var selectedViewController: UIViewController? {
-        willSet {
-            if let profileView = (newValue as? UINavigationController)?.topViewController as? ProfileViewController{
-                guard let authenticationBox,
-                      let account = authenticationBox.cachedAccount else { return }
-                profileView.viewModel = ProfileViewModel(context: AppContext.shared, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
-            }
-        }
     }
     
     override func viewDidLoad() {
@@ -171,6 +163,30 @@ extension MainTabBarController {
             notificationViewController.navigationController?.tabBarItem.image = image.imageWithoutBaseline()
         }
         .store(in: &disposeBag)
+        
+        $currentTab
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] currentTab in
+                guard let self else { return }
+                
+                if currentTab == .me {
+                    guard let authBox = authenticationBox, let myAccount = authBox.cachedAccount else { return }
+                    let oldMe = meProfileViewController
+                    let updatedProfile = ProfileViewController(.me(myAccount), authenticationBox: authBox)
+                    meProfileViewController = updatedProfile
+                    updatedProfile.configureTabBarItem(with: .me)
+                    self.replace(oldMe, with: updatedProfile)
+                    if let domain = myAccount.domain ?? myAccount.domainFromAcct {
+                        self.avatarURL =  myAccount.avatarImageURLWithFallback(domain: domain)
+                    } else {
+                        self.avatarURL = myAccount.avatarImageURL()
+                    }
+                    
+                    self.avatarButton.removeFromSuperview()
+                    self.layoutAvatarButton()
+                }
+            }
+            .store(in: &disposeBag)
 
         $avatarURL
             .receive(on: DispatchQueue.main)
@@ -203,10 +219,6 @@ extension MainTabBarController {
                         self?.updateUserAccount()
                     }
                     .store(in: &self.disposeBag)
-
-                if let currentViewModel = self.meProfileViewController.viewModel, currentViewModel.account.id == account.id, !currentViewModel.isEditing {
-                    self.meProfileViewController.viewModel = ProfileViewModel(context: AppContext.shared, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
-                }
             }
             .store(in: &disposeBag)
         
@@ -330,6 +342,7 @@ extension MainTabBarController {
         }
         anchorImageView.alpha = 0
         
+        accountSwitcherChevron.removeFromSuperview()
         accountSwitcherChevron.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(accountSwitcherChevron)
         

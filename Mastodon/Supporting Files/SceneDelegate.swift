@@ -167,15 +167,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                         authenticationBox: authenticationBox
                     ).value.first else { return }
 
-                    let profileViewModel = ProfileViewModel(
-                        context: AppContext.shared,
-                        authenticationBox: authenticationBox,
-                        account: account,
-                        relationship: relationship,
-                        me: me
-                    )
+                    let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
                     _ = self.coordinator?.present(
-                        scene: .profile(viewModel: profileViewModel),
+                        scene: .profile(profileType),
                         from: nil,
                         transition: .show
                     )
@@ -308,16 +302,9 @@ extension SceneDelegate {
                         authenticationBox: authenticationBox
                     ).value.first else { return }
                     
-                    let profileViewModel = ProfileViewModel(
-                        context: AppContext.shared,
-                        authenticationBox: authenticationBox,
-                        account: account,
-                        relationship: relationship,
-                        me: me
-                    )
-                    
+                    let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
                     self.coordinator?.present(
-                        scene: .profile(viewModel: profileViewModel),
+                        scene: .profile(profileType),
                         from: nil,
                         transition: .show
                     )

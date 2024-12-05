@@ -120,16 +120,9 @@ extension DataSourceFacade {
 
         coordinator.hideLoading()
 
-        let profileViewModel = ProfileViewModel(
-            context: AppContext.shared,
-            authenticationBox: provider.authenticationBox,
-            account: account,
-            relationship: relationship,
-            me: me
-        )
-
+        let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
         _ = coordinator.present(
-            scene: .profile(viewModel: profileViewModel),
+            scene: .profile(profileType),
             from: provider,
             transition: .show
         )

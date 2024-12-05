@@ -18,7 +18,6 @@ final class UserTimelineViewModel {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let title: String
     let dataController: StatusDataController
@@ -50,12 +49,10 @@ final class UserTimelineViewModel {
 
     @MainActor
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         title: String,
         queryFilter: QueryFilter
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.title = title
         self.dataController = StatusDataController()

@@ -32,6 +32,9 @@ final class ProfileHeaderViewController: UIViewController, MediaPreviewableViewC
     
     var disposeBag = Set<AnyCancellable>()
     let viewModel: ProfileHeaderViewModel
+    var editedDetails: ProfileHeaderDetails {
+        return viewModel.editedDetails
+    }
 
     weak var delegate: ProfileHeaderViewControllerDelegate?
     weak var headerDelegate: TabBarPagerHeaderDelegate?
@@ -79,9 +82,9 @@ final class ProfileHeaderViewController: UIViewController, MediaPreviewableViewC
         return documentPickerController
     }()
 
-    init(authenticationBox: MastodonAuthenticationBox, profileViewModel: ProfileViewModel) {
-        self.viewModel = ProfileHeaderViewModel(authenticationBox: authenticationBox, account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
-        self.profileHeaderView = ProfileHeaderView(account: profileViewModel.account, me: profileViewModel.me, relationship: profileViewModel.relationship)
+    init(authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
+        self.viewModel = ProfileHeaderViewModel(authenticationBox: authenticationBox, account: account, me: me, relationship: relationship)
+        self.profileHeaderView = ProfileHeaderView(account: account, me: me, relationship: relationship)
 
         super.init(nibName: nil, bundle: nil)
 

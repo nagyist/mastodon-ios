@@ -136,11 +136,9 @@ extension ProfilePagingViewController {
         let margin: CGFloat = {
             switch traitCollection.userInterfaceIdiom {
             case .phone:
-                return ProfileViewController.containerViewMarginForCompactHorizontalSizeClass
+                return ProfileViewController.containerViewMargin(forHorizontalSizeClass: .compact)
             default:
-                return traitCollection.horizontalSizeClass == .regular ?
-                    ProfileViewController.containerViewMarginForRegularHorizontalSizeClass :
-                    ProfileViewController.containerViewMarginForCompactHorizontalSizeClass
+                return ProfileViewController.containerViewMargin(forHorizontalSizeClass: traitCollection.horizontalSizeClass)
             }
         }()
 

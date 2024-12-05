@@ -77,6 +77,10 @@ extension ProfileHeaderViewModel {
         @Published var name: String?
         @Published var note: String?
     }
+    
+    var editedDetails: ProfileHeaderDetails {
+        return ProfileHeaderDetails(bannerImage: profileInfoEditing.header, avatarImage: profileInfoEditing.avatar, displayName: profileInfoEditing.name, bioText: profileInfoEditing.note)
+    }
 }
 
 extension ProfileHeaderViewModel {
@@ -96,7 +100,7 @@ extension ProfileHeaderViewModel {
 }
 
 // MARK: - ProfileViewModelEditable
-extension ProfileHeaderViewModel: ProfileViewModelEditable {
+extension ProfileHeaderViewModel {
     var isEdited: Bool {
         guard isEditing else { return false }
         

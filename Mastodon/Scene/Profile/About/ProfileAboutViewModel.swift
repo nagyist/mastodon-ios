@@ -18,7 +18,6 @@ final class ProfileAboutViewModel {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     @Published var account: Mastodon.Entity.Account
     @Published var isEditing = false
     @Published var accountForEdit: Mastodon.Entity.Account?
@@ -32,9 +31,8 @@ final class ProfileAboutViewModel {
     @Published var emojiMeta: MastodonContent.Emojis = [:]
     @Published var createdAt: Date = Date()
 
-    init(context: AppContext, account: Mastodon.Entity.Account) {
+    init(account: Mastodon.Entity.Account) {
         self.account = account
-        self.context = context
 
         emojiMeta = account.emojiMeta
         fields = account.mastodonFields
@@ -79,6 +77,12 @@ final class ProfileAboutViewModel {
 extension ProfileAboutViewModel {
     class ProfileInfo {
         @Published var fields: [ProfileFieldItem.FieldValue] = []
+        
+        var editedFields: [ (String, String) ] {
+            let edited = fields.map { return ($0.name.value, $0.value.value)
+            }
+            return edited
+        }
     }
 }
 
@@ -100,7 +104,7 @@ extension ProfileAboutViewModel {
 }
 
 // MARK: - ProfileViewModelEditable
-extension ProfileAboutViewModel: ProfileViewModelEditable {
+extension ProfileAboutViewModel {
     var isEdited: Bool {
         guard isEditing else { return false }
         

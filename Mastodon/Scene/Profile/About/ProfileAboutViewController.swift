@@ -33,7 +33,9 @@ final class ProfileAboutViewController: UIViewController {
         return collectionView
     }()
  
-    
+    public var currentEditableFields: [ (String, String) ] {
+        return viewModel.profileInfoEditing.editedFields
+    }
 }
 
 extension ProfileAboutViewController {
