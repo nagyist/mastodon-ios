@@ -280,17 +280,6 @@ extension SceneCoordinator {
         guard var presentingViewController = sender ?? sceneDelegate.window?.rootViewController?.topMost else {
             return nil
         }
-        
-        if case let .profile(profileType) = scene {
-            switch profileType {
-            case .me:
-                switchToTabBar(tab: .me)
-                return tabBarController.meProfileViewController
-            case .notMe:
-                break
-            }
-        }
-
         // adapt for child controller
         if let navigationControllerVisibleViewController = presentingViewController.navigationController?.visibleViewController {
             switch viewController {
