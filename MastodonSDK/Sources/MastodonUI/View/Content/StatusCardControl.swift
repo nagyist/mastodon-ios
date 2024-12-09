@@ -27,11 +27,11 @@ public final class StatusCardControl: UIControl {
     private var disposeBag = Set<AnyCancellable>()
 
     private let containerStackView = UIStackView()
-    private let headerContentStackView = UIStackView()
+    private let mainContentStackView = UIStackView()
     private let labelStackView = UIStackView()
 
     private let highlightView = UIView()
-    private let dividerView = UIView()
+    private let imageDividerView = UIView()
     private let imageView = UIImageView()
 
     private let publisherDateStackView: UIStackView
@@ -69,7 +69,7 @@ public final class StatusCardControl: UIControl {
 
     private var layout: Layout?
     private var layoutConstraints: [NSLayoutConstraint] = []
-    private var dividerConstraint: NSLayoutConstraint?
+    private var imageDividerConstraint: NSLayoutConstraint?
     private var authorDividerConstraint: NSLayoutConstraint?
 
     private var author: Mastodon.Entity.Account?
@@ -88,6 +88,10 @@ public final class StatusCardControl: UIControl {
     }
 
     public override init(frame: CGRect) {
+        
+        // containerStackView - always vertical, holds mainContentStackView and authorStackView
+        // mainContentStackView - vertical in .large, horizontal in .compact, holds imageView and labelStackView
+        // authorStackView - always vertical, has an avatar button if the author has an account, otherwise shows author information as text
 
         let mastodonLogo = Asset.Scene.Sidebar.logo.image.withRenderingMode(.alwaysTemplate)
         mastodonLogoImageView = UIImageView(image: mastodonLogo)
@@ -102,11 +106,13 @@ public final class StatusCardControl: UIControl {
 
         authorLabel = UILabel()
         authorLabel.numberOfLines = 1
+        authorLabel.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         authorLabel.font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(for: .systemFont(ofSize: 15, weight: .regular))
         authorLabel.textColor = .secondaryLabel
 
         publisherLabel.numberOfLines = 1
         publisherLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        publisherLabel.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         publisherLabel.font = UIFontMetrics(forTextStyle: .footnote).scaledFont(for: .systemFont(ofSize: 13, weight: .regular))
         publisherLabel.textColor = .secondaryLabel
 
@@ -128,7 +134,7 @@ public final class StatusCardControl: UIControl {
         authorAccountButton = StatusCardAuthorControl()
 
         authorStackView = UIStackView(arrangedSubviews: [mastodonLogoImageView, byLabel, authorLabel, authorAccountButton, UIView()])
-        authorStackView.alignment = .center
+        authorStackView.alignment = .fill//.center
         authorStackView.layoutMargins = .init(top: 10, left: 16, bottom: 10, right: 16)
         authorStackView.isLayoutMarginsRelativeArrangement = true
         authorStackView.spacing = 8
@@ -173,15 +179,16 @@ public final class StatusCardControl: UIControl {
         labelStackView.axis = .vertical
         labelStackView.spacing = 2
 
-        headerContentStackView.addArrangedSubview(imageView)
-        headerContentStackView.addArrangedSubview(dividerView)
-        headerContentStackView.addArrangedSubview(labelStackView)
-        headerContentStackView.isUserInteractionEnabled = true
-        headerContentStackView.axis = .vertical
-        headerContentStackView.spacing = 2
-        headerContentStackView.setCustomSpacing(0, after: imageView)
-
-        containerStackView.addArrangedSubview(headerContentStackView)
+        mainContentStackView.addArrangedSubview(imageView)
+        mainContentStackView.setCustomSpacing(0, after: imageView)
+        mainContentStackView.addArrangedSubview(imageDividerView)
+        mainContentStackView.addArrangedSubview(labelStackView)
+        mainContentStackView.isUserInteractionEnabled = true
+        mainContentStackView.axis = .vertical
+        mainContentStackView.spacing = 2
+        
+        containerStackView.axis = .vertical
+        containerStackView.addArrangedSubview(mainContentStackView)
         containerStackView.addArrangedSubview(authorDivider)
         containerStackView.addArrangedSubview(authorStackView)
         containerStackView.distribution = .fill
@@ -191,9 +198,14 @@ public final class StatusCardControl: UIControl {
         addSubview(showEmbedButton)
 
         containerStackView.translatesAutoresizingMaskIntoConstraints = false
+        mainContentStackView.translatesAutoresizingMaskIntoConstraints = false
+        labelStackView.translatesAutoresizingMaskIntoConstraints = false
+        authorLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         highlightView.translatesAutoresizingMaskIntoConstraints = false
         showEmbedButton.translatesAutoresizingMaskIntoConstraints = false
-        dividerView.translatesAutoresizingMaskIntoConstraints = false
+        imageDividerView.translatesAutoresizingMaskIntoConstraints = false
 
         containerStackView.pinToParent()
         highlightView.pinToParent()
@@ -247,7 +259,7 @@ public final class StatusCardControl: UIControl {
 
             authorAccountButton.addTarget(self, action: #selector(StatusCardControl.profileTapped(_:)), for: .touchUpInside)
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(StatusCardControl.contentTapped(_:)))
-            headerContentStackView.addGestureRecognizer(tapGestureRecognizer)
+            mainContentStackView.addGestureRecognizer(tapGestureRecognizer)
         } else {
             if let author = card.authors?.first, let authorName = author.name, authorName.isEmpty == false {
                 authorLabel.text = L10n.Common.Controls.Status.Card.byAuthor(authorName)
@@ -269,7 +281,7 @@ public final class StatusCardControl: UIControl {
 
         titleLabel.text = title
         descriptionLabel.text = card.description
-        imageView.contentMode = .center
+        imageView.contentMode = .scaleAspectFill
 
         imageView.sd_setImage(
             with: {
@@ -280,6 +292,9 @@ public final class StatusCardControl: UIControl {
         ) { [weak self] image, _, _, _ in
             if image != nil {
                 self?.imageView.contentMode = .scaleAspectFill
+            } else {
+                self?.imageView.isHidden = true
+                self?.imageDividerView.isHidden = true
             }
 
             self?.containerStackView.setNeedsLayout()
@@ -303,7 +318,7 @@ public final class StatusCardControl: UIControl {
         super.didMoveToWindow()
 
         if let window {
-            dividerConstraint?.constant = window.screen.pixelSize
+            imageDividerConstraint?.constant = window.screen.pixelSize
             authorDividerConstraint?.constant = window.screen.pixelSize
         }
     }
@@ -313,14 +328,20 @@ public final class StatusCardControl: UIControl {
         self.layout = layout
 
         NSLayoutConstraint.deactivate(layoutConstraints)
-        dividerConstraint?.deactivate()
+        imageDividerConstraint?.deactivate()
         authorDividerConstraint?.deactivate()
-
+        
         let pixelSize = (window?.screen.pixelSize ?? 1)
+        authorDividerConstraint = authorDivider.heightAnchor.constraint(equalToConstant: pixelSize).activate()
+
         switch layout {
         case .large(let aspectRatio):
+            imageView.isHidden = false
+            imageDividerView.isHidden = false
             containerStackView.alignment = .fill
             containerStackView.axis = .vertical
+            mainContentStackView.axis = .vertical
+            mainContentStackView.alignment = .fill
             layoutConstraints = [
                 imageView.widthAnchor.constraint(
                     equalTo: imageView.heightAnchor,
@@ -332,22 +353,28 @@ public final class StatusCardControl: UIControl {
                 // set a reasonable max height for very tall images
                 imageView.heightAnchor
                     .constraint(lessThanOrEqualToConstant: 400),
+                authorDivider.widthAnchor.constraint(equalTo: containerStackView.widthAnchor),
+                imageDividerView.widthAnchor.constraint(equalTo: mainContentStackView.widthAnchor)
             ]
-            dividerConstraint = dividerView.heightAnchor.constraint(equalToConstant: pixelSize).activate()
-            authorDividerConstraint = authorDivider.heightAnchor.constraint(equalToConstant: pixelSize).priority(.defaultLow - 1).activate()
-        case .compact:
-            containerStackView.alignment = .center
-            containerStackView.axis = .horizontal
+            imageDividerConstraint = imageDividerView.heightAnchor.constraint(equalToConstant: pixelSize).priority(.defaultLow - 1).activate()
+        case .compact, .noPreviewImage:
+            mainContentStackView.axis = .horizontal
+            mainContentStackView.alignment = .center
+            imageView.isHidden = false
+            imageDividerView.isHidden = false
+            containerStackView.alignment = .fill //.center
+            containerStackView.axis = .vertical
             layoutConstraints = [
-                imageView.heightAnchor.constraint(equalTo: heightAnchor),
+                imageView.heightAnchor.constraint(equalTo: mainContentStackView.heightAnchor),
                 imageView.widthAnchor.constraint(equalToConstant: 85),
-                heightAnchor.constraint(equalToConstant: 85).priority(.defaultLow - 1),
-                heightAnchor.constraint(greaterThanOrEqualToConstant: 85),
-                dividerView.heightAnchor.constraint(equalTo: containerStackView.heightAnchor),
-                authorDivider.heightAnchor.constraint(equalTo: containerStackView.heightAnchor),
+//                heightAnchor.constraint(equalToConstant: 85).priority(.defaultLow - 1),
+//                heightAnchor.constraint(greaterThanOrEqualToConstant: 85),
+                imageDividerView.heightAnchor.constraint(equalTo: mainContentStackView.heightAnchor),
+                authorDivider.widthAnchor.constraint(equalTo: containerStackView.widthAnchor)
             ]
-            dividerConstraint = dividerView.widthAnchor.constraint(equalToConstant: pixelSize).activate()
-            authorDividerConstraint = authorDivider.widthAnchor.constraint(equalToConstant: pixelSize).activate()
+            imageDividerConstraint = imageDividerView.widthAnchor.constraint(equalToConstant: pixelSize).priority(.defaultLow - 1).activate()
+            imageView.isHidden = layout == .noPreviewImage
+            imageDividerView.isHidden = layout == .noPreviewImage
         }
 
         layoutConstraints.append(contentsOf: [
@@ -356,10 +383,13 @@ public final class StatusCardControl: UIControl {
         ])
 
         NSLayoutConstraint.activate(layoutConstraints)
+        invalidateIntrinsicContentSize()
     }
 
     private func icon(for layout: Layout) -> UIImage? {
         switch layout {
+        case .noPreviewImage:
+            return nil
         case .compact:
             return UIImage(systemName: "newspaper.fill")
         case .large:
@@ -369,7 +399,7 @@ public final class StatusCardControl: UIControl {
     }
 
     private func applyBranding() {
-        dividerView.backgroundColor = SystemTheme.separator
+        imageDividerView.backgroundColor = SystemTheme.separator
         imageView.backgroundColor = UIColor.tertiarySystemFill
     }
 
@@ -465,6 +495,7 @@ extension StatusCardControl {
 
 private extension StatusCardControl {
     enum Layout: Equatable {
+        case noPreviewImage
         case compact
         case large(aspectRatio: CGFloat)
     }
@@ -472,12 +503,15 @@ private extension StatusCardControl {
 
 private extension Mastodon.Entity.Card {
     var layout: StatusCardControl.Layout {
+        if (image == nil || image!.isEmpty) && (html == nil || html!.isEmpty) {
+            return .noPreviewImage
+        }
         var aspectRatio = CGFloat(width ?? 1) / CGFloat(height ?? 1)
         if !aspectRatio.isFinite {
             aspectRatio = 1
         }
         
-        if (abs(aspectRatio - 1) < 0.05 || image == nil) && html == nil {
+        if (abs(aspectRatio - 1) < 0.05 || image == nil) && (html == nil || html!.isEmpty) {
             return .compact
         } else {
             return .large(aspectRatio: aspectRatio)
