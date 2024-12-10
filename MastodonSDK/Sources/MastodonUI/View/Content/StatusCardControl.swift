@@ -281,7 +281,6 @@ public final class StatusCardControl: UIControl {
 
         titleLabel.text = title
         descriptionLabel.text = card.description
-        imageView.contentMode = .scaleAspectFill
 
         imageView.sd_setImage(
             with: {
@@ -290,9 +289,7 @@ public final class StatusCardControl: UIControl {
             }(),
             placeholderImage: icon(for: card.layout)
         ) { [weak self] image, _, _, _ in
-            if image != nil {
-                self?.imageView.contentMode = .scaleAspectFill
-            } else {
+            if image == nil {
                 self?.imageView.isHidden = true
                 self?.imageDividerView.isHidden = true
             }
@@ -336,6 +333,7 @@ public final class StatusCardControl: UIControl {
 
         switch layout {
         case .large(let aspectRatio):
+            imageView.contentMode = .scaleAspectFill
             imageView.isHidden = false
             imageDividerView.isHidden = false
             containerStackView.alignment = .fill
@@ -353,11 +351,12 @@ public final class StatusCardControl: UIControl {
                 // set a reasonable max height for very tall images
                 imageView.heightAnchor
                     .constraint(lessThanOrEqualToConstant: 400),
-                authorDivider.widthAnchor.constraint(equalTo: containerStackView.widthAnchor),
-                imageDividerView.widthAnchor.constraint(equalTo: mainContentStackView.widthAnchor)
+                authorDivider.widthAnchor.constraint(equalTo: containerStackView.widthAnchor).priority(.defaultHigh),
+                imageDividerView.widthAnchor.constraint(equalTo: mainContentStackView.widthAnchor).priority(.defaultHigh)
             ]
             imageDividerConstraint = imageDividerView.heightAnchor.constraint(equalToConstant: pixelSize).priority(.defaultLow - 1).activate()
         case .compact, .noPreviewImage:
+            imageView.contentMode = .scaleAspectFit
             mainContentStackView.axis = .horizontal
             mainContentStackView.alignment = .center
             imageView.isHidden = false
@@ -365,12 +364,12 @@ public final class StatusCardControl: UIControl {
             containerStackView.alignment = .fill //.center
             containerStackView.axis = .vertical
             layoutConstraints = [
-                imageView.heightAnchor.constraint(equalTo: mainContentStackView.heightAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: 85),
+                imageView.heightAnchor.constraint(equalTo: mainContentStackView.heightAnchor).priority(.defaultHigh),
+                imageView.widthAnchor.constraint(greaterThanOrEqualToConstant: 85),
 //                heightAnchor.constraint(equalToConstant: 85).priority(.defaultLow - 1),
 //                heightAnchor.constraint(greaterThanOrEqualToConstant: 85),
-                imageDividerView.heightAnchor.constraint(equalTo: mainContentStackView.heightAnchor),
-                authorDivider.widthAnchor.constraint(equalTo: containerStackView.widthAnchor)
+                imageDividerView.heightAnchor.constraint(equalTo: mainContentStackView.heightAnchor).priority(.defaultHigh),
+                authorDivider.widthAnchor.constraint(equalTo: containerStackView.widthAnchor).priority(.defaultHigh)
             ]
             imageDividerConstraint = imageDividerView.widthAnchor.constraint(equalToConstant: pixelSize).priority(.defaultLow - 1).activate()
             imageView.isHidden = layout == .noPreviewImage

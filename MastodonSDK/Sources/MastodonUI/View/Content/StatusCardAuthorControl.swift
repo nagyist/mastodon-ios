@@ -43,7 +43,7 @@ class StatusCardAuthorControl: UIControl {
             bottomAnchor.constraint(equalTo: contentStackView.bottomAnchor, constant: 6),
 
             avatarImage.widthAnchor.constraint(equalToConstant: 16),
-            avatarImage.widthAnchor.constraint(equalTo: avatarImage.heightAnchor),
+            avatarImage.widthAnchor.constraint(equalTo: avatarImage.heightAnchor).priority(.defaultHigh),
         ]
 
         NSLayoutConstraint.activate(constraints)
