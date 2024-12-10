@@ -127,7 +127,8 @@ extension MediaView {
         layoutAlt()
     }
     
-    private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {        
+    private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {
+        let subscribedConfigurationIdentifier = ObjectIdentifier(configuration) // this shouldn't be necessary now, but allows a check in debug mode. https://github.com/mastodon/mastodon-ios/issues/1374
         Publishers.CombineLatest(
             configuration.$previewImage,
             configuration.$blurhashImage
@@ -135,13 +136,16 @@ extension MediaView {
         .receive(on: DispatchQueue.main)
         .sink { [weak self] previewImage, blurhashImage in
             guard let self = self else { return }
-            
+            guard let currentConfiguration = self.configuration, ObjectIdentifier(currentConfiguration) == subscribedConfigurationIdentifier else {
+                assert(false, "\(self) attempt to load an image that belongs to a configuration no longer associated with this MediaView.")
+                return
+            }
             let image = configuration.isReveal ?
                 (previewImage ?? blurhashImage ?? MediaView.placeholderImage) :
                 (blurhashImage ?? MediaView.placeholderImage)
             self.imageView.image = image
         }
-        .store(in: &configuration.disposeBag)
+        .store(in: &_disposeBag)
 
         bindAlt(configuration: configuration, altDescription: info.altDescription)
     }
@@ -220,7 +224,11 @@ extension MediaView {
         overlayViewController.view.pinToParent()
     }
     
+    @MainActor
     public func prepareForReuse() {
+        for cancellable in _disposeBag {
+            cancellable.cancel()
+        }
         _disposeBag.removeAll()
         
         // reset appearance
