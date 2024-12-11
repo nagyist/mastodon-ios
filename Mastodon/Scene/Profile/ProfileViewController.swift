@@ -163,6 +163,12 @@ class ProfileViewController: UIViewController, MediaPreviewableViewController, A
         }.store(in: &subscriptions)
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        Task {
+            await self.refetchAllData()
+        }
+    }
+    
     private func updateDisplay(_ viewModel: ProfileViewModelImmutable) {
         guard isViewLoaded else { return }
         // TODO: careful about resetting things if we failed to push edits
