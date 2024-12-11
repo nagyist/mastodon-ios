@@ -109,19 +109,22 @@ extension DataSourceFacade {
         provider: UIViewController & AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async {
-        
         guard let coordinator = provider.sceneCoordinator else { return }
-        
         coordinator.showLoading()
+        defer { coordinator.hideLoading() }
 
-        guard let me = provider.authenticationBox.cachedAccount,
-              let relationship = try? await APIService.shared.relationship(forAccounts: [account], authenticationBox: provider.authenticationBox).value.first else {
-            return coordinator.hideLoading()
+        guard let me = provider.authenticationBox.cachedAccount else { return }
+
+        let profileType: ProfileViewController.ProfileType
+        if me == account {
+            profileType = .me(me)
+        } else {
+            guard let relationship = try? await APIService.shared.relationship(forAccounts: [account], authenticationBox: provider.authenticationBox).value.first else {
+                return
+            }
+            profileType = .notMe(me: me, displayAccount: account, relationship: relationship)
         }
-
-        coordinator.hideLoading()
-
-        let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
+        
         _ = coordinator.present(
             scene: .profile(profileType),
             from: provider,
