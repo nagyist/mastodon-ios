@@ -205,6 +205,17 @@ extension MainTabBarController {
                 self?.updateUserAccount()
             }
             .store(in: &self.disposeBag)
+        
+        AuthenticationServiceProvider.shared.currentActiveUser
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] activeUser in
+                if let domain = activeUser?.domain {
+                    self?.avatarURL = activeUser?.cachedAccount?.avatarImageURLWithFallback(domain: domain)
+                } else {
+                    self?.avatarURL = activeUser?.cachedAccount?.avatarImageURL()
+                }
+            }
+            .store(in: &disposeBag)
 
         NotificationCenter.default.publisher(for: .userFetched)
             .receive(on: DispatchQueue.main)
