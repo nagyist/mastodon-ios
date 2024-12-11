@@ -748,10 +748,10 @@
             },
             "warning": {
                 "none": "Ihr Konto hat eine Moderationswarnung erhalten.",
-                "disable": "Your account has been disabled.",
-                "mark_statuses_as_sensitive": "Some of your posts have been marked as sensitive.",
-                "delete_statuses": "Some of your posts have been removed.",
-                "sensitive": "Your posts will be marked as sensitive from now on.",
+                "disable": "Ihr Konto wurde deaktiviert.",
+                "mark_statuses_as_sensitive": "Einige deiner Beiträge wurden mit einer Inhaltswarnung versehen.",
+                "delete_statuses": "Einige deiner Beiträge sind entfernt worden.",
+                "sensitive": "Deine zukünftigen Beiträge werden mit einer Inhaltswarnung versehen.",
                 "silence": "Dein Konto wurde eingeschränkt.",
                 "suspend": "Dein Konto wurde gesperrt.",
                 "learn_more": "Mehr erfahren"
@@ -852,7 +852,7 @@
                     "only_people_mentioned": "Nur erwähnte Profile"
                 },
                 "manually_approve_follow_requests": "Manuelles Genehmigen von Folgeanfragen",
-                "show_followers_and_following": "Show Followers & Following",
+                "show_followers_and_following": "Follower anzeigen & folgen",
                 "suggest_my_account_to_others": "Mein Konto anderen vorschlagen",
                 "appear_in_search_engines": "In Suchmaschinen anzeigen"
             }
@@ -980,12 +980,12 @@
             "not_found": {
                 "account_name": "Eugen Rochko",
                 "account": "@johnMastodon@no-such.account",
-                "content": "Sorry, we couldn’t find any posts with the hashtag <a>#%@</a>. Please try a <a>#DifferentHashtag</a> or check the widget settings."
+                "content": "Entschuldigung, wir konnten keine Beiträge mit dem Hashtag <a>#%@</a>finden. Bitte versuchen Sie einen <a>#DifferentHashtag</a> oder überprüfen Sie die Widget-Einstellungen."
             },
             "placeholder": {
                 "account_name": "John Mastodon",
                 "account": "@johnMastodon@no-such.account",
-                "content": "This is how a post with a <a>#hashtag</a> would look. Pick whichever <a>#hashtag</a> you want in the widget settings."
+                "content": "So würde ein Beitrag mit einem <a>#Hashtag</a> aussehen. Wählen Sie in den Widget-Einstellungen den gewünschten <a>#Hashtag</a> aus."
             }
         }
     }
