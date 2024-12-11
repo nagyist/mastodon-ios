@@ -61,7 +61,7 @@ extension DataSourceFacade {
         coordinator.showLoading()
 
         do {
-            guard let account = try await APIService.shared.fetchUser(
+            guard let account = try await APIService.shared.fetchNotMeUser( // ProfileViewController will fetch credentialed user later if this is actually me
                 username: username,
                 domain: domain,
                 authenticationBox: provider.authenticationBox

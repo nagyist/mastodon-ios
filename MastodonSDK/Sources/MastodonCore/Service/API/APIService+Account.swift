@@ -21,7 +21,7 @@ extension APIService {
             authorization: authenticationBox.userAuthorization
         ).singleOutput().value
         
-        PersistenceManager.shared.cacheAccount(account, for: authenticationBox)
+        PersistenceManager.shared.cacheAccount(account, forUserID: authenticationBox.authentication.userIdentifier())
         
         return account
     }
@@ -55,7 +55,7 @@ extension APIService {
                                                                accountCreatedAt: account.createdAt)
         
         let authBox = MastodonAuthenticationBox(authentication: authentication)
-        PersistenceManager.shared.cacheAccount(account, for: authBox)
+        PersistenceManager.shared.cacheAccount(account, forUserID: authentication.userIdentifier())
         AuthenticationServiceProvider.shared.activateAuthentication(authBox)
         return authBox
     }
@@ -160,7 +160,7 @@ extension APIService {
 }
 
 extension APIService {
-    public func fetchUser(username: String, domain: String, authenticationBox: MastodonAuthenticationBox)
+    public func fetchNotMeUser(username: String, domain: String, authenticationBox: MastodonAuthenticationBox)
     async throws -> Mastodon.Entity.Account? {
         let query = Mastodon.API.Account.AccountLookupQuery(acct: "\(username)@\(domain)")
         let authorization = authenticationBox.userAuthorization
@@ -172,8 +172,9 @@ extension APIService {
             authorization: authorization
         ).singleOutput()
 
-        PersistenceManager.shared.cacheAccount(response.value, for: authenticationBox)
+        let fetchedAccount = response.value
         
-        return response.value
+        
+        return fetchedAccount
     }
 }

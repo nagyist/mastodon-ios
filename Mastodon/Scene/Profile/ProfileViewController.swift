@@ -572,7 +572,7 @@ extension ProfileViewController {
             return account
         case .notMe(let me, let displayAccount, let relationship):
             guard let domain = displayAccount.domain else { throw ProfileViewError.invalidDomain }
-            guard let refreshedAccount = try await APIService.shared.fetchUser(username: displayAccount.acct, domain: domain, authenticationBox: authenticationBox) else { throw ProfileViewError.accountNotFound }
+            guard let refreshedAccount = try await APIService.shared.fetchNotMeUser(username: displayAccount.acct, domain: domain, authenticationBox: authenticationBox) else { throw ProfileViewError.accountNotFound }
             return refreshedAccount
         }
     }
