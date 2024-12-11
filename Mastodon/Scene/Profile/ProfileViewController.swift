@@ -167,6 +167,12 @@ class ProfileViewController: UIViewController, MediaPreviewableViewController, A
         guard isViewLoaded else { return }
         // TODO: careful about resetting things if we failed to push edits
         
+        if !viewModel.state.isUpdating {
+            if refreshControl.isRefreshing {
+                refreshControl.endRefreshing()
+            }
+        }
+        
         // Bridge to the old way of doing things until we replace the UI sometime in the future
         updateHeader(viewModel)
         updateAboutView(viewModel)
