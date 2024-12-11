@@ -10,6 +10,9 @@ import os.log
 
 @MainActor
 public class AuthenticationServiceProvider: ObservableObject {
+    
+    private(set) var lastFetchOfAllAccounts: Date?
+    
     private let logger = Logger(subsystem: "AuthenticationServiceProvider", category: "Authentication")
 
     public static let shared = AuthenticationServiceProvider()
@@ -238,11 +241,25 @@ public extension AuthenticationServiceProvider {
         userDefaults.didMigrateAuthentications == false
     }
 
-    func fetchAccounts() async {
+    func fetchAccounts(onlyIfItHasBeenAwhile: Bool) async {
         // FIXME: This is a dirty hack to make the performance-stuff work.
         // Problem is, that we don't persist the user on disk anymore. So we have to fetch
         // it when we need it to display on the home timeline.
         // We need this (also) for the Account-list, but it might be the wrong place. App Startup might be more appropriate
+        
+        let minTimeBetweenAutomaticAccountFetches = TimeInterval( 60 * 60 * 24) // one day
+        let itHasBeenAwhile: Bool
+        
+        if let lastFetch = lastFetchOfAllAccounts {
+            itHasBeenAwhile = lastFetch.distance(to: Date.now) > minTimeBetweenAutomaticAccountFetches
+        } else {
+            itHasBeenAwhile = true
+        }
+        
+        guard itHasBeenAwhile else { return }
+        
+        lastFetchOfAllAccounts = Date.now
+        
         for authentication in authentications {
             guard let account = try? await APIService.shared.accountInfo(MastodonAuthenticationBox(authentication: authentication)) else { continue }
         }

@@ -115,7 +115,7 @@ extension HomeTimelineViewModel.LoadLatestState {
             }
 
             do {
-                await AuthenticationServiceProvider.shared.fetchAccounts()
+                await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
                 let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
                 
                 /// To find out wether or not we need to show the "Load More" button

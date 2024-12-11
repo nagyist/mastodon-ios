@@ -205,10 +205,11 @@ final public class FeedDataController {
 }
 
 private extension FeedDataController {
+
     func load(kind: MastodonFeed.Kind, maxID: MastodonStatus.ID?) async throws -> [MastodonFeed] {
         switch kind {
         case .home(let timeline):
-            await AuthenticationServiceProvider.shared.fetchAccounts()
+            await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
             let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
 

@@ -61,7 +61,7 @@ extension HomeTimelineViewModel.LoadOldestState {
                 }
 
                 do {
-                    await AuthenticationServiceProvider.shared.fetchAccounts()
+                    await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
                     let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
 

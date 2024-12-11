@@ -166,7 +166,7 @@ extension HomeTimelineViewModel {
         guard let status = record.status else { return }
         record.isLoadingMore = true
 
-        await AuthenticationServiceProvider.shared.fetchAccounts()
+        await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
         // fetch data
         let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>?
