@@ -199,6 +199,12 @@ extension MainTabBarController {
                 )
             }
             .store(in: &disposeBag)
+        
+        AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher
+            .sink { [weak self] in
+                self?.updateUserAccount()
+            }
+            .store(in: &self.disposeBag)
 
         NotificationCenter.default.publisher(for: .userFetched)
             .receive(on: DispatchQueue.main)
@@ -213,12 +219,6 @@ extension MainTabBarController {
                 let _profileTabItem = self.tabBar.items?.first { item in item.tag == Tab.me.tag }
                 guard let profileTabItem = _profileTabItem else { return }
                 profileTabItem.accessibilityHint = L10n.Scene.AccountList.tabBarHint(account.displayNameWithFallback)
-
-                AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher
-                    .sink { [weak self] in
-                        self?.updateUserAccount()
-                    }
-                    .store(in: &self.disposeBag)
             }
             .store(in: &disposeBag)
         
