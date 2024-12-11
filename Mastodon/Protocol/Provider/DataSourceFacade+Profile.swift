@@ -40,6 +40,7 @@ extension DataSourceFacade {
         coordinator.hideLoading()
                 
         guard let redirectRecord = _redirectRecord else {
+            // Note: this situation arises if your account has been suspended, among other possibilities
             assertionFailure()
             return
         }
