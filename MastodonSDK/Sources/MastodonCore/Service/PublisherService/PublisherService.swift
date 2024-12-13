@@ -53,10 +53,10 @@ public final class PublisherService {
                 switch result {
                 case .success:
                     break
-                    // TODO:
-                    // update store review count trigger
+                    // TODO: update store review count trigger
                     // UserDefaults.shared.storeReviewInteractTriggerCount += 1
                 case .failure:
+                    // TODO: do not prompt for AppStore review until at least one successful publish has happened after this (IOS-35)
                     break
                 }
             }
