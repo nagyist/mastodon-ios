@@ -151,33 +151,37 @@ extension MastodonStatusPublisher: StatusPublisher {
             guard pollOptions != nil else { return nil }
             return self.pollExpireConfigurationOption.seconds
         }()
-        let inReplyToID: Mastodon.Entity.Status.ID? = try await PersistenceManager.shared.backgroundManagedObjectContext.perform {
-            guard let replyTo = self.replyTo else { return nil }
-            return replyTo.id
+        
+        do {
+            let inReplyToID: Mastodon.Entity.Status.ID? = try await PersistenceManager.shared.backgroundManagedObjectContext.perform {
+                guard let replyTo = self.replyTo else { return nil }
+                return replyTo.id
+            }
+            
+            let query = Mastodon.API.Statuses.PublishStatusQuery(
+                status: content,
+                mediaIDs: attachmentIDs.isEmpty ? nil : attachmentIDs,
+                pollOptions: pollOptions,
+                pollExpiresIn: pollExpiresIn,
+                inReplyToID: inReplyToID,
+                sensitive: isMediaSensitive,
+                spoilerText: isContentWarningComposing ? contentWarning : nil,
+                visibility: visibility,
+                language: language
+            )
+            
+            let publishResponse = try await api.publishStatus(
+                domain: authenticationBox.domain,
+                idempotencyKey: idempotencyKey,
+                query: query,
+                authenticationBox: authenticationBox
+            )
+            progress.completedUnitCount += publishStatusTaskCount
+            _state = .success
+            return .post(publishResponse)
+        } catch {
+            _state = .failure(error)
+            throw error
         }
-        
-        let query = Mastodon.API.Statuses.PublishStatusQuery(
-            status: content,
-            mediaIDs: attachmentIDs.isEmpty ? nil : attachmentIDs,
-            pollOptions: pollOptions,
-            pollExpiresIn: pollExpiresIn,
-            inReplyToID: inReplyToID,
-            sensitive: isMediaSensitive,
-            spoilerText: isContentWarningComposing ? contentWarning : nil,
-            visibility: visibility,
-            language: language
-        )
-        
-        let publishResponse = try await api.publishStatus(
-            domain: authenticationBox.domain,
-            idempotencyKey: idempotencyKey,
-            query: query,
-            authenticationBox: authenticationBox
-        )
-        progress.completedUnitCount += publishStatusTaskCount
-        _state = .success
-        
-        return .post(publishResponse)
     }
-    
 }

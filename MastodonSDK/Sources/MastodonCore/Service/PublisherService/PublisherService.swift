@@ -28,25 +28,22 @@ public final class PublisherService {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] publishers in
                 guard let self = self else { return }
+                
+                self.currentPublishProgressObservation?.invalidate()
+                
                 guard let last = publishers.last else {
                     self.currentPublishProgressObservation = nil
+                    self.currentPublishProgress = 0
                     return
                 }
                 
                 self.currentPublishProgressObservation = last.progress
                     .observe(\.fractionCompleted, options: [.initial, .new]) { [weak self] progress, _ in
                         guard let self = self else { return }
-                        self.currentPublishProgress = progress.fractionCompleted
+                        Task { @MainActor in
+                            self.currentPublishProgress = progress.fractionCompleted
+                        }
                     }
-            }
-            .store(in: &disposeBag)
-        
-        $statusPublishers
-            .filter { $0.isEmpty }
-            .delay(for: 1, scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                self.currentPublishProgress = 0
             }
             .store(in: &disposeBag)
         
