@@ -28,6 +28,17 @@ extension ComposeContentViewModel {
         case replyTo
         case status
     }
+    
+    private func composeContentTableViewCellIsInTableView(_ tableView: UIView) -> Bool {
+        var superview = composeContentTableViewCell.superview
+        while superview != nil {
+            if superview == tableView {
+                return true
+            }
+            superview = superview?.superview
+        }
+        return false
+    }
 
     private func setupTableViewCell(tableView: UITableView) {        
         composeContentTableViewCell.contentConfiguration = UIHostingConfigurationBackport {
@@ -39,7 +50,7 @@ extension ComposeContentViewModel {
             .removeDuplicates()
             .sink { [weak self] height in
                 guard let self = self else { return }
-                guard !tableView.visibleCells.isEmpty else { return }
+                guard self.composeContentTableViewCellIsInTableView(tableView) else { return }
                 UIView.performWithoutAnimation {
                     tableView.beginUpdates()
                     self.composeContentTableViewCell.frame.size.height = height
