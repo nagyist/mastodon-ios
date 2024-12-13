@@ -84,8 +84,10 @@ extension PublisherService {
                 
             } catch is CancellationError {
                 self.statusPublishers.removeAll(where: { $0 === publisher })
-                
+                self.currentPublishProgress = 0
+                self.statusPublishResult.send(.failure(CancellationError()))
             } catch {
+                self.statusPublishers.removeAll(where: { $0 === publisher })
                 self.statusPublishResult.send(.failure(error))
                 self.currentPublishProgress = 0
             }
