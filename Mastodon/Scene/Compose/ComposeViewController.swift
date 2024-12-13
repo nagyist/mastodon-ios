@@ -19,6 +19,11 @@ import MastodonSDK
 
 final class ComposeViewController: UIViewController {
     static let minAutoCompleteVisibleHeight: CGFloat = 100
+    lazy var publishProgressView: UIProgressView = {
+        let progressView = UIProgressView(progressViewStyle: .bar)
+        progressView.alpha = 0
+        return progressView
+    }()
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: ComposeViewModel
@@ -26,9 +31,39 @@ final class ComposeViewController: UIViewController {
     init(viewModel: ComposeViewModel) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
+        self.setUpPublishingIndicator()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    
+    func setUpPublishingIndicator() {
+        publishProgressView.translatesAutoresizingMaskIntoConstraints = false
+        publishProgressView.tintColor = .systemIndigo
+        publishProgressView.trackTintColor = .systemGray
+        publishButton.addSubview(publishProgressView)
+        let constraints = [
+            publishProgressView.leadingAnchor.constraint(equalTo: publishButton.leadingAnchor),
+            publishProgressView.trailingAnchor.constraint(equalTo: publishButton.trailingAnchor),
+            publishProgressView.topAnchor.constraint(equalTo: publishButton.topAnchor),
+            publishProgressView.bottomAnchor.constraint(equalTo: publishButton.bottomAnchor),
+            publishProgressView.heightAnchor.constraint(greaterThanOrEqualToConstant: 35)
+        ]
+        NSLayoutConstraint.activate(constraints)
+        
+        PublisherService.shared.$currentPublishProgress
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] progress in
+                guard let self = self else { return }
+                let progress = Float(progress)
+                if progress > 0 {
+                    UIView.animate(withDuration: 0.25) {
+                        self.publishProgressView.alpha = 1
+                    }
+                    self.publishProgressView.setProgress(progress, animated: true)
+                }
+            }
+            .store(in: &disposeBag)
+    }
 
     lazy var composeContentViewModel: ComposeContentViewModel = {
 
@@ -241,13 +276,24 @@ extension ComposeViewController {
     private func enqueuePublishStatus() {
         do {
             let statusPublisher = try composeContentViewModel.statusPublisher()
+            cancelBarButtonItem.isEnabled = false
+            publishButton.isEnabled = false
             statusPublisher.state
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] result in
+                    self?.cancelBarButtonItem.isEnabled = true
+                    
                     switch result {
                     case .success:
-                        self?.dismiss(animated: true, completion: nil)
+                        self?.publishProgressView.progress = 100
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            self?.dismiss(animated: true, completion: nil)
+                        }
                     case .failure(let error):
+                        UIView.animate(withDuration: 0.25) {
+                            self?.publishProgressView.alpha = 0
+                        }
+                        self?.publishButton.isEnabled = true
                         let alertController = UIAlertController.standardAlert(of: error)
                         self?.present(alertController, animated: true)
                         // HomeTimelineViewController is also listening and will post the alert if this view has been dismissed
