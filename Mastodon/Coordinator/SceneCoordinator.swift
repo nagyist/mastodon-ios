@@ -68,7 +68,7 @@ final public class SceneCoordinator {
                             }
 
                             self.setup()
-                            try await Task.sleep(nanoseconds: .second * 1)
+                            try await Task.sleep(nanoseconds: .nanosPerUnit * 1)
 
                             // redirect to notifications tab
                             self.switchToTabBar(tab: .notifications)

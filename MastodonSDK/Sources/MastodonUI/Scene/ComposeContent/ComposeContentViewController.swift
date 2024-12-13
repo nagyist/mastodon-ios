@@ -532,7 +532,7 @@ extension ComposeContentViewController: ComposeContentToolbarViewDelegate {
             self.viewModel.isContentWarningActive.toggle()
             if self.viewModel.isContentWarningActive {
                 Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: .second / 20)     // 0.05s
+                    try? await Task.sleep(nanoseconds: .nanosPerUnit / 20)     // 0.05s
                     self.viewModel.setContentWarningTextViewFirstResponderIfNeeds()
                 }   // end Task
             } else {

@@ -142,7 +142,7 @@ extension ShareViewController {
                 _ = try await statusPublisher.publish(api: APIService.shared, authenticationBox: authenticationBox)
                 
                 self.publishButton.setTitle(L10n.Common.Controls.Actions.done, for: .normal)
-                try await Task.sleep(nanoseconds: 1 * .second)
+                try await Task.sleep(nanoseconds: 1 * .nanosPerUnit)
                 
                 self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
 
