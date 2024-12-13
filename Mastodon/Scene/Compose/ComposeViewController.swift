@@ -241,6 +241,22 @@ extension ComposeViewController {
     private func enqueuePublishStatus() {
         do {
             let statusPublisher = try composeContentViewModel.statusPublisher()
+            statusPublisher.state
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] result in
+                    switch result {
+                    case .success:
+                        self?.dismiss(animated: true, completion: nil)
+                    case .failure(let error):
+                        let alertController = UIAlertController.standardAlert(of: error)
+                        self?.present(alertController, animated: true)
+                        // HomeTimelineViewController is also listening and will post the alert if this view has been dismissed
+                    case .pending:
+                        break
+                    }
+                }
+                .store(in: &disposeBag)
+            
             PublisherService.shared.enqueue(
                 statusPublisher: statusPublisher,
                 authenticationBox: viewModel.authenticationBox
@@ -250,8 +266,6 @@ extension ComposeViewController {
             present(alertController, animated: true)
             return
         }
-
-        dismiss(animated: true, completion: nil)
     }
 
     @objc

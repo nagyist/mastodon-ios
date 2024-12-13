@@ -432,7 +432,7 @@ extension HomeTimelineViewController {
             })
             .store(in: &disposeBag)
 
-        PublisherService.shared.statusPublishResult.prepend(.failure(AppError.badRequest)) // prepend failure hides the timelinePill
+        PublisherService.shared.statusPublishResult
         .receive(on: DispatchQueue.main)
         .sink { [weak self] publishResult in
             guard let self else { return }
@@ -440,8 +440,13 @@ extension HomeTimelineViewController {
             case .success:
                 self.timelinePill.update(with: .postSent)
                 self.showTimelinePill()
-            case .failure:
+                self.viewModel?.loadLatestStateMachine.enter(HomeTimelineViewModel.LoadLatestState.Loading.self)
+            case .failure(let error):
                 self.hideTimelinePill()
+                if tabBarController?.presentingViewController == nil {
+                    let alertController = UIAlertController.standardAlert(of: error)
+                    self.present(alertController, animated: true)
+                }
             }
         }
         .store(in: &disposeBag)
