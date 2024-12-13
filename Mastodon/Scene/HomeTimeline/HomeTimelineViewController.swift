@@ -432,7 +432,7 @@ extension HomeTimelineViewController {
             })
             .store(in: &disposeBag)
 
-        PublisherService.shared.statusPublishResult.prepend(.failure(AppError.badRequest))
+        PublisherService.shared.statusPublishResult.prepend(.failure(AppError.badRequest)) // prepend failure hides the timelinePill
         .receive(on: DispatchQueue.main)
         .sink { [weak self] publishResult in
             guard let self else { return }
