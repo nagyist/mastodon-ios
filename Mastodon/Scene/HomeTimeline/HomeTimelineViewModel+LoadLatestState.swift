@@ -87,7 +87,7 @@ extension HomeTimelineViewModel.LoadLatestState {
                     return
                 }
                 
-                viewModel.dataController.records = []
+                await viewModel.dataController.setRecordsAfterFiltering([])
                 var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
                 snapshot.appendSections([.main])
                 snapshot.appendItems([.topLoader], toSection: .main)
@@ -153,7 +153,7 @@ extension HomeTimelineViewModel.LoadLatestState {
 
                 if statuses.isEmpty {
                     // stop refresher if no new statuses
-                    viewModel.dataController.records = []
+                    await viewModel.dataController.setRecordsAfterFiltering([])
                     viewModel.didLoadLatest.send()
                 } else {
                     var toAdd = [MastodonFeed]()
@@ -169,7 +169,8 @@ extension HomeTimelineViewModel.LoadLatestState {
                         toAdd.last?.hasMore = latestFeedRecords.isNotEmpty
                     }
                     
-                    viewModel.dataController.records = (toAdd + latestFeedRecords).removingDuplicates()
+                    let newRecords = (toAdd + latestFeedRecords).removingDuplicates()
+                    await viewModel.dataController.setRecordsAfterFiltering(newRecords)
                 }
 
                 viewModel.timelineIsEmpty.value = (latestStatusIDs.isEmpty && statuses.isEmpty) ? {

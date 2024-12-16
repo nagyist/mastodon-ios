@@ -112,18 +112,21 @@ final class HomeTimelineViewController: UIViewController, MediaPreviewableViewCo
         let showFollowingAction = UIAction(title: L10n.Scene.HomeTimeline.TimelineMenu.following, image: .init(systemName: "house")) { [weak self] _ in
             guard let self, let viewModel = self.viewModel else { return }
 
-            viewModel.timelineContext = .home
-            viewModel.dataController.records = []
-
-            viewModel.loadLatestStateMachine.enter(HomeTimelineViewModel.LoadLatestState.ContextSwitch.self)
-            timelineSelectorButton.setAttributedTitle(
-                .init(string: L10n.Scene.HomeTimeline.TimelineMenu.following, attributes: [
-                    .font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 20, weight: .semibold))
-                ]),
-                for: .normal)
-
-            timelineSelectorButton.sizeToFit()
-            timelineSelectorButton.menu = generateTimelineSelectorMenu()
+            Task { [weak self] in
+                guard let self else { return }
+                viewModel.timelineContext = .home
+                await viewModel.dataController.setRecordsAfterFiltering([])
+                
+                viewModel.loadLatestStateMachine.enter(HomeTimelineViewModel.LoadLatestState.ContextSwitch.self)
+                self.timelineSelectorButton.setAttributedTitle(
+                    .init(string: L10n.Scene.HomeTimeline.TimelineMenu.following, attributes: [
+                        .font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 20, weight: .semibold))
+                    ]),
+                    for: .normal)
+                
+                self.timelineSelectorButton.sizeToFit()
+                self.timelineSelectorButton.menu = self.generateTimelineSelectorMenu()
+            }
         }
 
         let showLocalTimelineAction = UIAction(title: L10n.Scene.HomeTimeline.TimelineMenu.localCommunity, image: .init(systemName: "building.2")) { [weak self] action in

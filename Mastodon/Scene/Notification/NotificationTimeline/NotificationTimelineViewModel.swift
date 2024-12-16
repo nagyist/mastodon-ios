@@ -54,18 +54,22 @@ final class NotificationTimelineViewModel {
         self.scope = scope
         self.dataController = FeedDataController(authenticationBox: authenticationBox, kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
-
-        switch scope {
-        case .everything:
-            self.dataController.records = (try? FileManager.default.cachedNotificationsAll(for: authenticationBox))?.map({ notification in
-                MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationAll)
-            }) ?? []
-        case .mentions:
-            self.dataController.records = (try? FileManager.default.cachedNotificationsMentions(for: authenticationBox))?.map({ notification in
-                MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationMentions)
-            }) ?? []
-        case .fromAccount(_):
-            self.dataController.records = []
+        
+        Task {
+            switch scope {
+            case .everything:
+                let initialRecords = (try? FileManager.default.cachedNotificationsAll(for: authenticationBox))?.map({ notification in
+                    MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationAll)
+                }) ?? []
+                await self.dataController.setRecordsAfterFiltering(initialRecords)
+            case .mentions:
+                let initialRecords = (try? FileManager.default.cachedNotificationsMentions(for: authenticationBox))?.map({ notification in
+                    MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationMentions)
+                }) ?? []
+                await self.dataController.setRecordsAfterFiltering(initialRecords)
+            case .fromAccount(_):
+                await self.dataController.setRecordsAfterFiltering([])
+            }
         }
 
         self.dataController.$records

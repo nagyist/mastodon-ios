@@ -9,7 +9,7 @@ final public class FeedDataController {
     private let logger = Logger(subsystem: "FeedDataController", category: "Data")
     private static let entryNotFoundMessage = "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
 
-    @Published public var records: [MastodonFeed] = []
+    @Published public private(set) var records: [MastodonFeed] = []
     
     private let authenticationBox: MastodonAuthenticationBox
     private let kind: MastodonFeed.Kind
@@ -25,21 +25,27 @@ final public class FeedDataController {
                 if let filterBox {
                     Task { [weak self] in
                         guard let self else { return }
-                        self.records = await self.filter(self.records, forFeed: kind, with: filterBox)
+                        await self.setRecordsAfterFiltering(self.records)
                     }
                 }
             }
             .store(in: &subscriptions)
     }
     
+    public func setRecordsAfterFiltering(_ newRecords: [MastodonFeed]) async {
+        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records = newRecords; return }
+        self.records = await self.filter(self.records, forFeed: kind, with: filterBox)
+    }
+    
+    public func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeed]) async {
+        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
+        self.records += await self.filter(additionalRecords, forFeed: kind, with: filterBox)
+    }
+    
     public func loadInitial(kind: MastodonFeed.Kind) {
         Task {
             let unfilteredRecords = try await load(kind: kind, maxID: nil)
-            if let filterBox = StatusFilterService.shared.activeFilterBox {
-                records = await filter(unfilteredRecords, forFeed: kind, with: filterBox)
-            } else {
-                records = unfilteredRecords
-            }
+            await setRecordsAfterFiltering(unfilteredRecords)
         }
     }
     
@@ -50,11 +56,7 @@ final public class FeedDataController {
             }
 
             let unfiltered = try await load(kind: kind, maxID: lastId)
-            if let filterBox = StatusFilterService.shared.activeFilterBox {
-                records += await filter(unfiltered, forFeed: kind, with: filterBox)
-            } else {
-                records += unfiltered
-            }
+            await self.appendRecordsAfterFiltering(unfiltered)
         }
     }
     

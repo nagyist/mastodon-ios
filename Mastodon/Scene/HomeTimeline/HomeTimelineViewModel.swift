@@ -94,9 +94,12 @@ final class HomeTimelineViewModel: NSObject {
         self.authenticationBox = authenticationBox
         self.dataController = FeedDataController(authenticationBox: authenticationBox, kind: .home(timeline: timelineContext))
         super.init()
-        self.dataController.records = (try? PersistenceManager.shared.cachedTimeline(.homeTimeline(authenticationBox)).map {
+        let initialRecords = (try? PersistenceManager.shared.cachedTimeline(.homeTimeline(authenticationBox)).map {
             MastodonFeed.fromStatus($0, kind: .home)
         }) ?? []
+        Task {
+            await self.dataController.setRecordsAfterFiltering(initialRecords)
+        }
         
         authenticationBox.inMemoryCache.$followingUserIds.sink { [weak self] _ in
             self?.homeTimelineNeedRefresh.send()
@@ -231,10 +234,13 @@ extension HomeTimelineViewModel {
         }
 
         let combinedRecords = Array(head + feedItems + tail)
-        dataController.records = combinedRecords
         
-        record.isLoadingMore = false
-        record.hasMore = false
+        Task {
+            await dataController.setRecordsAfterFiltering(combinedRecords)
+            
+            record.isLoadingMore = false
+            record.hasMore = false
+        }
     }
     
 }
