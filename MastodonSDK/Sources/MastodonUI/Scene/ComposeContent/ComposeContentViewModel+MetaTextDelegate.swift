@@ -32,8 +32,10 @@ extension ComposeContentViewModel: MetaTextDelegate {
             
         case .content:
             let textInput = textStorage.string
-            self.content = textInput
-            
+            Task {
+                self.content = textInput
+            }
+                
             let content = MastodonContent(
                 content: textInput,
                 emojis: [:] // customEmojiViewModel?.emojis.value.asDictionary ?? [:]
