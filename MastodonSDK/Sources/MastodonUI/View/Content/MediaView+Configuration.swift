@@ -180,7 +180,7 @@ extension MediaView.Configuration {
 }
 
 extension MediaView {
-    public static func configuration(status: MastodonStatus) -> [MediaView.Configuration] {
+    public static func configuration(status: MastodonStatus, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func videoInfo(from attachment: MastodonAttachment) -> MediaView.Configuration.VideoInfo {
             MediaView.Configuration.VideoInfo(
                 aspectRadio: attachment.size,
@@ -234,6 +234,7 @@ extension MediaView {
                 }   // end switch
             }()
             
+            configuration.isReveal = !contentDisplayMode.shouldConcealMedia
             configuration.load()
             
             return configuration
@@ -244,7 +245,7 @@ extension MediaView {
 }
 
 extension MediaView {
-    public static func configuration(status: Mastodon.Entity.StatusEdit) -> [MediaView.Configuration] {
+    public static func configuration(status: Mastodon.Entity.StatusEdit, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func aspectRatio(from attachment: Mastodon.Entity.Attachment) -> CGSize? {
             if let width = attachment.meta?.original?.width, let height = attachment.meta?.original?.height {
                 return CGSize(width: width, height: height)
@@ -317,7 +318,7 @@ extension MediaView {
             }()
             
             configuration?.load()
-            configuration?.isReveal = true
+            configuration?.isReveal = !contentDisplayMode.shouldConcealMedia
             
             return configuration
         }

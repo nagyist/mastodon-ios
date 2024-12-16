@@ -49,12 +49,12 @@ extension StatusView {
         configureAuthor(author: author)
         configureTimestamp(timestamp: (status.reblog ?? status).entity.createdAt)
         configureApplicationName(status.entity.application?.name)
-        configureMedia(status: status)
+        configureMedia(status: status, contentDisplayMode: contentDisplayMode)
         configurePollHistory(statusEdit: statusEdit)
         configureCard(status: status)
         configureToolbar(status: status)
         configureContent(statusEdit: statusEdit, status: status)
-        configureMedia(status: statusEdit)
+        configureMedia(status: statusEdit, contentDisplayMode: contentDisplayMode)
         actionToolbarAdaptiveMarginContainerView.isHidden = true
         authorView.menuButton.isHidden = true
         headerAdaptiveMarginContainerView.isHidden = true
@@ -72,7 +72,7 @@ extension StatusView {
         configureTimestamp(timestamp: timestamp)
         configureApplicationName(status.entity.application?.name)
         configureContent(status: status)
-        configureMedia(status: status)
+        configureMedia(status: status, contentDisplayMode: contentDisplayMode)
         configurePoll(status: status)
         configureCard(status: status)
         configureToolbar(status: status)
@@ -451,14 +451,14 @@ extension StatusView {
         viewModel.visibility = status.entity.mastodonVisibility
     }
     
-    private func configureMedia(status: MastodonStatus) {
+    private func configureMedia(status: MastodonStatus, contentDisplayMode: ContentDisplayMode) {
         let status = status.reblog ?? status
-        let configurations = MediaView.configuration(status: status)
+        let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
         viewModel.mediaViewConfigurations = configurations
     }
     
-    private func configureMedia(status: Mastodon.Entity.StatusEdit) {
-        let configurations = MediaView.configuration(status: status)
+    private func configureMedia(status: Mastodon.Entity.StatusEdit, contentDisplayMode: ContentDisplayMode) {
+        let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
         viewModel.mediaViewConfigurations = configurations
     }
     

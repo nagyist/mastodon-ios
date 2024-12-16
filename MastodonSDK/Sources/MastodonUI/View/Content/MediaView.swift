@@ -43,15 +43,17 @@ public final class MediaView: UIView {
         return imageView
     }()
     
-    private(set) lazy var playerViewController: AVPlayerViewController = {
+    private(set) var playerViewController: AVPlayerViewController?
+    private var playerLooper: AVPlayerLooper?
+    
+    private func createPlayerViewController() -> AVPlayerViewController {
         let playerViewController = AVPlayerViewController()
         playerViewController.view.layer.masksToBounds = true
         playerViewController.view.isUserInteractionEnabled = false
         playerViewController.videoGravity = .resizeAspectFill
         playerViewController.updatesNowPlayingInfoCenter = false
         return playerViewController
-    }()
-    private var playerLooper: AVPlayerLooper?
+    }
 
     let overlayViewController: UIHostingController<InlineMediaOverlayContainer> = {
         let vc = UIHostingController(rootView: InlineMediaOverlayContainer())
@@ -152,6 +154,10 @@ extension MediaView {
     
     private func layoutGIF() {
         // use view controller as View here
+        if playerViewController == nil {
+            playerViewController = createPlayerViewController()
+        }
+        guard let playerViewController else { return }
         playerViewController.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(playerViewController.view)
         playerViewController.view.pinToParent()
@@ -165,11 +171,21 @@ extension MediaView {
 
         guard let player = setupGIFPlayer(info: info) else { return }
         setupPlayerLooper(player: player)
+        
+        if playerViewController == nil {
+            playerViewController = createPlayerViewController()
+        }
+        guard let playerViewController else { return }
         playerViewController.player = player
         playerViewController.showsPlaybackControls = false
         
         // auto play for GIF
-        player.play()
+        if configuration.isReveal {
+            blurhashImageView.alpha = 0
+            player.play()
+        } else {
+            blurhashImageView.alpha = 1
+        }
 
         bindAlt(configuration: configuration, altDescription: info.altDescription)
     }
@@ -241,12 +257,12 @@ extension MediaView {
         imageView.image = nil
         
         // reset player
-        playerViewController.view.removeFromSuperview()
-        playerViewController.contentOverlayView.flatMap { view in
+        playerViewController?.view.removeFromSuperview()
+        playerViewController?.contentOverlayView.flatMap { view in
             view.removeConstraints(view.constraints)
         }
-        playerViewController.player?.pause()
-        playerViewController.player = nil
+        playerViewController?.player?.pause()
+        playerViewController?.player = nil
         playerLooper = nil
         
         // blurhash
