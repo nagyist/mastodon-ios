@@ -302,6 +302,7 @@ extension ComposeContentViewModel {
     private func bind() {
         // bind author
         $authenticationBox
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] authenticationBox in
                 guard let self, let account = authenticationBox.cachedAccount else { return }
 
@@ -321,7 +322,7 @@ extension ComposeContentViewModel {
         
         // bind text
         $content
-            .receive(on: DispatchQueue.global(qos: .background))
+            .receive(on: DispatchQueue.main)
             .map { [weak self] input in
                 guard let self, let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
                     return input.count
