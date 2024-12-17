@@ -34,7 +34,7 @@ final public class FeedDataController {
     
     public func setRecordsAfterFiltering(_ newRecords: [MastodonFeed]) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records = newRecords; return }
-        self.records = await self.filter(self.records, forFeed: kind, with: filterBox)
+        self.records = await self.filter(newRecords, forFeed: kind, with: filterBox)
     }
     
     public func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeed]) async {
