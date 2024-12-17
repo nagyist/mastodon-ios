@@ -112,6 +112,23 @@ public class StatusAuthorView: UIStackView {
 }
 
 extension StatusAuthorView {
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let superHit = super.hitTest(point, with: event)
+        if superHit == avatarButton {
+            return avatarButton
+        } else {
+            if menuButton.point(inside: convert(point, to: menuButton), with: event) {
+                return menuButton
+            }
+            if contentSensitiveeToggleButton.point(inside: convert(point, to: contentSensitiveeToggleButton), with: event) {
+                return contentSensitiveeToggleButton
+            }
+            return self
+        }
+    }
+}
+
+extension StatusAuthorView {
     func _init() {
         axis = .horizontal
         spacing = 12
@@ -134,7 +151,7 @@ extension StatusAuthorView {
 
         // dateLabel
         dateLabel.isUserInteractionEnabled = false
-        self.addTapGestureToAuthorName()
+        self.addTapGestureToSelf()
     }
 }
 
@@ -214,9 +231,9 @@ extension StatusAuthorView {
         return (menu, accessibilityActions)
     }
 
-    private func addTapGestureToAuthorName() {
+    private func addTapGestureToSelf() {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(StatusAuthorView.authorNameDidPressed(_:)))
-        authorNameLabel.addGestureRecognizer(tapGesture)
+        addGestureRecognizer(tapGesture)
     }
 }
 
