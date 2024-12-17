@@ -127,34 +127,34 @@ extension HomeTimelineViewModel {
         oldSnapshot: NSDiffableDataSourceSnapshot<S, T>,
         newSnapshot: NSDiffableDataSourceSnapshot<S, T>
     ) -> Difference<T>? {
-        guard let sourceIndexPath = (tableView.indexPathsForVisibleRows ?? []).sorted().first else { return nil }
-        let rectForSourceItemCell = tableView.rectForRow(at: sourceIndexPath)
-        let sourceDistanceToTableViewTopEdge: CGFloat = {
+        guard let currentFirstVisibleIndexPath = (tableView.indexPathsForVisibleRows ?? []).sorted().first else { return nil }
+        let rectForCurrentFirstVisibleCell = tableView.rectForRow(at: currentFirstVisibleIndexPath)
+        let currentDistanceFromFirstVisibleCellToTableViewTopEdge: CGFloat = {
             if tableView.window != nil {
-                return tableView.convert(rectForSourceItemCell, to: nil).origin.y - tableView.safeAreaInsets.top
+                return tableView.convert(rectForCurrentFirstVisibleCell, to: nil).origin.y - tableView.safeAreaInsets.top
             } else {
-                return rectForSourceItemCell.origin.y - tableView.contentOffset.y - tableView.safeAreaInsets.top
+                return rectForCurrentFirstVisibleCell.origin.y - tableView.contentOffset.y - tableView.safeAreaInsets.top
             }
         }()
 
-        guard sourceIndexPath.section < oldSnapshot.numberOfSections,
-              sourceIndexPath.row < oldSnapshot.numberOfItems(inSection: oldSnapshot.sectionIdentifiers[sourceIndexPath.section])
-        else { return nil }
+        guard currentFirstVisibleIndexPath.section < oldSnapshot.numberOfSections,
+              currentFirstVisibleIndexPath.row < oldSnapshot.numberOfItems(inSection: oldSnapshot.sectionIdentifiers[currentFirstVisibleIndexPath.section])
+        else { assertionFailure("tableview not in sync with oldSnapshot"); return nil }
         
-        let sectionIdentifier = oldSnapshot.sectionIdentifiers[sourceIndexPath.section]
-        let item = oldSnapshot.itemIdentifiers(inSection: sectionIdentifier)[sourceIndexPath.row]
+        let currentFirstVisibleSectionIdentifier = oldSnapshot.sectionIdentifiers[currentFirstVisibleIndexPath.section]
+        let currentFirstVisibleItem = oldSnapshot.itemIdentifiers(inSection: currentFirstVisibleSectionIdentifier)[currentFirstVisibleIndexPath.row]
         
-        guard let targetIndexPathRow = newSnapshot.indexOfItem(item),
-              let newSectionIdentifier = newSnapshot.sectionIdentifier(containingItem: item),
+        guard let targetIndexPathRow = newSnapshot.indexOfItem(currentFirstVisibleItem),
+              let newSectionIdentifier = newSnapshot.sectionIdentifier(containingItem: currentFirstVisibleItem),
               let targetIndexPathSection = newSnapshot.indexOfSection(newSectionIdentifier)
         else { return nil }
         
         let targetIndexPath = IndexPath(row: targetIndexPathRow, section: targetIndexPathSection)
         
         return Difference(
-            item: item,
-            sourceIndexPath: sourceIndexPath,
-            sourceDistanceToTableViewTopEdge: sourceDistanceToTableViewTopEdge,
+            item: currentFirstVisibleItem,
+            sourceIndexPath: currentFirstVisibleIndexPath,
+            sourceDistanceToTableViewTopEdge: currentDistanceFromFirstVisibleCellToTableViewTopEdge,
             targetIndexPath: targetIndexPath
         )
     }
