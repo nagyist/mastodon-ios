@@ -84,12 +84,13 @@ extension HomeTimelineViewModel {
                     }
                     
                     await self.updateDataSource(snapshot: newSnapshot, animatingDifferences: false)
-                    if tableView.numberOfSections >= difference.targetIndexPath.section && tableView.numberOfRows(inSection: difference.targetIndexPath.section) >= difference.targetIndexPath.row {
+                    let tableViewContainsTargetIndexPath = difference.targetIndexPath.section < tableView.numberOfSections  && difference.targetIndexPath.row < tableView.numberOfRows(inSection: difference.targetIndexPath.section)
+                    if tableViewContainsTargetIndexPath {
                         tableView.scrollToRow(at: difference.targetIndexPath, at: .top, animated: false)
+                        var contentOffset = tableView.contentOffset
+                        contentOffset.y = tableView.contentOffset.y - difference.sourceDistanceToTableViewTopEdge
+                        tableView.setContentOffset(contentOffset, animated: false)
                     }
-                    var contentOffset = tableView.contentOffset
-                    contentOffset.y = tableView.contentOffset.y - difference.sourceDistanceToTableViewTopEdge
-                    tableView.setContentOffset(contentOffset, animated: false)
                     self.didLoadLatest.send()
                     self.hasPendingStatusEditReload = false
                 }   // end Task
