@@ -29,7 +29,7 @@ final class ProfileFieldEditCollectionViewCell: UICollectionViewCell {
     let containerStackView = UIStackView()
 
     let editButton: UIButton = {
-        let button = HitTestExpandedButton(type: .custom)
+        let button = MinimumHitTargetButton(type: .custom)
         button.setImage(ProfileFieldEditCollectionViewCell.removeButtonImage, for: .normal)
         button.contentMode = .center
         button.tintColor = .systemRed

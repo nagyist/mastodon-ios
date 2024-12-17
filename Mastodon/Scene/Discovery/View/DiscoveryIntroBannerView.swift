@@ -30,8 +30,8 @@ public final class DiscoveryIntroBannerView: UIView {
         return label
     }()
     
-    let closeButton: HitTestExpandedButton = {
-        let button = HitTestExpandedButton(type: .system)
+    let closeButton: MinimumHitTargetButton = {
+        let button = MinimumHitTargetButton(type: .system)
         button.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
         button.tintColor = Asset.Colors.Label.secondary.color
         return button

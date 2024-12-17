@@ -394,7 +394,7 @@ public final class StatusView: UIView {
         return label
     }()
     let pollVoteButton: UIButton = {
-        let button = HitTestExpandedButton()
+        let button = MinimumHitTargetButton()
         button.titleLabel?.font = UIFontMetrics(forTextStyle: .body).scaledFont(for: .systemFont(ofSize: 14, weight: .semibold))
         button.setTitle(L10n.Common.Controls.Status.Poll.vote, for: .normal)
         button.setTitleColor(Asset.Colors.Brand.blurple.color, for: .normal)

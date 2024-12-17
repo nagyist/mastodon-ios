@@ -41,8 +41,7 @@ public class StatusAuthorView: UIStackView {
     public let dateLabel = MetaLabel(style: .statusUsername)
 
     public let menuButton: UIButton = {
-        let button = HitTestExpandedButton(type: .system)
-        button.expandEdgeInsets = UIEdgeInsets(top: -20, left: -10, bottom: -10, right: -10)
+        let button = MinimumHitTargetButton(type: .system)
         button.tintColor = Asset.Colors.Label.secondary.color
         let image = UIImage(systemName: "ellipsis", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: 15)))
         button.setImage(image, for: .normal)
@@ -51,8 +50,7 @@ public class StatusAuthorView: UIStackView {
     }()
 
     public let contentSensitiveeToggleButton: UIButton = {
-        let button = HitTestExpandedButton(type: .system)
-        button.expandEdgeInsets = UIEdgeInsets(top: -20, left: -10, bottom: -10, right: -10)
+        let button = MinimumHitTargetButton(type: .system)
         button.tintColor = Asset.Colors.Label.secondary.color
         button.imageView?.contentMode = .scaleAspectFit
         let image = UIImage(systemName: "eye.slash.fill")

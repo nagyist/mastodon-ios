@@ -86,7 +86,7 @@ public final class NotificationView: UIView {
     public let dateLabel = MetaLabel(style: .statusUsername)
     
     public let menuButton: UIButton = {
-        let button = HitTestExpandedButton(type: .system)
+        let button = MinimumHitTargetButton(type: .system)
         button.tintColor = Asset.Colors.Label.secondary.color
         let image = UIImage(systemName: "ellipsis", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: 15)))
         button.setImage(image, for: .normal)
