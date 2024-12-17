@@ -15,6 +15,21 @@ import UIKit
 import WebKit
 import MastodonSDK
 
+extension UIView {
+    func containingView<T>(ofClass: T.Type) -> T? {
+        var ancestor = superview
+        while ancestor != nil {
+            if let instanceOfRequestedType = ancestor as? T
+            {
+                return instanceOfRequestedType
+            } else {
+                ancestor = ancestor?.superview
+            }
+        }
+        return nil
+    }
+}
+
 public protocol StatusCardControlDelegate: AnyObject {
     func statusCardControl(_ statusCardControl: StatusCardControl, didTapURL url: URL)
     func statusCardControl(_ statusCardControl: StatusCardControl, didTapAuthor author: Mastodon.Entity.Account)
@@ -289,6 +304,9 @@ public final class StatusCardControl: UIControl {
             }(),
             placeholderImage: icon(for: card.layout)
         ) { [weak self] image, _, _, _ in
+            let tableView = self?.containingView(ofClass: UITableView.self)
+            tableView?.beginUpdates()
+            defer { tableView?.endUpdates() }
             if image == nil {
                 self?.imageView.isHidden = true
                 self?.imageDividerView.isHidden = true
