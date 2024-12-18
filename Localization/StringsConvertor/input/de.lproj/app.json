@@ -143,9 +143,9 @@
                     "next_status": "Nächster Beitrag",
                     "open_status": "Beitrag öffnen",
                     "open_author_profile": "Profil des Verfassers ansehen",
-                    "open_reblogger_profile": "Open Booster's Profile",
+                    "open_reblogger_profile": "Booster Profil öffnen",
                     "reply_status": "Auf Beitrag antworten",
-                    "toggle_reblog": "Toggle Boost on Post",
+                    "toggle_reblog": "Boost beim Posten ein-/ausschalten",
                     "toggle_favorite": "Favorit vom Beitrag umschalten",
                     "toggle_content_warning": "Inhaltswarnung umschalten",
                     "preview_image": "Bildvorschau"
@@ -156,7 +156,7 @@
                 }
             },
             "status": {
-                "user_reblogged": "%s boosted",
+                "user_reblogged": "%s geboostet",
                 "user_replied_to": "Antwortet auf %s",
                 "show_post": "Beitrag anzeigen",
                 "show_user_profile": "Benutzerprofil anzeigen",
@@ -179,7 +179,7 @@
                 "actions": {
                     "reply": "Antworten",
                     "reblog": "Boost",
-                    "unreblog": "Undo boost",
+                    "unreblog": "Boost rückgängig machen",
                     "favorite": "Favorit",
                     "unfavorite": "Aus Favoriten entfernen",
                     "menu": "Menü",
@@ -312,7 +312,7 @@
         },
         "login": {
             "title": "Willkommen zurück",
-            "subtitle": "Log in with the server where you created your account.",
+            "subtitle": "Melden Sie sich bei dem Server an, auf dem Sie Ihr Konto erstellt haben.",
             "server_search_field": {
                 "placeholder": "URL eingeben oder nach Server suchen"
             }
@@ -368,8 +368,8 @@
             "no_server_selected_hint": "Wenn Sie fortfahren, ohne eine Auswahl zu treffen, wird ein Server auf der Grundlage Ihrer Sprache ausgewählt."
         },
         "privacy": {
-            "title": "Your Privacy",
-            "description": "Although the Mastodon app does not collect any data, the server you sign up through may have a different policy.\n\nIf you disagree with the policy for **%s**, you can go back and pick a different server.",
+            "title": "Ihre Privatsphäre",
+            "description": "Obwohl die Mastodon-App keine Daten sammelt, kann es sein, dass der Server, über den Sie sich anmelden, andere Richtlinien hat.\n\nWenn Sie mit den Richtlinien für **%s** nicht einverstanden sind, können Sie zurückgehen und einen anderen Server auswählen.",
             "policy": {
                 "ios": "Datenschutzerklärung - Mastodon für iOS",
                 "server": "Datenschutzerklärung - %s"
@@ -476,8 +476,8 @@
         "home_timeline": {
             "title": "Startseite",
             "timeline_menu": {
-                "following": "Following",
-                "local_community": "Local",
+                "following": "Folge ich",
+                "local_community": "Lokal",
                 "lists": {
                     "title": "Listen",
                     "empty_message": "Keine Listen vorhanden"
@@ -747,11 +747,11 @@
                 "rejected": "Abgelehnt"
             },
             "warning": {
-                "none": "Your account has received a moderation warning.",
-                "disable": "Your account has been disabled.",
-                "mark_statuses_as_sensitive": "Some of your posts have been marked as sensitive.",
-                "delete_statuses": "Some of your posts have been removed.",
-                "sensitive": "Your posts will be marked as sensitive from now on.",
+                "none": "Ihr Konto hat eine Moderationswarnung erhalten.",
+                "disable": "Ihr Konto wurde deaktiviert.",
+                "mark_statuses_as_sensitive": "Einige deiner Beiträge wurden mit einer Inhaltswarnung versehen.",
+                "delete_statuses": "Einige deiner Beiträge sind entfernt worden.",
+                "sensitive": "Deine zukünftigen Beiträge werden mit einer Inhaltswarnung versehen.",
                 "silence": "Dein Konto wurde eingeschränkt.",
                 "suspend": "Dein Konto wurde gesperrt.",
                 "learn_more": "Mehr erfahren"
@@ -852,7 +852,7 @@
                     "only_people_mentioned": "Nur erwähnte Profile"
                 },
                 "manually_approve_follow_requests": "Manuelles Genehmigen von Folgeanfragen",
-                "show_followers_and_following": "Show Followers & Following",
+                "show_followers_and_following": "Follower anzeigen & folgen",
                 "suggest_my_account_to_others": "Mein Konto anderen vorschlagen",
                 "appear_in_search_engines": "In Suchmaschinen anzeigen"
             }
@@ -980,12 +980,12 @@
             "not_found": {
                 "account_name": "Eugen Rochko",
                 "account": "@johnMastodon@no-such.account",
-                "content": "Sorry, we couldn’t find any posts with the hashtag <a>#%@</a>. Please try a <a>#DifferentHashtag</a> or check the widget settings."
+                "content": "Entschuldigung, wir konnten keine Beiträge mit dem Hashtag <a>#%@</a>finden. Bitte versuchen Sie einen <a>#DifferentHashtag</a> oder überprüfen Sie die Widget-Einstellungen."
             },
             "placeholder": {
                 "account_name": "John Mastodon",
                 "account": "@johnMastodon@no-such.account",
-                "content": "This is how a post with a <a>#hashtag</a> would look. Pick whichever <a>#hashtag</a> you want in the widget settings."
+                "content": "So würde ein Beitrag mit einem <a>#Hashtag</a> aussehen. Wählen Sie in den Widget-Einstellungen den gewünschten <a>#Hashtag</a> aus."
             }
         }
     }
