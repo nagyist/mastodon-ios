@@ -52,9 +52,12 @@ extension ComposeContentViewModel {
                 guard let self = self else { return }
                 guard self.composeContentTableViewCellIsInTableView(tableView) else { return }
                 UIView.performWithoutAnimation {
-                    tableView.beginUpdates()
-                    self.composeContentTableViewCell.frame.size.height = height
-                    tableView.endUpdates()                    
+                    if height != self.composeContentTableViewCell.contentHeight {
+                        tableView.beginUpdates()
+                        self.composeContentTableViewCell.contentHeight = height
+                        self.composeContentTableViewCell.invalidateIntrinsicContentSize()
+                        tableView.endUpdates()
+                    }
                 }
             }
             .store(in: &disposeBag)
