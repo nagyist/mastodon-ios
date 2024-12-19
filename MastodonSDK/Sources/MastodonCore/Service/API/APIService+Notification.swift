@@ -26,8 +26,8 @@ extension APIService {
     ) async throws -> Mastodon.Response.Content<[Mastodon.Entity.Notification]> {
         let authorization = authenticationBox.userAuthorization
 
-        let types: [Mastodon.Entity.Notification.NotificationType]?
-        let excludedTypes: [Mastodon.Entity.Notification.NotificationType]?
+        let types: [Mastodon.Entity.NotificationType]?
+        let excludedTypes: [Mastodon.Entity.NotificationType]?
 
         switch scope {
         case .everything:

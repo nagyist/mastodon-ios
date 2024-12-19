@@ -90,7 +90,7 @@ final public class SceneCoordinator {
                             }()
 
                             // show notification related content
-                            guard let type = Mastodon.Entity.Notification.NotificationType(rawValue: pushNotification.notificationType) else { return }
+                            guard let type = Mastodon.Entity.NotificationType(rawValue: pushNotification.notificationType) else { return }
                             guard let me = authenticationBox.cachedAccount else { return }
                             let notificationID = String(pushNotification.notificationID)
 

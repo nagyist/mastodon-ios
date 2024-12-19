@@ -90,8 +90,8 @@ extension Mastodon.API.Notifications {
         public let sinceID: Mastodon.Entity.Status.ID?
         public let minID: Mastodon.Entity.Status.ID?
         public let limit: Int?
-        public let types: [Mastodon.Entity.Notification.NotificationType]?
-        public let excludeTypes: [Mastodon.Entity.Notification.NotificationType]?
+        public let types: [Mastodon.Entity.NotificationType]?
+        public let excludeTypes: [Mastodon.Entity.NotificationType]?
         public let accountID: String?
     
         public init(
@@ -99,8 +99,8 @@ extension Mastodon.API.Notifications {
             sinceID: Mastodon.Entity.Status.ID? = nil,
             minID: Mastodon.Entity.Status.ID? = nil,
             limit: Int? = nil,
-            types: [Mastodon.Entity.Notification.NotificationType]? = nil,
-            excludeTypes: [Mastodon.Entity.Notification.NotificationType]? = nil,
+            types: [Mastodon.Entity.NotificationType]? = nil,
+            excludeTypes: [Mastodon.Entity.NotificationType]? = nil,
             accountID: String? = nil
         ) {
             self.maxID = maxID
