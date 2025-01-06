@@ -26,10 +26,10 @@ final class MastodonStatusThreadViewModel {
     @Published private(set) var deletedObjectIDs: Set<MastodonStatus.ID> = Set()
 
     // output
-    @Published var __ancestors: [MastodonItemIdentifier] = []
+    @Published private var __ancestors: [MastodonItemIdentifier] = []
     @Published var ancestors: [MastodonItemIdentifier] = []
     
-    @Published var __descendants: [MastodonItemIdentifier] = []
+    @Published private var __descendants: [MastodonItemIdentifier] = []
     @Published var descendants: [MastodonItemIdentifier] = []
     
     init(filterContext: Mastodon.Entity.FilterContext?) {
