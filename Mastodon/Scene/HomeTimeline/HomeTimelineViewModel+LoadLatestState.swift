@@ -48,7 +48,8 @@ extension HomeTimelineViewModel.LoadLatestState {
         }
         
         override func didEnter(from previousState: GKState?) {
-            didEnter(from: previousState, viewModel: viewModel, isUserInitiated: false)
+            super.didEnter(from: previousState)
+            loadLatest(viewModel: viewModel, isUserInitiated: false, isContextSwitch: previousState is HomeTimelineViewModel.LoadLatestState.ContextSwitch)
         }
     }
     
@@ -58,7 +59,8 @@ extension HomeTimelineViewModel.LoadLatestState {
         }
         
         override func didEnter(from previousState: GKState?) {
-            didEnter(from: previousState, viewModel: viewModel, isUserInitiated: true)
+            super.didEnter(from: previousState)
+            loadLatest(viewModel: viewModel, isUserInitiated: true, isContextSwitch: previousState is HomeTimelineViewModel.LoadLatestState.ContextSwitch)
         }
     }
     
@@ -100,9 +102,7 @@ extension HomeTimelineViewModel.LoadLatestState {
         }
     }
 
-    private func didEnter(from previousState: GKState?, viewModel: HomeTimelineViewModel?, isUserInitiated: Bool) {
-        super.didEnter(from: previousState)
-
+    private func loadLatest(viewModel: HomeTimelineViewModel?, isUserInitiated: Bool, isContextSwitch: Bool) {
         guard let viewModel else { return }
         
         Task { @MainActor in
@@ -197,7 +197,7 @@ extension HomeTimelineViewModel.LoadLatestState {
                     return statuses.isNotEmpty
                 }()
                 
-                if hasNewStatuses && (previousState is HomeTimelineViewModel.LoadLatestState.ContextSwitch) == false {
+                if hasNewStatuses && !isContextSwitch {
                     viewModel.hasNewPosts.value = true
                 }
 
