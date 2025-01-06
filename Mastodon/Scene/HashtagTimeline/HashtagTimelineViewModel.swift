@@ -29,7 +29,7 @@ final class HashtagTimelineViewModel {
     let hashtagEntity = CurrentValueSubject<Mastodon.Entity.Tag?, Never>(nil)
 
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
     let hashtagDetails = CurrentValueSubject<Mastodon.Entity.Tag?, Never>(nil)
 

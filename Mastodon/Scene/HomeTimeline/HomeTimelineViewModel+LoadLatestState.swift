@@ -90,7 +90,7 @@ extension HomeTimelineViewModel.LoadLatestState {
                 }
                 
                 await viewModel.dataController.setRecordsAfterFiltering([])
-                var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+                var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
                 snapshot.appendSections([.main])
                 snapshot.appendItems([.topLoader], toSection: .main)
                 diffableDataSource.apply(snapshot) { [weak self] in

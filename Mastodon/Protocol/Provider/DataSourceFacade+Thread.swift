@@ -17,14 +17,14 @@ extension DataSourceFacade {
         target: StatusTarget,
         status: MastodonStatus
     ) async {
-        let _root: StatusItem.Thread? = {
+        let _root: MastodonItemIdentifier.Thread? = {
             let redirectRecord = DataSourceFacade.status(
                 status: status,
                 target: target
             )
             
-            let threadContext = StatusItem.Thread.Context(status: redirectRecord)
-            return StatusItem.Thread.root(context: threadContext)
+            let threadContext = MastodonItemIdentifier.Thread.Context(status: redirectRecord)
+            return MastodonItemIdentifier.Thread.root(context: threadContext)
         }()
         guard let root = _root else {
             assertionFailure()
@@ -40,7 +40,7 @@ extension DataSourceFacade {
     @MainActor
     static func coordinateToStatusThreadScene(
         provider: UIViewController,
-        root: StatusItem.Thread
+        root: MastodonItemIdentifier.Thread
     ) async {
         guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
         let threadViewModel = ThreadViewModel(

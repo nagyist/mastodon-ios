@@ -216,7 +216,7 @@
 		DB023D2827A0FABD005AC798 /* NotificationTableViewCellDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB023D2727A0FABD005AC798 /* NotificationTableViewCellDelegate.swift */; };
 		DB023D2A27A0FE5C005AC798 /* DataSourceProvider+NotificationTableViewCellDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB023D2927A0FE5C005AC798 /* DataSourceProvider+NotificationTableViewCellDelegate.swift */; };
 		DB023D2C27A10464005AC798 /* NotificationTimelineViewController+DataSourceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB023D2B27A10464005AC798 /* NotificationTimelineViewController+DataSourceProvider.swift */; };
-		DB025B78278D606A002F581E /* StatusItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB025B77278D606A002F581E /* StatusItem.swift */; };
+		DB025B78278D606A002F581E /* MastodonItemIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB025B77278D606A002F581E /* MastodonItemIdentifier.swift */; };
 		DB029E95266A20430062874E /* MastodonAuthenticationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB029E94266A20430062874E /* MastodonAuthenticationController.swift */; };
 		DB02CDAB26256A9500D0A2AF /* ThreadReplyLoaderTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB02CDAA26256A9500D0A2AF /* ThreadReplyLoaderTableViewCell.swift */; };
 		DB02CDBF2625AE5000D0A2AF /* AdaptiveUserInterfaceStyleBarButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB02CDBE2625AE5000D0A2AF /* AdaptiveUserInterfaceStyleBarButtonItem.swift */; };
@@ -878,7 +878,7 @@
 		DB023D2727A0FABD005AC798 /* NotificationTableViewCellDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTableViewCellDelegate.swift; sourceTree = "<group>"; };
 		DB023D2927A0FE5C005AC798 /* DataSourceProvider+NotificationTableViewCellDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DataSourceProvider+NotificationTableViewCellDelegate.swift"; sourceTree = "<group>"; };
 		DB023D2B27A10464005AC798 /* NotificationTimelineViewController+DataSourceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationTimelineViewController+DataSourceProvider.swift"; sourceTree = "<group>"; };
-		DB025B77278D606A002F581E /* StatusItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItem.swift; sourceTree = "<group>"; };
+		DB025B77278D606A002F581E /* MastodonItemIdentifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MastodonItemIdentifier.swift; sourceTree = "<group>"; };
 		DB029E94266A20430062874E /* MastodonAuthenticationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MastodonAuthenticationController.swift; sourceTree = "<group>"; };
 		DB02CDAA26256A9500D0A2AF /* ThreadReplyLoaderTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadReplyLoaderTableViewCell.swift; sourceTree = "<group>"; };
 		DB02CDBE2625AE5000D0A2AF /* AdaptiveUserInterfaceStyleBarButtonItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveUserInterfaceStyleBarButtonItem.swift; sourceTree = "<group>"; };
@@ -2259,7 +2259,7 @@
 			isa = PBXGroup;
 			children = (
 				2D76319E25C1521200929FB9 /* StatusSection.swift */,
-				DB025B77278D606A002F581E /* StatusItem.swift */,
+				DB025B77278D606A002F581E /* MastodonItemIdentifier.swift */,
 			);
 			path = Status;
 			sourceTree = "<group>";
@@ -3697,7 +3697,7 @@
 				DBE0822425CD3F1E00FD6BBD /* MastodonRegisterViewModel.swift in Sources */,
 				D8318A882A4468D300C0FB73 /* NotificationSettingsViewController.swift in Sources */,
 				2D82B9FF25E7863200E36F0F /* OnboardingViewControllerAppearance.swift in Sources */,
-				DB025B78278D606A002F581E /* StatusItem.swift in Sources */,
+				DB025B78278D606A002F581E /* MastodonItemIdentifier.swift in Sources */,
 				D82BD7532ABC44C2009A374A /* Coordinator.swift in Sources */,
 				DB697DD4278F4927004EF2F7 /* StatusTableViewCellDelegate.swift in Sources */,
 				2A506CF6292D040100059C37 /* HashtagTimelineHeaderView.swift in Sources */,

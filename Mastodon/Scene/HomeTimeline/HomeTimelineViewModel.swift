@@ -56,7 +56,7 @@ final class HomeTimelineViewModel: NSObject {
     let homeTimelineNeedRefresh = PassthroughSubject<Void, Never>()
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
 
     // top loader
@@ -147,7 +147,7 @@ final class HomeTimelineViewModel: NSObject {
 
 extension HomeTimelineViewModel {
     struct ScrollPositionRecord {
-        let item: StatusItem
+        let item: MastodonItemIdentifier
         let offset: CGFloat
         let timestamp: Date
     }
@@ -163,7 +163,7 @@ extension HomeTimelineViewModel {
 
     // load timeline gap
     @MainActor
-    func loadMore(item: StatusItem, at indexPath: IndexPath) async {
+    func loadMore(item: MastodonItemIdentifier, at indexPath: IndexPath) async {
         guard case let .feedLoader(feedItem) = item else { return }
 
         guard let status = feedItem.status else { return }

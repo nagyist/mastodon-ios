@@ -23,7 +23,7 @@ extension FavoriteViewModel {
             )
         )
         // set empty section to make update animation top-to-bottom style
-        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
         snapshot.appendSections([.main])
         diffableDataSource?.apply(snapshot)
         
@@ -35,10 +35,10 @@ extension FavoriteViewModel {
                 guard let self = self else { return }
                 guard let diffableDataSource = self.diffableDataSource else { return }
                 
-                var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+                var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
                 snapshot.appendSections([.main])
                 
-                let items = records.map { StatusItem.status(record: $0) }
+                let items = records.map { MastodonItemIdentifier.status($0) }
                 snapshot.appendItems(items, toSection: .main)
                 
                 if let currentState = self.stateMachine.currentState {

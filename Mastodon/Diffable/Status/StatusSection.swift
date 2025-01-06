@@ -33,7 +33,7 @@ extension StatusSection {
     static func diffableDataSource(
         tableView: UITableView,
         configuration: Configuration
-    ) -> UITableViewDiffableDataSource<StatusSection, StatusItem> {
+    ) -> UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier> {
         tableView.register(StatusTableViewCell.self, forCellReuseIdentifier: String(describing: StatusTableViewCell.self))
         tableView.register(TimelineMiddleLoaderTableViewCell.self, forCellReuseIdentifier: String(describing: TimelineMiddleLoaderTableViewCell.self))
         tableView.register(StatusThreadRootTableViewCell.self, forCellReuseIdentifier: String(describing: StatusThreadRootTableViewCell.self))
@@ -98,7 +98,7 @@ extension StatusSection {
 extension StatusSection {
     
     struct ThreadCellRegistrationConfiguration {
-        let thread: StatusItem.Thread
+        let thread: MastodonItemIdentifier.Thread
         let configuration: Configuration
     }
 

@@ -27,8 +27,8 @@ class ThreadViewModel {
     let mastodonStatusThreadViewModel: MastodonStatusThreadViewModel
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
-    @Published var root: StatusItem.Thread?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
+    @Published var root: MastodonItemIdentifier.Thread?
     @Published var threadContext: ThreadContext?
     @Published var hasPendingStatusEditReload = false
     
@@ -50,7 +50,7 @@ class ThreadViewModel {
     
     init(
         authenticationBox: MastodonAuthenticationBox,
-        optionalRoot: StatusItem.Thread?
+        optionalRoot: MastodonItemIdentifier.Thread?
     ) {
         self.authenticationBox = authenticationBox
         self.root = optionalRoot

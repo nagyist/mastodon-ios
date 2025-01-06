@@ -27,7 +27,7 @@ final class RemoteThreadViewModel: ThreadViewModel {
                 authenticationBox: authenticationBox
             )
             
-            let threadContext = StatusItem.Thread.Context(status: .fromEntity(response.value))
+            let threadContext = MastodonItemIdentifier.Thread.Context(status: .fromEntity(response.value))
             self.root = .root(context: threadContext)
             
         }   // end Task
@@ -50,7 +50,7 @@ final class RemoteThreadViewModel: ThreadViewModel {
             
             guard let status = response.value.status else { return }
             
-            let threadContext = StatusItem.Thread.Context(status: .fromEntity(status))
+            let threadContext = MastodonItemIdentifier.Thread.Context(status: .fromEntity(status))
             self.root = .root(context: threadContext)
         }   // end Task
     }

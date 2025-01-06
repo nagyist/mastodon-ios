@@ -31,7 +31,7 @@ extension ThreadViewModel {
         )
         
         // make initial snapshot animation smooth
-        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
         snapshot.appendSections([.main])
         if let root = self.root {
             if case let .root(threadContext) = root,
@@ -71,7 +71,7 @@ extension ThreadViewModel {
             Task { @MainActor in
                 let oldSnapshot = diffableDataSource.snapshot()
 
-                var newSnapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+                var newSnapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
                 newSnapshot.appendSections([.main])
 
                 // top loader
@@ -92,7 +92,7 @@ extension ThreadViewModel {
                 newSnapshot.appendItems(ancestors.reversed(), toSection: .main)
                 // root
                 if let root = root {
-                    let item = StatusItem.thread(root)
+                    let item = MastodonItemIdentifier.thread(root)
                     newSnapshot.appendItems([item], toSection: .main)
                 }
                 // leafs
@@ -141,14 +141,14 @@ extension ThreadViewModel {
 extension ThreadViewModel {
     
     @MainActor func updateDataSource(
-        snapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>,
+        snapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>,
         animatingDifferences: Bool
     ) async {
         await diffableDataSource?.apply(snapshot, animatingDifferences: animatingDifferences)
     }
     
     @MainActor func updateSnapshotUsingReloadData(
-        snapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>
+        snapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>
     ) async {
         await self.diffableDataSource?.applySnapshotUsingReloadData(snapshot)
     }
@@ -156,11 +156,11 @@ extension ThreadViewModel {
     // Some UI tweaks to present replies and conversation smoothly
     @MainActor private func updateSnapshotUsingReloadData(
         tableView: UITableView,
-        oldSnapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>,
-        newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>,
+        oldSnapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>,
+        newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>,
         difference: ThreadViewModel.Difference // <StatusItem>
     ) async {
-        let replies: [StatusItem] = {
+        let replies: [MastodonItemIdentifier] = {
             newSnapshot.itemIdentifiers.filter { item in
                 guard case let .thread(thread) = item else { return false }
                 guard case .reply = thread else { return false }
@@ -185,7 +185,7 @@ extension ThreadViewModel {
         // and restore the "TopLoaderHeight" when bottom inset adjusted
         
         // set bottom inset. Make root item pin to top.
-        if let item = root.flatMap({ StatusItem.thread($0) }),
+        if let item = root.flatMap({ MastodonItemIdentifier.thread($0) }),
            let index = newSnapshot.indexOfItem(item),
            let cell = tableView.cellForRow(at: IndexPath(row: index, section: 0))
         {
@@ -212,7 +212,7 @@ extension ThreadViewModel {
 
 extension ThreadViewModel {
     struct Difference {
-        let item: StatusItem
+        let item: MastodonItemIdentifier
         let sourceIndexPath: IndexPath
         let sourceDistanceToTableViewTopEdge: CGFloat
         let targetIndexPath: IndexPath
@@ -220,8 +220,8 @@ extension ThreadViewModel {
 
     @MainActor private func calculateReloadSnapshotDifference(
         tableView: UITableView,
-        oldSnapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>,
-        newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>
+        oldSnapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>,
+        newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>
     ) -> Difference? {
         guard oldSnapshot.numberOfItems != 0 else { return nil }
         guard let indexPathsForVisibleRows = tableView.indexPathsForVisibleRows?.sorted() else { return nil }

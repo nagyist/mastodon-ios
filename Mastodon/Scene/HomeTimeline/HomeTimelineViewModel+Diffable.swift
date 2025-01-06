@@ -29,7 +29,7 @@ extension HomeTimelineViewModel {
         )
 
         // make initial snapshot animation smooth
-        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
         snapshot.appendSections([.main])
         diffableDataSource?.apply(snapshot)
         
@@ -44,11 +44,11 @@ extension HomeTimelineViewModel {
 
                 Task { @MainActor in
                     let oldSnapshot = diffableDataSource.snapshot()
-                    var newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem> = {
+                    var newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier> = {
                         let newItems = records.map { record in
-                            StatusItem.feed(record: record)
+                            MastodonItemIdentifier.feed(record)
                         }.removingDuplicates()
-                        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+                        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
                         snapshot.appendSections([.main])
                         snapshot.appendItems(newItems, toSection: .main)
                         return snapshot
@@ -63,7 +63,7 @@ extension HomeTimelineViewModel {
                         if isLast {
                             newSnapshot.insertItems([.bottomLoader], afterItem: item)
                         } else {
-                            newSnapshot.insertItems([.feedLoader(record: record)], afterItem: item)
+                            newSnapshot.insertItems([.feedLoader(feed: record)], afterItem: item)
                         }
                     }
 
@@ -104,14 +104,14 @@ extension HomeTimelineViewModel {
 extension HomeTimelineViewModel {
     
     @MainActor func updateDataSource(
-        snapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>,
+        snapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>,
         animatingDifferences: Bool
     ) async {
         await diffableDataSource?.apply(snapshot, animatingDifferences: animatingDifferences)
     }
     
     @MainActor func updateSnapshotUsingReloadData(
-        snapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>
+        snapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>
     ) {
         self.diffableDataSource?.applySnapshotUsingReloadData(snapshot)
     }
