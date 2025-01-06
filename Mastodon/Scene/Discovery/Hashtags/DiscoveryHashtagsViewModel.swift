@@ -7,7 +7,6 @@
 
 import UIKit
 import Combine
-import GameplayKit
 import CoreData
 import CoreDataStack
 import MastodonCore
