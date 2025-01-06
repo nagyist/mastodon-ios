@@ -34,12 +34,14 @@ final public class FeedDataController {
     
     public func setRecordsAfterFiltering(_ newRecords: [MastodonFeed]) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records = newRecords; return }
-        self.records = await self.filter(newRecords, forFeed: kind, with: filterBox)
+        let filtered = await self.filter(newRecords, forFeed: kind, with: filterBox)
+        self.records = filtered.removingDuplicates()
     }
     
     public func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeed]) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
-        self.records += await self.filter(additionalRecords, forFeed: kind, with: filterBox)
+        let newRecords = await self.filter(additionalRecords, forFeed: kind, with: filterBox)
+        self.records = (self.records + newRecords).removingDuplicates()
     }
     
     public func loadInitial(kind: MastodonFeed.Kind) {
