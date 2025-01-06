@@ -164,10 +164,10 @@ extension HomeTimelineViewModel {
     // load timeline gap
     @MainActor
     func loadMore(item: StatusItem, at indexPath: IndexPath) async {
-        guard case let .feedLoader(record) = item else { return }
+        guard case let .feedLoader(feedItem) = item else { return }
 
-        guard let status = record.status else { return }
-        record.isLoadingMore = true
+        guard let status = feedItem.status else { return }
+        feedItem.isLoadingMore = true
 
         await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
@@ -200,7 +200,7 @@ extension HomeTimelineViewModel {
         
         // insert missing items
         guard let items = response?.value else {
-            record.isLoadingMore = false
+            feedItem.isLoadingMore = false
             return
         }
         
@@ -238,8 +238,8 @@ extension HomeTimelineViewModel {
         Task {
             await dataController.setRecordsAfterFiltering(combinedRecords)
             
-            record.isLoadingMore = false
-            record.hasMore = false
+            feedItem.isLoadingMore = false
+            feedItem.hasMore = false
         }
     }
     
