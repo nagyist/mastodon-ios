@@ -305,8 +305,12 @@ public final class StatusCardControl: UIControl {
             placeholderImage: icon(for: card.layout)
         ) { [weak self] image, _, _, _ in
             let tableView = self?.containingView(ofClass: UITableView.self)
+            UIView.setAnimationsEnabled(false)
             tableView?.beginUpdates()
-            defer { tableView?.endUpdates() }
+            defer {
+                tableView?.endUpdates()
+                UIView.setAnimationsEnabled(true)
+            }
             if image == nil {
                 self?.imageView.isHidden = true
                 self?.imageDividerView.isHidden = true
