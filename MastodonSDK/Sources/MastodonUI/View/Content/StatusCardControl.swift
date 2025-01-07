@@ -73,7 +73,6 @@ public final class StatusCardControl: UIControl {
 
     private let authorDivider: UIView
 
-    private let mastodonLogoImageView: UIImageView
     private let byLabel: UILabel
     private let authorLabel: UILabel
     private let authorAccountButton: StatusCardAuthorControl
@@ -107,11 +106,6 @@ public final class StatusCardControl: UIControl {
         // containerStackView - always vertical, holds mainContentStackView and authorStackView
         // mainContentStackView - vertical in .large, horizontal in .compact, holds imageView and labelStackView
         // authorStackView - always vertical, has an avatar button if the author has an account, otherwise shows author information as text
-
-        let mastodonLogo = Asset.Scene.Sidebar.logo.image.withRenderingMode(.alwaysTemplate)
-        mastodonLogoImageView = UIImageView(image: mastodonLogo)
-        mastodonLogoImageView.tintColor = .gray
-        mastodonLogoImageView.translatesAutoresizingMaskIntoConstraints = false
 
         byLabel = UILabel()
         byLabel.text = L10n.Common.Controls.Status.Card.by
@@ -148,7 +142,7 @@ public final class StatusCardControl: UIControl {
 
         authorAccountButton = StatusCardAuthorControl()
 
-        authorStackView = UIStackView(arrangedSubviews: [mastodonLogoImageView, byLabel, authorLabel, authorAccountButton, UIView()])
+        authorStackView = UIStackView(arrangedSubviews: [byLabel, authorLabel, authorAccountButton, UIView()])
         authorStackView.alignment = .fill//.center
         authorStackView.layoutMargins = .init(top: 10, left: 16, bottom: 10, right: 16)
         authorStackView.isLayoutMarginsRelativeArrangement = true
@@ -269,7 +263,6 @@ public final class StatusCardControl: UIControl {
             authorAccountButton.isHidden = false
             authorLabel.isHidden = true
             byLabel.isHidden = false
-            mastodonLogoImageView.isHidden = false
             self.author = account
 
             authorAccountButton.addTarget(self, action: #selector(StatusCardControl.profileTapped(_:)), for: .touchUpInside)
@@ -287,7 +280,6 @@ public final class StatusCardControl: UIControl {
             author = nil
             authorLabel.isHidden = false
             byLabel.isHidden = true
-            mastodonLogoImageView.isHidden = true
             authorAccountButton.isHidden = true
 
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(StatusCardControl.contentTapped(_:)))
@@ -397,11 +389,6 @@ public final class StatusCardControl: UIControl {
             imageView.isHidden = layout == .noPreviewImage
             imageDividerView.isHidden = layout == .noPreviewImage
         }
-
-        layoutConstraints.append(contentsOf: [
-            mastodonLogoImageView.widthAnchor.constraint(equalToConstant: 20),
-            mastodonLogoImageView.heightAnchor.constraint(equalTo: mastodonLogoImageView.widthAnchor),
-        ])
 
         NSLayoutConstraint.activate(layoutConstraints)
         invalidateIntrinsicContentSize()

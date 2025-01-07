@@ -10,7 +10,8 @@ class StatusCardAuthorControl: UIControl {
     public override init(frame: CGRect) {
         authorLabel = UILabel()
         authorLabel.textAlignment = .center
-        authorLabel.font = UIFontMetrics(forTextStyle: .footnote).scaledFont(for: .systemFont(ofSize: 16, weight: .bold))
+        authorLabel.font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(for: .systemFont(ofSize: 15, weight: .semibold))
+        authorLabel.textColor = .systemIndigo
         authorLabel.isUserInteractionEnabled = false
 
         avatarImage = AvatarImageView()
@@ -30,20 +31,22 @@ class StatusCardAuthorControl: UIControl {
         addSubview(contentStackView)
         setupConstraints()
         backgroundColor = Asset.Colors.Button.userFollowing.color
-        layer.cornerRadius = 10
+        layer.cornerRadius = 6
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    private let verticalPadding: CGFloat = 4
+    private let horizontalPadding: CGFloat = 6
     private func setupConstraints() {
         let constraints = [
-            contentStackView.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
-            trailingAnchor.constraint(equalTo: contentStackView.trailingAnchor, constant: 6),
-            bottomAnchor.constraint(equalTo: contentStackView.bottomAnchor, constant: 6),
+            contentStackView.topAnchor.constraint(equalTo: topAnchor, constant: verticalPadding),
+            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: horizontalPadding),
+            trailingAnchor.constraint(equalTo: contentStackView.trailingAnchor, constant: horizontalPadding),
+            bottomAnchor.constraint(equalTo: contentStackView.bottomAnchor, constant: verticalPadding),
 
-            avatarImage.widthAnchor.constraint(equalToConstant: 16),
-            avatarImage.widthAnchor.constraint(equalTo: avatarImage.heightAnchor).priority(.defaultHigh),
+            avatarImage.widthAnchor.constraint(equalToConstant: 20),
+            avatarImage.widthAnchor.constraint(equalTo: avatarImage.heightAnchor).priority(.required),
         ]
 
         NSLayoutConstraint.activate(constraints)
