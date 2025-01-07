@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -1271,6 +1271,10 @@
 		FBD689B42CCBF09F00CE29F3 /* DonationCampaignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DonationCampaignViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		FBC4A4F42D2DA424002E654B /* Beta Testing Settings */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Beta Testing Settings"; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		2A64515A29642A8A00CD8B8A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -1760,6 +1764,7 @@
 				2A0BF97D2C062278004A1E29 /* Privacy and Safety */,
 				D80911062AC4BFD100EB4D15 /* Server Details */,
 				D8F917092A4B2AFF008A5370 /* About Mastodon */,
+				FBC4A4F42D2DA424002E654B /* Beta Testing Settings */,
 				D8318A7F2A4466D300C0FB73 /* SettingsCoordinator.swift */,
 			);
 			path = Settings;
@@ -3146,6 +3151,9 @@
 				DB8FABCD26AEC7B2008E5AF4 /* PBXTargetDependency */,
 				2A64516829642A8B00CD8B8A /* PBXTargetDependency */,
 				2A728133297EA9D8004138C5 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FBC4A4F42D2DA424002E654B /* Beta Testing Settings */,
 			);
 			name = Mastodon;
 			packageProductDependencies = (
