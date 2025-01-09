@@ -29,7 +29,7 @@ extension NotificationTimelineViewModel {
         snapshot.appendSections([.main])
         diffableDataSource?.apply(snapshot)
         
-        dataController.$records
+        feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in
                 guard let self else { return }
@@ -39,29 +39,16 @@ extension NotificationTimelineViewModel {
                     let oldSnapshot = diffableDataSource.snapshot()
                     var newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem> = {
                         let newItems = records.map { record in
-                            NotificationItem.feed(record: record)
+                            NotificationItem.notification(record)
                         }
                         var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>()
                         snapshot.appendSections([.main])
                         if self.scope == .everything, let notificationPolicy = self.notificationPolicy, notificationPolicy.summary.pendingRequestsCount > 0 {
-                            snapshot.appendItems([.filteredNotifications(policy: notificationPolicy)])
+                            snapshot.appendItems([.filteredNotificationsInfo(policy: notificationPolicy)])
                         }
                         snapshot.appendItems(newItems.removingDuplicates(), toSection: .main)
                         return snapshot
                     }()
-
-                    let anchors: [MastodonFeed] = records.filter { $0.hasMore == true }
-                    let itemIdentifiers = newSnapshot.itemIdentifiers
-                    for (index, item) in itemIdentifiers.enumerated() {
-                        guard case let .feed(record) = item else { continue }
-                        guard anchors.contains(where: { feed in feed.id == record.id }) else { continue }
-                        let isLast = index + 1 == itemIdentifiers.count
-                        if isLast {
-                            newSnapshot.insertItems([.bottomLoader], afterItem: item)
-                        } else {
-                            newSnapshot.insertItems([.feedLoader(record: record)], afterItem: item)
-                        }
-                    }
 
                     let hasChanges = newSnapshot.itemIdentifiers != oldSnapshot.itemIdentifiers
                     if !hasChanges {

@@ -41,8 +41,8 @@ extension NotificationSection {
 
         return UITableViewDiffableDataSource(tableView: tableView) { tableView, indexPath, item -> UITableViewCell? in
             switch item {
-            case .feed(let feed):
-                if let notification = feed.notification, let accountWarning = notification.accountWarning {
+            case .notification(let notificationItem):
+                if let notification = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.Notification, let accountWarning = notification.accountWarning {
                     let cell = tableView.dequeueReusableCell(withIdentifier: AccountWarningNotificationCell.reuseIdentifier, for: indexPath) as! AccountWarningNotificationCell
                     cell.configure(with: accountWarning)
                     return cell
@@ -51,7 +51,7 @@ extension NotificationSection {
                     configure(
                         tableView: tableView,
                         cell: cell,
-                        viewModel: NotificationTableViewCell.ViewModel(value: .feed(feed)),
+                        itemIdentifier: notificationItem,
                         configuration: configuration
                     )
                     return cell
@@ -66,7 +66,7 @@ extension NotificationSection {
                 cell.activityIndicatorView.startAnimating()
                 return cell
 
-            case .filteredNotifications(let policy):
+            case .filteredNotificationsInfo(let policy):
                 let cell = tableView.dequeueReusableCell(withIdentifier: NotificationFilteringBannerTableViewCell.reuseIdentifier, for: indexPath) as! NotificationFilteringBannerTableViewCell
                 cell.configure(with: policy)
 
@@ -81,7 +81,7 @@ extension NotificationSection {
     static func configure(
         tableView: UITableView,
         cell: NotificationTableViewCell,
-        viewModel: NotificationTableViewCell.ViewModel,
+        itemIdentifier: MastodonFeedItemIdentifier,
         configuration: Configuration
     ) {
         StatusSection.setupStatusPollDataSource(
@@ -96,7 +96,7 @@ extension NotificationSection {
         
         cell.configure(
             tableView: tableView,
-            viewModel: viewModel,
+            notificationIdentifier: itemIdentifier,
             delegate: configuration.notificationTableViewCellDelegate,
             authenticationBox: configuration.authenticationBox
         )

@@ -19,8 +19,8 @@ extension APIService {
     }
 
     public func notifications(
-        maxID: Mastodon.Entity.Status.ID?,
-        accountID: String? = nil,
+        olderThan maxID: Mastodon.Entity.Status.ID?,
+        fromAccount accountID: String? = nil,
         scope: MastodonNotificationScope?,
         authenticationBox: MastodonAuthenticationBox
     ) async throws -> Mastodon.Response.Content<[Mastodon.Entity.Notification]> {
@@ -49,6 +49,46 @@ extension APIService {
         )
         
         let response = try await Mastodon.API.Notifications.getNotifications(
+            session: session,
+            domain: authenticationBox.domain,
+            query: query,
+            authorization: authorization
+        ).singleOutput()
+        
+        return response
+    }
+    
+    public func groupedNotifications(
+        olderThan maxID: Mastodon.Entity.Status.ID?,
+        fromAccount accountID: String? = nil,
+        scope: MastodonNotificationScope?,
+        authenticationBox: MastodonAuthenticationBox
+    ) async throws -> Mastodon.Response.Content<Mastodon.Entity.GroupedNotificationsResults> {
+        let authorization = authenticationBox.userAuthorization
+        
+        let types: [Mastodon.Entity.NotificationType]?
+        let excludedTypes: [Mastodon.Entity.NotificationType]?
+        
+        switch scope {
+        case .everything:
+            types = [.follow, .followRequest, .mention, .reblog, .favourite, .poll, .status, .moderationWarning]
+            excludedTypes = nil
+        case .mentions:
+            types = [.mention]
+            excludedTypes = [.follow, .followRequest, .reblog, .favourite, .poll]
+        case nil:
+            types = nil
+            excludedTypes = nil
+        }
+        
+        let query = Mastodon.API.Notifications.GroupedQuery(
+            maxID: maxID,
+            types: types,
+            excludeTypes: excludedTypes,
+            accountID: accountID
+        )
+        
+        let response = try await Mastodon.API.Notifications.getGroupedNotifications(
             session: session,
             domain: authenticationBox.domain,
             query: query,

@@ -34,6 +34,11 @@ extension NotificationView {
 }
 
 extension NotificationView {
+    
+    public func configure(notificationItem: MastodonFeedItemIdentifier) {
+        assertionFailure("not implemented")
+    }
+    
     public func configure(notification: MastodonNotification, authenticationBox: MastodonAuthenticationBox) {
         configureAuthor(notification: notification, authenticationBox: authenticationBox)
         
@@ -65,6 +70,10 @@ extension NotificationView {
             assertionFailure()
         }
         
+    }
+    
+    private func configureAuthor(notificationItem: MastodonItemIdentifier) {
+        assertionFailure("not implemented")
     }
 
     private func configureAuthor(notification: MastodonNotification, authenticationBox: MastodonAuthenticationBox) {

@@ -3,6 +3,7 @@
 import Foundation
 import CoreDataStack
 
+//@available(*, deprecated, message: "migrate to MastodonFeedLoader and MastodonFeedItemIdentifier")
 public final class MastodonFeed {
     
     public enum Kind {
@@ -109,4 +110,109 @@ extension MastodonFeed: Hashable {
         hasher.combine(isLoadingMore)
     }
     
+}
+
+
+public enum MastodonFeedItemIdentifier: Hashable, Identifiable, Equatable {
+    case status(id: String)
+    case notification(id: String)
+    case notificationGroup(id: String)
+    
+    public var id: String {
+        switch self {
+        case .status(let id):
+            return id
+        case .notification(let id):
+            return id
+        case .notificationGroup(let id):
+            return id
+        }
+    }
+}
+
+public enum MastodonFeedKind {
+    case notificationsAll
+    case notificationsMentionsOnly
+    case notificationsWithAccount(String)
+}
+
+public class MastodonFeedItemCacheManager {
+    private var statusCache = [ String : Mastodon.Entity.Status ]()
+    private var notificationsCache = [ String : Mastodon.Entity.Notification ]()
+    private var groupedNotificationsCache = [ String : Mastodon.Entity.NotificationGroup ]()
+    private var relationshipsCache = [ String : Mastodon.Entity.Relationship ]()
+    private var fullAccountsCache = [ String : Mastodon.Entity.Account ]()
+    private var partialAccountsCache = [ String : Mastodon.Entity.PartialAccountWithAvatar ]()
+    
+    private init(){}
+    public static let shared = MastodonFeedItemCacheManager()
+
+    public func clear() { // TODO: call this when switching accounts
+        statusCache.removeAll()
+        notificationsCache.removeAll()
+        groupedNotificationsCache.removeAll()
+        relationshipsCache.removeAll()
+    }
+    
+    public func addToCache(_ item: Any) {
+        if let status = item as? Mastodon.Entity.Status {
+            statusCache[status.id] = status
+        } else if let notification = item as? Mastodon.Entity.Notification {
+            notificationsCache[notification.id] = notification
+        } else if let notificationGroup = item as? Mastodon.Entity.NotificationGroup {
+            groupedNotificationsCache[notificationGroup.id] = notificationGroup
+        } else if let relationship = item as? Mastodon.Entity.Relationship {
+            relationshipsCache[relationship.id] = relationship
+        } else if let fullAccount = item as? Mastodon.Entity.Account {
+            partialAccountsCache.removeValue(forKey: fullAccount.id)
+            fullAccountsCache[fullAccount.id] = fullAccount
+        } else if let partialAccount = item as? Mastodon.Entity.PartialAccountWithAvatar {
+            partialAccountsCache[partialAccount.id] = partialAccount
+        } else {
+            assertionFailure("cannot cache \(item)")
+        }
+    }
+    
+    public func cachedItem(_ identifier: MastodonFeedItemIdentifier) -> Any? {
+        switch identifier {
+        case .status(let id):
+            return statusCache[id]
+        case .notification(let id):
+            return notificationsCache[id]
+        case .notificationGroup(let id):
+            return groupedNotificationsCache[id]
+        }
+    }
+    
+    public func filterableStatus(associatedWith identifier: MastodonFeedItemIdentifier) -> Mastodon.Entity.Status? {
+        guard let cachedItem = cachedItem(identifier) else { return nil }
+        if let status = cachedItem as? Mastodon.Entity.Status {
+            return status.reblog ?? status
+        } else if let notification = cachedItem as? Mastodon.Entity.Notification {
+            return notification.status?.reblog ?? notification.status
+        } else if let notificationGroup = cachedItem as? Mastodon.Entity.NotificationGroup {
+            guard let statusID = notificationGroup.statusID else { return nil }
+            let status = statusCache[statusID]
+            return status?.reblog ?? status
+        } else if let relationship = cachedItem as? Mastodon.Entity.Relationship {
+            return nil
+        } else {
+            return nil
+        }
+    }
+    
+    public func relationship(associatedWith accountID: MastodonFeedItemIdentifier) -> Mastodon.Entity.Relationship? {
+        assertionFailure("not implemented")
+        return nil
+    }
+    
+    public func partialAccount(_ id: String) -> Mastodon.Entity.PartialAccountWithAvatar? {
+        assertionFailure("not implemented")
+        return nil
+    }
+    
+    public func fullAccount(_ id: String) -> Mastodon.Entity.Account? {
+        assertionFailure("not implemented")
+        return nil
+    }
 }

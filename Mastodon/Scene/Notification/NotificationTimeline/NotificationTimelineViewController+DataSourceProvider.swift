@@ -29,21 +29,27 @@ extension NotificationTimelineViewController: DataSourceProvider {
         }
         
         switch item {
-        case .feed(let feed):
-            let item: DataSourceItem? = {
-                guard feed.kind == .notificationAll || feed.kind == .notificationMentions else { return nil }
-                
-                if let notification = feed.notification {
-                    let mastodonNotification = MastodonNotification.fromEntity(notification, relationship: nil)
-                    return .notification(record: mastodonNotification)
-                } else {
-                    return nil
-                }
-            }()
-            return item
-        case .filteredNotifications(let policy):
+        case .notification(let notificationItem):
+            switch notificationItem {
+            case .notification, .notificationGroup:
+                let item: DataSourceItem? = {
+                    //                guard feed.kind == .notificationAll || feed.kind == .notificationMentions else { return nil }
+                    
+                    if let notification = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.Notification {
+                        let mastodonNotification = MastodonNotification.fromEntity(notification, relationship: nil)
+                        return .notification(record: mastodonNotification)
+                    } else {
+                        return nil
+                    }
+                }()
+                return item
+            case .status:
+                assertionFailure("unexpected item in notifications feed")
+                return nil
+            }
+        case .filteredNotificationsInfo(let policy):
             return DataSourceItem.notificationBanner(policy: policy)
-        case .bottomLoader, .feedLoader(_):
+        case .bottomLoader, .feedLoader:
             return nil
         }
     }

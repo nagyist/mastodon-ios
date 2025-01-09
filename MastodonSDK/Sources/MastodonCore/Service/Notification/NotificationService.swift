@@ -172,7 +172,7 @@ extension NotificationService {
         guard let authenticationBox = try await authenticationBox(for: pushNotification) else { return }
         
         _ = try await APIService.shared.notifications(
-            maxID: nil,
+            olderThan: nil,
             scope: .everything,
             authenticationBox: authenticationBox
         )

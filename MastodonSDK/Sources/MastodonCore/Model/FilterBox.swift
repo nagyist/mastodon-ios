@@ -62,6 +62,13 @@ public extension Mastodon.Entity {
             hideWholeWordMatch = _hideWholeWordMatch
         }
         
+        public func apply(to status: Mastodon.Entity.Status, in context: FilterContext) -> Mastodon.Entity.FilterResult {
+            let status = status.reblog ?? status
+            let defaultFilterResult = Mastodon.Entity.FilterResult.notFiltered
+            guard let content = status.content?.lowercased() else { return defaultFilterResult }
+            return apply(to: content, in: context)
+        }
+        
         public func apply(to status: MastodonStatus, in context: FilterContext) -> Mastodon.Entity.FilterResult {
             let status = status.reblog ?? status
             let defaultFilterResult = Mastodon.Entity.FilterResult.notFiltered

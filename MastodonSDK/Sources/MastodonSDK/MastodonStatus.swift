@@ -45,6 +45,7 @@ public enum ContentWarning {
     
 }
 
+//@available(*, deprecated, message: "migrate to Mastodon.Entity.Status")
 public final class MastodonStatus: ObservableObject {
     public typealias ID = Mastodon.Entity.Status.ID
     

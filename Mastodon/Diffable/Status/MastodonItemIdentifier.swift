@@ -10,6 +10,7 @@ import CoreDataStack
 import MastodonUI
 import MastodonSDK
 
+//@available(*, deprecated, message: "migrate to MastodonFeedItemIdentifier")
 enum MastodonItemIdentifier: Hashable {
     case feed(MastodonFeed)
     case feedLoader(feed: MastodonFeed)

@@ -9,6 +9,7 @@ import UIKit
 import Combine
 import CoreDataStack
 import MastodonCore
+import MastodonSDK
 import MastodonLocalization
 
 class NotificationTimelineViewController: UIViewController, MediaPreviewableViewController {
@@ -264,7 +265,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
     
     static func validNavigateableItem(_ item: NotificationItem) -> Bool {
         switch item {
-        case .feed:
+        case .notification:
             return true
         default:
             return false
@@ -278,10 +279,43 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
         
         Task { @MainActor in
             switch item {
-            case .feed(let record):
-                guard let notification = record.notification else { return }
+            case .notification(let notificationItem):
+                let status: Mastodon.Entity.Status?
+                let account: Mastodon.Entity.Account?
+                switch notificationItem {
+                case .notification(let id):
+                    guard let notification = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.Notification  else {
+                        status = nil
+                        account = nil
+                        break
+                    }
+                    status = notification.status
+                    account = notification.account
+                    
+                case .notificationGroup(let id):
+                    guard let notificationGroup = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.NotificationGroup  else {
+                        status = nil
+                        account = nil
+                        break
+                    }
+                    if let statusID = notificationGroup.statusID {
+                        status = MastodonFeedItemCacheManager.shared.cachedItem(.status(id: statusID)) as? Mastodon.Entity.Status
+                    } else {
+                        status = nil
+                    }
+                    if notificationGroup.sampleAccountIDs.count == 1, let theOneAccountID = notificationGroup.sampleAccountIDs.first {
+                        account = MastodonFeedItemCacheManager.shared.fullAccount(theOneAccountID)
+                    } else {
+                        account = nil
+                    }
+                case .status:
+                    assertionFailure("unexpected element in notifications feed")
+                    status = nil
+                    account = nil
+                    break
+                }
                 
-                if let status = notification.status {
+                if let status {
                     let threadViewModel = ThreadViewModel(
                         authenticationBox: self.viewModel.authenticationBox,
                         optionalRoot: .root(context: .init(status: .fromEntity(status)))
@@ -291,9 +325,8 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
                         from: self,
                         transition: .show
                     )
-                } else {
-
-                    await DataSourceFacade.coordinateToProfileScene(provider: self, account: notification.account)
+                } else if let account {
+                    await DataSourceFacade.coordinateToProfileScene(provider: self, account: account)
                 }
             default:
                 break

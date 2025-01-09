@@ -4,6 +4,7 @@ import Combine
 import MastodonSDK
 import os.log
 
+//@available(*, deprecated, message: "migrate to MastodonFeedLoader")
 @MainActor
 final public class FeedDataController {
     private let logger = Logger(subsystem: "FeedDataController", category: "Data")
@@ -22,7 +23,7 @@ final public class FeedDataController {
         
         StatusFilterService.shared.$activeFilterBox
             .sink { filterBox in
-                if let filterBox {
+                if filterBox != nil {
                     Task { [weak self] in
                         guard let self else { return }
                         await self.setRecordsAfterFiltering(self.records)
@@ -256,7 +257,7 @@ private extension FeedDataController {
 
     private func getFeeds(with scope: APIService.MastodonNotificationScope?, accountID: String? = nil) async throws -> [MastodonFeed] {
 
-        let notifications = try await APIService.shared.notifications(maxID: nil, accountID: accountID, scope: scope, authenticationBox: authenticationBox).value
+        let notifications = try await APIService.shared.notifications(olderThan: nil, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
 
         let accounts = notifications.map { $0.account }
         let relationships = try await APIService.shared.relationship(forAccounts: accounts, authenticationBox: authenticationBox).value

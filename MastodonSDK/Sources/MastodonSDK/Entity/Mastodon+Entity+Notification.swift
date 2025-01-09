@@ -26,7 +26,7 @@ extension Mastodon.Entity {
         public let account: Account
         public let status: Status?
         public let report: Report?
-//        public let relationshipSeverenceEvent: RelationshipSeveranceEvent?
+        public let relationshipSeveranceEvent: RelationshipSeveranceEvent?
         public let accountWarning: AccountWarning?
 
         enum CodingKeys: String, CodingKey {
@@ -38,6 +38,7 @@ extension Mastodon.Entity {
             case status
             case report
             case accountWarning = "moderation_warning"
+            case relationshipSeveranceEvent = "event"
         }
     }
     
@@ -62,7 +63,7 @@ extension Mastodon.Entity {
         public let sampleAccountIDs: [String] // IDs of some of the accounts who most recently triggered notifications in this group.
         public let statusID: ID?
         public let report: Report?
-        //        public let relationshipSeverenceEvent: RelationshipSeveranceEvent?
+        public let relationshipSeveranceEvent: RelationshipSeveranceEvent?
         public let accountWarning: AccountWarning?
         
         enum CodingKeys: String, CodingKey {
@@ -77,6 +78,93 @@ extension Mastodon.Entity {
             case statusID = "status_id"
             case report = "report"
             case accountWarning = "moderation_warning"
+            case relationshipSeveranceEvent = "event"
+        }
+    }
+    
+    public struct GroupedNotificationsResults: Codable, Sendable {
+        public let accounts: [Mastodon.Entity.Account]
+        public let partialAccounts: [Mastodon.Entity.PartialAccountWithAvatar]?
+        public let statuses: [Mastodon.Entity.Status]
+        public let notificationGroups: [Mastodon.Entity.NotificationGroup]
+        
+        enum CodingKeys: String, CodingKey {
+            case accounts
+            case partialAccounts = "partial_accounts"
+            case statuses
+            case notificationGroups = "notification_groups"
+        }
+    }
+    
+    public struct PartialAccountWithAvatar: Codable, Sendable
+    {
+        public typealias ID = String
+        
+        public let id: ID
+        public let acct: String // The Webfinger account URI. Equal to username for local users, or username@domain for remote users.
+        public let url: String // location of this account's profile page
+        public let avatar: String // url
+        public let avatarStatic: String // url, non-animated
+        public let locked: Bool // account manually approves follow requests
+        public let bot: Bool // is this a bot account
+        
+        enum CodingKeys: String, CodingKey {
+            case id
+            case acct
+            case url
+            case avatar
+            case avatarStatic = "avatar_static"
+            case locked
+            case bot
+        }
+    }
+    
+    public enum RelationshipSeveranceEventType: RawRepresentable, Codable, Sendable {
+        case domainBlock
+        case userDomainBlock
+        case accountSuspension
+        case _other(String)
+        
+        public init?(rawValue: String) {
+            switch rawValue {
+            case "domain_block":         self = .domainBlock
+            case "user_domain_block":    self = .userDomainBlock
+            case "account_suspension":   self = .accountSuspension
+            default:                     self = ._other(rawValue)
+            }
+        }
+        public var rawValue: String {
+            switch self {
+            case .domainBlock:                       return "domain_block"
+            case .userDomainBlock:
+                return "user_domain_block"
+            case .accountSuspension:
+                return "account_suspension"
+            case ._other(let rawValue):
+                return rawValue
+            }
+        }
+    }
+    
+    public struct RelationshipSeveranceEvent: Codable, Sendable {
+        public typealias ID = String
+        
+        public let id: ID
+        public let type: RelationshipSeveranceEventType
+        public let purged: Bool // Whether the list of severed relationships is unavailable because the underlying issue has been purged.
+        public let targetName: String // Name of the target of the moderation/block event. This is either a domain name or a user handle, depending on the event type.
+        public let followersCount: Int // Number of followers that were removed as result of the event.
+        public let followingCount: Int // Number of accounts the user stopped following as result of the event.
+        public let createdAt: Date
+        
+        enum CodingKeys: String, CodingKey {
+            case id
+            case type
+            case purged
+            case targetName = "target_name"
+            case followersCount = "followers_count"
+            case followingCount = "following_count"
+            case createdAt = "created_at"
         }
     }
 }

@@ -22,7 +22,7 @@ final class NotificationTimelineViewModel {
     let authenticationBox: MastodonAuthenticationBox
     let scope: Scope
     var notificationPolicy: Mastodon.Entity.NotificationPolicy?
-    let dataController: FeedDataController
+    let feedLoader: MastodonFeedLoader
     @Published var isLoadingLatest = false
     @Published var lastAutomaticFetchTimestamp: Date?
     
@@ -52,45 +52,9 @@ final class NotificationTimelineViewModel {
     ) {
         self.authenticationBox = authenticationBox
         self.scope = scope
-        self.dataController = FeedDataController(authenticationBox: authenticationBox, kind: scope.feedKind)
+        let useGroupedNotifications = false
+        self.feedLoader = MastodonFeedLoader(authenticationBox: authenticationBox, kind: scope.feedKind, dedupePolicy: useGroupedNotifications ? .removeOldest : .omitNewest)
         self.notificationPolicy = notificationPolicy
-        
-        Task {
-            switch scope {
-            case .everything:
-                let initialRecords = (try? FileManager.default.cachedNotificationsAll(for: authenticationBox))?.map({ notification in
-                    MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationAll)
-                }) ?? []
-                await self.dataController.setRecordsAfterFiltering(initialRecords)
-            case .mentions:
-                let initialRecords = (try? FileManager.default.cachedNotificationsMentions(for: authenticationBox))?.map({ notification in
-                    MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationMentions)
-                }) ?? []
-                await self.dataController.setRecordsAfterFiltering(initialRecords)
-            case .fromAccount(_):
-                await self.dataController.setRecordsAfterFiltering([])
-            }
-        }
-
-        self.dataController.$records
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink(receiveValue: { feeds in
-                let items: [Mastodon.Entity.Notification] = feeds.compactMap { feed -> Mastodon.Entity.Notification? in
-                    guard let status = feed.notification else { return nil }
-                    return status
-                }
-                switch self.scope {
-                case .everything:
-                    FileManager.default.cacheNotificationsAll(items: items, for: authenticationBox)
-                case .mentions:
-                    FileManager.default.cacheNotificationsMentions(items: items, for: authenticationBox)
-                case .fromAccount(_):
-                    //NOTE: we don't persist these
-                    break
-                }
-            })
-            .store(in: &disposeBag)
 
         NotificationCenter.default.addObserver(self, selector: #selector(Self.notificationFilteringChanged(_:)), name: .notificationFilteringChanged, object: nil)
     }
@@ -126,14 +90,14 @@ extension NotificationTimelineViewModel {
             }
         }
         
-        var feedKind: MastodonFeed.Kind {
+        var feedKind: MastodonFeedKind {
             switch self {
             case .everything:
-                return .notificationAll
+                return .notificationsAll
             case .mentions:
-                return .notificationMentions
+                return .notificationsMentionsOnly
             case .fromAccount(let account):
-                return .notificationAccount(account.id)
+                return .notificationsWithAccount(account.id)
             }
         }
     }
@@ -145,28 +109,12 @@ extension NotificationTimelineViewModel {
     func loadLatest() async {
         isLoadingLatest = true
         defer { isLoadingLatest = false }
-        
-        switch scope {
-        case .everything:
-            dataController.loadInitial(kind: .notificationAll)
-        case .mentions:
-            dataController.loadInitial(kind: .notificationMentions)
-        case .fromAccount(let account):
-            dataController.loadInitial(kind: .notificationAccount(account.id))
-        }
-
+        feedLoader.loadInitial(kind: scope.feedKind)
         didLoadLatest.send()
     }
     
     // load timeline gap
     func loadMore(item: NotificationItem) async {
-        switch scope {
-        case .everything:
-            dataController.loadNext(kind: .notificationAll)
-        case .mentions:
-            dataController.loadNext(kind: .notificationMentions)
-        case .fromAccount(let account):
-            dataController.loadNext(kind: .notificationAccount(account.id))
-        }
+        feedLoader.loadNext(kind: scope.feedKind)
     }
 }

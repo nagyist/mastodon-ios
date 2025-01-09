@@ -34,7 +34,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
     class Initial: NotificationTimelineViewModel.LoadOldestState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             guard let viewModel = viewModel else { return false }
-            guard !viewModel.dataController.records.isEmpty else { return false }
+            guard !viewModel.feedLoader.records.isEmpty else { return false }
             return stateClass == Loading.self
         }
     }
@@ -50,7 +50,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
             
             guard let viewModel = viewModel, let stateMachine = stateMachine else { return }
             
-            guard let lastFeedRecord = viewModel.dataController.records.last else {
+            guard let lastFeedRecord = viewModel.feedLoader.records.last else {
                 stateMachine.enter(Fail.self)
                 return
             }
@@ -71,7 +71,7 @@ extension NotificationTimelineViewModel.LoadOldestState {
             }
 
             Task {
-                let _maxID: Mastodon.Entity.Notification.ID? = lastFeedRecord.notification?.id
+                let _maxID: Mastodon.Entity.Notification.ID? = lastFeedRecord.id
                 
                 guard let maxID = _maxID else {
                     self.enter(state: Fail.self)
@@ -80,8 +80,8 @@ extension NotificationTimelineViewModel.LoadOldestState {
                 
                 do {
                     let response = try await APIService.shared.notifications(
-                        maxID: maxID,
-                        accountID: accountID,
+                        olderThan: maxID,
+                        fromAccount: accountID,
                         scope: scope,
                         authenticationBox: viewModel.authenticationBox
                     )
