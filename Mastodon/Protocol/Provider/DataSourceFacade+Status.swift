@@ -243,7 +243,7 @@ extension DataSourceFacade {
                 authenticationBox: dependency.authenticationBox,
                 account: menuContext.author,
                 relationship: relationship,
-                status: menuContext.statusViewModel?.originalStatus,
+                status: menuContext.statusViewModel?._originalStatus,
                 contentDisplayMode: .neverConceal
             )
 
@@ -270,7 +270,7 @@ extension DataSourceFacade {
                 transition: .activityViewControllerPresent(animated: true, completion: nil)
             )
         case .bookmarkStatus:
-                guard let status = menuContext.statusViewModel?.originalStatus else {
+                guard let status = menuContext.statusViewModel?._originalStatus else {
                     assertionFailure()
                     return
                 }
@@ -279,7 +279,7 @@ extension DataSourceFacade {
                     status: status
                 )
         case .shareStatus:
-            guard let status: MastodonStatus = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus else {
+            guard let status: MastodonStatus = menuContext.statusViewModel?._originalStatus?.reblog ?? menuContext.statusViewModel?._originalStatus else {
                 assertionFailure()
                 return
             }
@@ -310,7 +310,7 @@ extension DataSourceFacade {
                     style: .destructive
                 ) { [weak dependency] _ in
                     guard let dependency else { return }
-                    guard let status = menuContext.statusViewModel?.originalStatus else { return }
+                    guard let status = menuContext.statusViewModel?._originalStatus else { return }
                     performDeletion(of: status, with: dependency)
                 }
                 alertController.addAction(confirmAction)
@@ -318,11 +318,11 @@ extension DataSourceFacade {
                 alertController.addAction(cancelAction)
                 dependency.present(alertController, animated: true)
             } else {
-                guard let status = menuContext.statusViewModel?.originalStatus else { return }
+                guard let status = menuContext.statusViewModel?._originalStatus else { return }
                 performDeletion(of: status, with: dependency)
             }
         case .translateStatus:
-            guard let status = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus else { return }
+            guard let status = menuContext.statusViewModel?._originalStatus?.reblog ?? menuContext.statusViewModel?._originalStatus else { return }
 
             do {
                 let translation = try await DataSourceFacade.translateStatus(provider: dependency, status: status)
@@ -336,7 +336,7 @@ extension DataSourceFacade {
             }
         case .editStatus:
 
-            guard let status = menuContext.statusViewModel?.originalStatus else { return }
+            guard let status = menuContext.statusViewModel?._originalStatus else { return }
 
             let statusSource = try await APIService.shared.getStatusSource(
                 forStatusID: status.id,
@@ -391,21 +391,21 @@ extension DataSourceFacade {
             alertController.addAction(cancelAction)
             dependency.present(alertController, animated: true)
         case .boostStatus(_):
-            guard let status: MastodonStatus = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus else {
+            guard let status: MastodonStatus = menuContext.statusViewModel?._originalStatus?.reblog ?? menuContext.statusViewModel?._originalStatus else {
                 assertionFailure()
                 return
             }
 
             try await responseToStatusReblogAction(provider: dependency, status: status)
         case .favoriteStatus(_):
-            guard let status: MastodonStatus = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus else {
+            guard let status: MastodonStatus = menuContext.statusViewModel?._originalStatus?.reblog ?? menuContext.statusViewModel?._originalStatus else {
                 assertionFailure()
                 return
             }
 
             try await responseToStatusFavoriteAction(provider: dependency, status: status)
         case .copyStatusLink:
-            guard let status: MastodonStatus = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus else {
+            guard let status: MastodonStatus = menuContext.statusViewModel?._originalStatus?.reblog ?? menuContext.statusViewModel?._originalStatus else {
                 assertionFailure()
                 return
             }
@@ -413,7 +413,7 @@ extension DataSourceFacade {
             UIPasteboard.general.string = status.entity.url
         case .openStatusInBrowser:
             guard
-                let status: MastodonStatus = menuContext.statusViewModel?.originalStatus?.reblog ?? menuContext.statusViewModel?.originalStatus,
+                let status: MastodonStatus = menuContext.statusViewModel?._originalStatus?.reblog ?? menuContext.statusViewModel?._originalStatus,
                 let urlString = status.entity.url,
                 let url = URL(string: urlString)
             else {

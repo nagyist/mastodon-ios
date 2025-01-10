@@ -143,6 +143,9 @@ public class MastodonFeedItemCacheManager {
     private var relationshipsCache = [ String : Mastodon.Entity.Relationship ]()
     private var fullAccountsCache = [ String : Mastodon.Entity.Account ]()
     private var partialAccountsCache = [ String : Mastodon.Entity.PartialAccountWithAvatar ]()
+    private var filterOverrides = Set<String>()
+    private var contentWarningOverrides = Set<String>()
+    private var followRequestStates = [ String : MastodonFollowRequestState ]()
     
     private init(){}
     public static let shared = MastodonFeedItemCacheManager()
@@ -194,16 +197,15 @@ public class MastodonFeedItemCacheManager {
             guard let statusID = notificationGroup.statusID else { return nil }
             let status = statusCache[statusID]
             return status?.reblog ?? status
-        } else if let relationship = cachedItem as? Mastodon.Entity.Relationship {
-            return nil
+//        } else if let relationship = cachedItem as? Mastodon.Entity.Relationship {
+//            return nil
         } else {
             return nil
         }
     }
     
-    public func relationship(associatedWith accountID: MastodonFeedItemIdentifier) -> Mastodon.Entity.Relationship? {
-        assertionFailure("not implemented")
-        return nil
+    public func currentRelationship(toAccount accountID: String) -> Mastodon.Entity.Relationship? {
+        return relationshipsCache[accountID]
     }
     
     public func partialAccount(_ id: String) -> Mastodon.Entity.PartialAccountWithAvatar? {
@@ -214,5 +216,53 @@ public class MastodonFeedItemCacheManager {
     public func fullAccount(_ id: String) -> Mastodon.Entity.Account? {
         assertionFailure("not implemented")
         return nil
+    }
+    
+    private func contentStatusID(forStatus statusID: String) -> String {
+        guard let status = statusCache[statusID] else { return statusID }
+        return status.reblog?.id ?? statusID
+    }
+    
+    public func shouldShowDespiteContentWarning(statusID: String) -> Bool {
+        return contentWarningOverrides.contains(contentStatusID(forStatus: statusID))
+    }
+    
+    public func shouldShowDespiteFilter(statusID: String) -> Bool {
+        return filterOverrides.contains(contentStatusID(forStatus: statusID))
+    }
+    
+    public func toggleFilteredVisibility(ofStatus statusID: String) {
+        let contentStatusID = contentStatusID(forStatus: statusID)
+        if filterOverrides.contains(contentStatusID) {
+            filterOverrides.remove(contentStatusID)
+        } else {
+            filterOverrides.insert(contentStatusID)
+        }
+    }
+    
+    public func toggleContentWarnedVisibility(ofStatus statusID: String) {
+        let contentStatusID = contentStatusID(forStatus: statusID)
+        if contentWarningOverrides.contains(contentStatusID) {
+            contentWarningOverrides.remove(contentStatusID)
+        } else {
+            contentWarningOverrides.insert(contentStatusID)
+        }
+    }
+    
+    public func followRequestState(forFollowRequestNotification notificationID: String) -> MastodonFollowRequestState {
+        if let requestState = followRequestStates[notificationID] {
+            return requestState
+        } else {
+            return .init(state: .none)
+        }
+    }
+    
+    public func setFollowRequestState(_ requestState: MastodonFollowRequestState, for followRequestID: String) {
+        switch requestState.state {
+        case .none:
+            followRequestStates.removeValue(forKey: followRequestID)
+        default:
+            followRequestStates[followRequestID] = requestState
+        }
     }
 }

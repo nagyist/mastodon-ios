@@ -76,7 +76,7 @@ extension StatusView {
         configurePoll(status: status)
         configureCard(status: status)
         configureToolbar(status: status)
-        viewModel.originalStatus = status
+        viewModel._originalStatus = status
 
         viewModel.$translation
             .receive(on: DispatchQueue.main)
@@ -194,7 +194,11 @@ extension StatusView {
     }
     
     private func configureHeader(status: MastodonStatus) {
-        if status.entity.reblogged == true, 
+        configureHeader(status: status.entity)
+    }
+    
+    private func configureHeader(status: Mastodon.Entity.Status) {
+        if status.reblogged == true,
             let authenticationBox = viewModel.authenticationBox,
            let account = authenticationBox.cachedAccount {
 
@@ -213,8 +217,8 @@ extension StatusView {
                 }
             }()
         } else if status.reblog != nil {
-            let name = status.entity.account.displayNameWithFallback
-            let emojis = status.entity.account.emojis
+            let name = status.account.displayNameWithFallback
+            let emojis = status.account.emojis
 
             viewModel.header = {
                 let text = L10n.Common.Controls.Status.userReblogged(name)
@@ -228,8 +232,8 @@ extension StatusView {
                 }
             }()
 
-        } else if let _ = status.entity.inReplyToID,
-                  let inReplyToAccountID = status.entity.inReplyToAccountID
+        } else if let _ = status.inReplyToID,
+                  let inReplyToAccountID = status.inReplyToAccountID
         {
             func createHeader(
                 name: String?,
@@ -251,7 +255,7 @@ extension StatusView {
                 return header
             }
 
-            if let inReplyToID = status.entity.inReplyToID {
+            if let inReplyToID = status.inReplyToID {
                 // A. replyTo status exist
                 
                 /// we need to initially set an empty header, otherwise the layout gets messed up
@@ -369,13 +373,20 @@ extension StatusView {
     }
     
     public func revertTranslation() {
-        guard let originalStatus = viewModel.originalStatus else { return }
-        
-        viewModel.translation = nil
-        configure(status: originalStatus, contentDisplayMode: contentDisplayMode)
+        if let originalStatus = viewModel._originalStatus {
+            viewModel.translation = nil
+            configure(status: originalStatus, contentDisplayMode: contentDisplayMode)
+        } else if let untranslatedStatus = viewModel.untranslatedStatus {
+            viewModel.translation = nil
+            configure(status: untranslatedStatus, contentDisplayMode: contentDisplayMode)
+        }
     }
     
     func configureTranslated(status: MastodonStatus) {
+        configureTranslated(status: status.entity)
+    }
+    
+    func configureTranslated(status: Mastodon.Entity.Status) {
         guard let translation = viewModel.translation,
               let translatedContent = translation.content else {
             viewModel.isCurrentlyTranslating = false
@@ -384,7 +395,7 @@ extension StatusView {
 
         // content
         do {
-            let content = MastodonContent(content: translatedContent, emojis: status.entity.emojis.asDictionary)
+            let content = MastodonContent(content: translatedContent, emojis: status.emojis.asDictionary)
             let metaContent = try MastodonMetaContent.convert(document: content)
             viewModel.content = metaContent
             viewModel.isCurrentlyTranslating = false
@@ -414,17 +425,22 @@ extension StatusView {
     }
 
     private func configureContent(status: MastodonStatus) {
+        configureContent(status: status.entity)
+    }
+    
+    private func configureContent(status: Mastodon.Entity.Status) {
         
         guard viewModel.translation == nil else {
-            return configureTranslated(status: status)
+            configureTranslated(status: status)
+            return
         }
         
         let status = status.reblog ?? status
         
         // spoilerText
-        if let spoilerText = status.entity.spoilerText, !spoilerText.isEmpty {
+        if let spoilerText = status.spoilerText, !spoilerText.isEmpty {
             do {
-                let content = MastodonContent(content: spoilerText, emojis: status.entity.emojis.asDictionary)
+                let content = MastodonContent(content: spoilerText, emojis: status.emojis.asDictionary)
                 let metaContent = try MastodonMetaContent.convert(document: content)
                 viewModel.spoilerContent = metaContent
             } catch {
@@ -436,10 +452,10 @@ extension StatusView {
         }
 
         // language
-        viewModel.language = (status.reblog ?? status).entity.language
+        viewModel.language = (status.reblog ?? status).language
         // content
         do {
-            let content = MastodonContent(content: status.entity.content ?? "", emojis: status.entity.emojis.asDictionary)
+            let content = MastodonContent(content: status.content ?? "", emojis: status.emojis.asDictionary)
             let metaContent = try MastodonMetaContent.convert(document: content)
             viewModel.content = metaContent
             viewModel.isCurrentlyTranslating = false
@@ -448,10 +464,16 @@ extension StatusView {
             viewModel.content = PlaintextMetaContent(string: "")
         }
         // visibility
-        viewModel.visibility = status.entity.mastodonVisibility
+        viewModel.visibility = status.mastodonVisibility
     }
     
     private func configureMedia(status: MastodonStatus, contentDisplayMode: ContentDisplayMode) {
+        let status = status.reblog ?? status
+        let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
+        viewModel.mediaViewConfigurations = configurations
+    }
+    
+    private func configureMedia(status: Mastodon.Entity.Status, contentDisplayMode: ContentDisplayMode) {
         let status = status.reblog ?? status
         let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
         viewModel.mediaViewConfigurations = configurations
@@ -519,31 +541,87 @@ extension StatusView {
             .assign(to: \.isVoting, on: viewModel)
             .store(in: &disposeBag)
     }
+    
+    private func configurePoll(status: Mastodon.Entity.Status) {
+        let status = status.reblog ?? status
+        
+        guard let poll = status.poll else {
+            return
+        }
 
+        let options = poll.options
+        let items: [PollItem] = options.map { .pollOption($0) }
+        self.viewModel.pollItems = items
+
+        viewModel.isVoteButtonEnabled = !viewModel.selectedPollItems.isEmpty
+
+        viewModel.voteCount = poll.votesCount
+        viewModel.voterCount = poll.votersCount
+        viewModel.expireAt = poll.expiresAt
+        viewModel.expired = poll.expired
+        viewModel.isVoting = poll.voted ?? false
+    }
+    
     private func configureCard(status: MastodonStatus) {
+        configureCard(status: status.entity)
+    }
+
+    private func configureCard(status: Mastodon.Entity.Status) {
         let status = status.reblog ?? status
         if viewModel.mediaViewConfigurations.isEmpty {
-            viewModel.card = status.entity.card
+            viewModel.card = status.card
         } else {
             viewModel.card = nil
         }
     }
     
     private func configureToolbar(status: MastodonStatus) {
+        configureToolbar(status: status.entity)
+    }
+    
+    private func configureToolbar(status: Mastodon.Entity.Status) {
         let status = status.reblog ?? status
 
-        viewModel.replyCount = status.entity.repliesCount ?? 0
+        viewModel.replyCount = status.repliesCount ?? 0
         
-        viewModel.reblogCount = status.entity.reblogsCount
+        viewModel.reblogCount = status.reblogsCount
         
-        viewModel.favoriteCount = status.entity.favouritesCount
+        viewModel.favoriteCount = status.favouritesCount
         
-        viewModel.editedAt = status.entity.editedAt
+        viewModel.editedAt = status.editedAt
 
         // relationship
-        viewModel.isReblog = status.entity.reblogged == true
-        viewModel.isFavorite = status.entity.favourited == true
-        viewModel.isBookmark = status.entity.bookmarked == true
+        viewModel.isReblog = status.reblogged == true
+        viewModel.isFavorite = status.favourited == true
+        viewModel.isBookmark = status.bookmarked == true
     }
 
+}
+
+extension StatusView {
+    public func configure(status: Mastodon.Entity.Status, contentDisplayMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentDisplayMode
+        
+        configureHeader(status: status)
+        let author = (status.reblog ?? status).account
+        configureAuthor(author: author)
+        let timestamp = (status.reblog ?? status).createdAt
+        configureTimestamp(timestamp: timestamp)
+        configureApplicationName(status.application?.name)
+        configureContent(status: status)
+        configureMedia(status: status, contentDisplayMode: contentDisplayMode)
+        configurePoll(status: status)
+        configureCard(status: status)
+        configureToolbar(status: status)
+        viewModel.untranslatedStatus = status
+
+        viewModel.$translation
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] translation in
+                self?.configureTranslated(status: status)
+            }
+            .store(in: &disposeBag)
+        
+        configureForContentDisplayMode()
+    }
 }

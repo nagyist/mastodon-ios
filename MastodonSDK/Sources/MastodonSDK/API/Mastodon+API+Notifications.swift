@@ -11,9 +11,9 @@ import Foundation
 extension Mastodon.API.Notifications {
     internal static func notificationsEndpointURL(domain: String, grouped: Bool = false) -> URL {
         if grouped {
-            Mastodon.API.endpointURL(domain: domain).appendingPathComponent("notifications")
-        } else {
             Mastodon.API.endpointV2URL(domain: domain).appendingPathComponent("notifications")
+        } else {
+            Mastodon.API.endpointURL(domain: domain).appendingPathComponent("notifications")
         }
     }
 

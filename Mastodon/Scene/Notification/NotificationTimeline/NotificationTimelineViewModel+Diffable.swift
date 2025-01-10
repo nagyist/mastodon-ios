@@ -37,7 +37,7 @@ extension NotificationTimelineViewModel {
 
                 Task {
                     let oldSnapshot = diffableDataSource.snapshot()
-                    var newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem> = {
+                    let newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem> = {
                         let newItems = records.map { record in
                             NotificationItem.notification(record)
                         }

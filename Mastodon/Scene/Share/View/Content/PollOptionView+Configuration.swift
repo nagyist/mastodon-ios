@@ -64,6 +64,37 @@ extension PollOptionView {
         // appearance
         checkmarkBackgroundView.backgroundColor = SystemTheme.tableViewCellSelectionBackgroundColor
     }
+    
+    public func configure(poll: Mastodon.Entity.Poll, option pollOption: Mastodon.Entity.Poll.Option, isMyPoll: Bool) {
+        // metaContent
+        viewModel.metaContent = PlaintextMetaContent(string: pollOption.title)
+        
+        // percentage
+        let denominator = poll.votersCount ?? poll.votesCount
+        let optionVotesCount = pollOption.votesCount ?? 0
+        if denominator > 0, optionVotesCount >= 0 {
+            viewModel.percentage = Double(optionVotesCount) / Double(denominator)
+        } else {
+            viewModel.percentage = 0
+        }
+        
+        // expiration
+        viewModel.isExpire = poll.expired
+        
+        // isMultiple
+        viewModel.isMultiple = poll.multiple
+
+        if let isSelectedIndex = poll.options.firstIndex(of: pollOption) {
+            viewModel.isSelect = poll.ownVotes?.contains(isSelectedIndex) ?? false
+        } else {
+            viewModel.isSelect = false
+        }
+        viewModel.isPollVoted = poll.voted == true
+        viewModel.isMyPoll = isMyPoll
+
+        // appearance
+        checkmarkBackgroundView.backgroundColor = SystemTheme.tableViewCellSelectionBackgroundColor
+    }
 }
 
 extension PollOptionView {

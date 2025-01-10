@@ -145,6 +145,14 @@ extension StatusSection {
             switch item {
             case .history:
                 return nil
+            case .pollOption(let option):
+                // Fix cell reuse animation issue
+                let cell: PollOptionTableViewCell = {
+                    let _cell = tableView.dequeueReusableCell(withIdentifier: String(describing: PollOptionTableViewCell.self) + "@\(indexPath.row)#\(indexPath.section)") as? PollOptionTableViewCell
+                    _cell?.prepareForReuse()
+                    return _cell ?? PollOptionTableViewCell()
+                }()
+                return cell
             case .option(let record):
                 // Fix cell reuse animation issue
                 let cell: PollOptionTableViewCell = {
@@ -175,6 +183,8 @@ extension StatusSection {
     ) {
         statusView.pollTableViewDiffableDataSource = UITableViewDiffableDataSource<PollSection, PollItem>(tableView: statusView.pollTableView) { tableView, indexPath, item in
             switch item {
+            case .pollOption:
+                return nil
             case .option:
                 return nil
             case let .history(option):

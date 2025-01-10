@@ -274,7 +274,8 @@ private extension MastodonFeedLoader {
         }
         
         return notifications.map {
-            MastodonFeedItemIdentifier.notification(id: $0.id)
+            MastodonFeedItemCacheManager.shared.addToCache($0)
+            return MastodonFeedItemIdentifier.notification(id: $0.id)
         }
     }
     

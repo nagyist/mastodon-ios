@@ -89,6 +89,45 @@ public final class StatusView: UIView {
             }
         }
         
+        public init(status: Mastodon.Entity.Status?, filterBox: Mastodon.Entity.FilterBox?, filterContext: Mastodon.Entity.FilterContext?, showDespiteFilter: Bool, showDespiteContentWarning: Bool) {
+             
+            let status = (status?.reblog ?? status)
+            
+            if let status, let filterContext, let filterBox {
+                let filterPrefix = "\(L10n.Common.Controls.Timeline.filtered) \""
+                let filterResult = filterBox.apply(to: status, in: filterContext)
+                switch filterResult {
+                case .notFiltered:
+                    filtered = .neverConceal
+                case .hide(let reason):
+                    filtered = .concealAll(reason: filterPrefix + reason + "\"", showAnyway: showDespiteFilter)
+                case .warn(let reason):
+                    filtered = .concealAll(reason: filterPrefix + reason + "\"", showAnyway: showDespiteFilter)
+                }
+            } else {
+                filtered = .neverConceal
+            }
+            
+            if let status {
+                let contentWarning = ContentWarning(status: status)
+                switch contentWarning {
+                case .warnNothing:
+                    contentWarned = .neverConceal
+                case .warnMediaOnly:
+                    contentWarned = .concealMediaOnly(showAnyway: showDespiteContentWarning)
+                case .warnWholePost(let message):
+                    contentWarned = .concealAll(reason: message, showAnyway: showDespiteContentWarning)
+                }
+            } else {
+                contentWarned = .neverConceal
+            }
+        }
+        
+        func contentDisplayMode(_ status: Mastodon.Entity.Status, showDespiteFilter: Bool, showDespiteContentWarning: Bool) -> StatusView.ContentDisplayMode {
+            let contentDisplayModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: .notifications, showDespiteFilter: showDespiteFilter, showDespiteContentWarning: showDespiteContentWarning)
+            return contentDisplayModel.effectiveDisplayMode
+        }
+        
         public var effectiveDisplayMode: ContentDisplayMode {
             switch (filtered.shouldConcealSomething, contentWarned.shouldConcealSomething) {
             case (true, _):

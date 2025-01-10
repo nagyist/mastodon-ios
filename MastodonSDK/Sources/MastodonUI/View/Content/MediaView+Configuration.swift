@@ -181,6 +181,10 @@ extension MediaView.Configuration {
 
 extension MediaView {
     public static func configuration(status: MastodonStatus, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
+        return configuration(status: status.entity, contentDisplayMode: contentDisplayMode)
+    }
+    
+    public static func configuration(status: Mastodon.Entity.Status, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func videoInfo(from attachment: MastodonAttachment) -> MediaView.Configuration.VideoInfo {
             MediaView.Configuration.VideoInfo(
                 aspectRadio: attachment.size,
@@ -191,7 +195,7 @@ extension MediaView {
             )
         }
         
-        let attachments = status.entity.mastodonAttachments
+        let attachments = status.mastodonAttachments
         let configurations = attachments.enumerated().map { (idx, attachment) -> MediaView.Configuration in
             let configuration: MediaView.Configuration = {
                 switch attachment.kind {

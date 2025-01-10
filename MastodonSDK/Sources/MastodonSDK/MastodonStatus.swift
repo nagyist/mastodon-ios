@@ -26,6 +26,23 @@ public enum ContentWarning {
         }
     }
     
+    public init(status: Mastodon.Entity.Status) {
+        let statusWithContent = status.reblog ?? status
+        let hasSpoilerText = statusWithContent.spoilerText != nil && !statusWithContent.spoilerText!.isEmpty
+        let isMarkedSensitive = statusWithContent.sensitive ?? false
+        let fallbackWarningText = ""
+        switch (hasSpoilerText, isMarkedSensitive) {
+        case (true, true):
+            self = .warnWholePost(message: statusWithContent.spoilerText ?? fallbackWarningText)
+        case (true, false):
+            self = .warnWholePost(message: statusWithContent.spoilerText ?? fallbackWarningText)
+        case (false, true):
+            self = .warnMediaOnly
+        case (false, false):
+            self = .warnNothing
+        }
+    }
+    
     public init(statusEdit: Mastodon.Entity.StatusEdit) {
         let entity = statusEdit
         let hasSpoilerText = entity.spoilerText != nil && !entity.spoilerText!.isEmpty

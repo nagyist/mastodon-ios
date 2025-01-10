@@ -172,11 +172,15 @@ extension NotificationTimelineViewController: UITableViewDelegate, AutoGenerateT
     }
     
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        guard let item = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else {
+        
+        let sectionCount = viewModel.diffableDataSource?.numberOfSections(in: tableView) ?? 0
+        let rowCount = viewModel.diffableDataSource?.tableView(tableView, numberOfRowsInSection: indexPath.section) ?? 0
+        
+        let isLastItem = indexPath.section == sectionCount - 1 && indexPath.row == rowCount - 1
+        
+        guard isLastItem, let item = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else {
             return
         }
-        
-        // check item type inside `loadMore`
         Task {
             await viewModel.loadMore(item: item)
         }

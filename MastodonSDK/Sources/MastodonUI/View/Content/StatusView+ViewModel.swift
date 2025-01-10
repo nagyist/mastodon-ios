@@ -26,10 +26,11 @@ extension StatusView {
         public var managedObjects = Set<NSManagedObject>()
 
         public var authenticationBox: MastodonAuthenticationBox?
-        public var originalStatus: MastodonStatus? {
+        public var untranslatedStatus: Mastodon.Entity.Status?
+        public var _originalStatus: MastodonStatus? {
             didSet {
                 // Note: the originalStatus is created fresh every time, so never canceling this subscription is ok for now.
-                originalStatus?.$entity
+                _originalStatus?.$entity
                     .receive(on: DispatchQueue.main)
                     .sink(receiveValue: { status in
                         self.isBookmark = status.bookmarked == true
@@ -83,6 +84,7 @@ extension StatusView {
         
         // Poll
         @Published public var pollItems: [PollItem] = []
+        @Published public var selectedPollItems = IndexSet()  // when using .pollOption, selection information has to be stored separately.  deprecated .option wrapped that information inside the contained MastodonPollOption.
         @Published public var isVotable: Bool = false
         @Published public var isVoting: Bool = false
         @Published public var isVoteButtonEnabled: Bool = false
