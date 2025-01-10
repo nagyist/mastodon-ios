@@ -16,19 +16,19 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 class ThreadViewModel {
     
     var disposeBag = Set<AnyCancellable>()
     var rootItemObserver: AnyCancellable?
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let mastodonStatusThreadViewModel: MastodonStatusThreadViewModel
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
-    @Published var root: StatusItem.Thread?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
+    @Published var root: MastodonItemIdentifier.Thread?
     @Published var threadContext: ThreadContext?
     @Published var hasPendingStatusEditReload = false
     
@@ -49,14 +49,12 @@ class ThreadViewModel {
     @Published var navigationBarTitle: MastodonMetaContent?
     
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
-        optionalRoot: StatusItem.Thread?
+        optionalRoot: MastodonItemIdentifier.Thread?
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.root = optionalRoot
-        self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(context: context)
+        self.mastodonStatusThreadViewModel = MastodonStatusThreadViewModel(filterContext: .thread)
         // end init
 
         $root
@@ -81,7 +79,7 @@ class ThreadViewModel {
             }
             .store(in: &disposeBag)
         
-        context.publisherService
+        PublisherService.shared
             .statusPublishResult
             .sink { [weak self] value in
                 guard let self else { return }

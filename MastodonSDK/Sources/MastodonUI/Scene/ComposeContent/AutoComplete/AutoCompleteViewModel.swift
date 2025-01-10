@@ -11,12 +11,12 @@ import GameplayKit
 import MastodonSDK
 import MastodonCore
 
+@MainActor
 final class AutoCompleteViewModel {
     
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     public let inputText = CurrentValueSubject<String, Never>("")  // contains "@" or "#" prefix
     public let symbolBoundingRect = CurrentValueSubject<CGRect, Never>(.zero)
@@ -37,10 +37,9 @@ final class AutoCompleteViewModel {
         return stateMachine
     }()
     
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
-        self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(for: authenticationBox.domain)
+        self.customEmojiViewModel = EmojiService.shared.dequeueCustomEmojiViewModel(for: authenticationBox.domain)
         // end init
         
         autoCompleteItems

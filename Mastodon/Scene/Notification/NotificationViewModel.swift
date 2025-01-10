@@ -56,7 +56,7 @@ final class NotificationViewModel {
         // end init
         Task {
             do {
-                let policy = try await context.apiService.notificationPolicy(authenticationBox: authenticationBox)
+                let policy = try await APIService.shared.notificationPolicy(authenticationBox: authenticationBox)
                 self.notificationPolicy = policy.value
             } catch {
                 // we won't show the filtering-options.

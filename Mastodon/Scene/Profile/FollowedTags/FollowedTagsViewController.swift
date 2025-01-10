@@ -11,9 +11,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class FollowedTagsViewController: UIViewController, NeedsDependency {
-    var context: AppContext!
-    var coordinator: SceneCoordinator!
+final class FollowedTagsViewController: UIViewController {
     let authenticationBox: MastodonAuthenticationBox
 
     var viewModel: FollowedTagsViewModel
@@ -22,9 +20,7 @@ final class FollowedTagsViewController: UIViewController, NeedsDependency {
     let tableView: UITableView
     let refreshControl: UIRefreshControl
 
-    init(appContext: AppContext, sceneCoordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox, viewModel: FollowedTagsViewModel) {
-        self.context = appContext
-        self.coordinator = sceneCoordinator
+    init(authenticationBox: MastodonAuthenticationBox, viewModel: FollowedTagsViewModel) {
         self.authenticationBox = authenticationBox
         self.viewModel = viewModel
 
@@ -76,12 +72,11 @@ extension FollowedTagsViewController: UITableViewDelegate {
         let object = viewModel.followedTags[indexPath.row]
 
         let hashtagTimelineViewModel = HashtagTimelineViewModel(
-            context: self.context,
             authenticationBox: self.authenticationBox,
             hashtag: object.name
         )
 
-        _ = self.coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel),
             from: self,
             transition: .show

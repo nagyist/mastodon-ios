@@ -812,9 +812,7 @@ public enum L10n {
       /// Currency
       public static let currency = L10n.tr("Localizable", "Scene.Donation.Currency", fallback: "Currency")
       /// Donate
-      public static let donateButtonTitle = L10n.tr("Localizable", "Scene.Donation.DonateButtonTitle", fallback: "Donate")
-      /// Donate to Mastodon
-      public static let title = L10n.tr("Localizable", "Scene.Donation.Title", fallback: "Donate to Mastodon")
+      public static let donatebuttontitle = L10n.tr("Localizable", "Scene.Donation.Donatebuttontitle", fallback: "Donate")
       public enum Picker {
         /// Monthly
         public static let monthlyTitle = L10n.tr("Localizable", "Scene.Donation.Picker.MonthlyTitle", fallback: "Monthly")
@@ -919,8 +917,8 @@ public enum L10n {
       }
     }
     public enum Login {
-      /// Log in with the server where you created your account.
-      public static let subtitle = L10n.tr("Localizable", "Scene.Login.Subtitle", fallback: "Log in with the server where you created your account.")
+      /// Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.
+      public static let subtitle = L10n.tr("Localizable", "Scene.Login.Subtitle", fallback: "Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.")
       /// Welcome Back
       public static let title = L10n.tr("Localizable", "Scene.Login.Title", fallback: "Welcome Back")
       public enum ServerSearchField {
@@ -1692,8 +1690,6 @@ public enum L10n {
         public static func logout(_ p1: Any) -> String {
           return L10n.tr("Localizable", "Scene.Settings.Overview.Logout", String(describing: p1), fallback: "Logout %@")
         }
-        /// Manage donations
-        public static let manageDonations = L10n.tr("Localizable", "Scene.Settings.Overview.ManageDonations", fallback: "Manage donations")
         /// Notifications
         public static let notifications = L10n.tr("Localizable", "Scene.Settings.Overview.Notifications", fallback: "Notifications")
         /// Privacy & Safety

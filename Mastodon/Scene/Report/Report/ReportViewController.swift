@@ -12,13 +12,10 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
-class ReportViewController: UIViewController, NeedsDependency, ReportViewControllerAppearance {
+class ReportViewController: UIViewController, ReportViewControllerAppearance {
     
     var disposeBag = Set<AnyCancellable>()
     private var observations = Set<NSKeyValueObservation>()
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     let viewModel: ReportViewModel
 
@@ -50,8 +47,6 @@ class ReportViewController: UIViewController, NeedsDependency, ReportViewControl
         viewModel.reportSupplementaryViewModel.delegate = self
         
         let reportReasonViewController = ReportReasonViewController(viewModel: viewModel.reportReasonViewModel)
-        reportReasonViewController.context = context
-        reportReasonViewController.coordinator = coordinator
 
         addChild(reportReasonViewController)
         reportReasonViewController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -80,25 +75,24 @@ extension ReportViewController: ReportReasonViewControllerDelegate {
         switch reason {
         case .dislike:
             let reportResultViewModel = ReportResultViewModel(
-                context: context,
                 authenticationBox: viewModel.authenticationBox,
                 account: viewModel.account,
                 relationship: viewModel.relationship,
                 isReported: false
             )
-            _ = coordinator.present(
+            _ = self.sceneCoordinator?.present(
                 scene: .reportResult(viewModel: reportResultViewModel),
                 from: self,
                 transition: .show
             )
         case .violateRule:
-            _ = coordinator.present(
+            _ = self.sceneCoordinator?.present(
                 scene: .reportServerRules(viewModel: viewModel.reportServerRulesViewModel),
                 from: self,
                 transition: .show
             )
         case .spam, .other:
-            _ = coordinator.present(
+            _ = self.sceneCoordinator?.present(
                 scene: .reportStatus(viewModel: viewModel.reportStatusViewModel),
                 from: self,
                 transition: .show
@@ -114,7 +108,7 @@ extension ReportViewController: ReportServerRulesViewControllerDelegate {
             return
         }
         
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .reportStatus(viewModel: viewModel.reportStatusViewModel),
             from: self,
             transition: .show
@@ -133,7 +127,7 @@ extension ReportViewController: ReportStatusViewControllerDelegate {
     }
     
     private func coordinateToReportSupplementary() {
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .reportSupplementary(viewModel: viewModel.reportSupplementaryViewModel),
             from: self,
             transition: .show
@@ -157,14 +151,13 @@ extension ReportViewController: ReportSupplementaryViewControllerDelegate {
                 let _ = try await viewModel.report()
 
                 let reportResultViewModel = ReportResultViewModel(
-                    context: context,
                     authenticationBox: viewModel.authenticationBox,
                     account: viewModel.account,
                     relationship: viewModel.relationship,
                     isReported: true
                 )
                 
-                _ = coordinator.present(
+                _ = self.sceneCoordinator?.present(
                     scene: .reportResult(viewModel: reportResultViewModel),
                     from: self,
                     transition: .show
@@ -174,7 +167,7 @@ extension ReportViewController: ReportSupplementaryViewControllerDelegate {
                 let alertController = UIAlertController(for: error, title: nil, preferredStyle: .alert)
                 let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
                 alertController.addAction(okAction)
-                _ = self.coordinator.present(
+                _ = self.sceneCoordinator?.present(
                     scene: .alertController(alertController: alertController),
                     from: nil,
                     transition: .alertController(animated: true, completion: nil)

@@ -10,10 +10,7 @@ import UIKit
 import WebKit
 import MastodonCore
 
-final class MastodonResendEmailViewController: UIViewController, NeedsDependency {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class MastodonResendEmailViewController: UIViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: MastodonResendEmailViewModel!

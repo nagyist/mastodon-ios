@@ -5,16 +5,12 @@ import MastodonSDK
 import MastodonCore
 
 struct NotificationRequestsViewModel {
-    let appContext: AppContext
     let authenticationBox: MastodonAuthenticationBox
-    let coordinator: SceneCoordinator
 
     var requests: [Mastodon.Entity.NotificationRequest]
 
-    init(appContext: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator, requests: [Mastodon.Entity.NotificationRequest]) {
-        self.appContext = appContext
+    init(authenticationBox: MastodonAuthenticationBox, requests: [Mastodon.Entity.NotificationRequest]) {
         self.authenticationBox = authenticationBox
-        self.coordinator = coordinator
         self.requests = requests
     }
 }

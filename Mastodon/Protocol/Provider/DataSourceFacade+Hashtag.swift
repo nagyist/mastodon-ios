@@ -13,16 +13,16 @@ import MastodonSDK
 extension DataSourceFacade {
     @MainActor
     static func coordinateToHashtagScene(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController,
         tag: Mastodon.Entity.Tag
     ) async {
+        guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
         let hashtagTimelineViewModel = HashtagTimelineViewModel(
-            context: provider.context,
-            authenticationBox: provider.authenticationBox,
+            authenticationBox: authBox,
             hashtag: tag.name
         )
-        
-        _ = provider.coordinator.present(
+        guard let coordinator = provider.sceneCoordinator else { return }
+        _ = coordinator.present(
             scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel),
             from: provider,
             transition: .show

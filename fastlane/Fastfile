@@ -54,7 +54,7 @@ platform :ios do
     )
     xcodebuild(
       build: true,
-      destination: "platform=iOS Simulator,name=iPhone 14 Pro",
+      destination: "platform=iOS Simulator,name=iPhone 16 Pro",
       scheme: "#{$appName}"
     )
   end

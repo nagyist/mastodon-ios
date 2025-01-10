@@ -47,7 +47,7 @@ extension UserTableViewCell {
     }
 }
 
-extension UserTableViewCellDelegate where Self: ViewControllerWithDependencies & AuthContextProvider {
+extension UserTableViewCellDelegate where Self: UIViewController & AuthContextProvider {
     func userView(_ view: UserView, didTapButtonWith state: UserView.ButtonState, for account: Mastodon.Entity.Account, me: Mastodon.Entity.Account?) {
         Task {
             await MainActor.run { view.setButtonState(.loading) }
@@ -62,7 +62,7 @@ extension UserTableViewCellDelegate where Self: ViewControllerWithDependencies &
             // Otherwise the relationship might still be `pending`
             try await Task.sleep(for: .seconds(1))
 
-            let relationship = try await self.context.apiService.relationship(forAccounts: [account], authenticationBox: authenticationBox).value.first
+            let relationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: authenticationBox).value.first
 
             let isMe: Bool
             if let me {

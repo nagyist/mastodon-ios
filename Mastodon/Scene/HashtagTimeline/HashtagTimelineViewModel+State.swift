@@ -9,6 +9,7 @@ import Foundation
 import GameplayKit
 import CoreDataStack
 import MastodonSDK
+import MastodonCore
 
 extension HashtagTimelineViewModel {
     class State: GKState {
@@ -126,7 +127,7 @@ extension HashtagTimelineViewModel.State {
 
             Task {
                 do {
-                    let response = try await viewModel.context.apiService.hashtagTimeline(
+                    let response = try await APIService.shared.hashtagTimeline(
                         maxID: maxID,
                         hashtag: viewModel.hashtag,
                         authenticationBox: viewModel.authenticationBox

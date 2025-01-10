@@ -9,12 +9,10 @@ import UIKit
 import Combine
 import CoreDataStack
 import MastodonCore
+import MastodonSDK
 import MastodonLocalization
 
-class NotificationTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
+class NotificationTimelineViewController: UIViewController, MediaPreviewableViewController {
     
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
 
@@ -39,10 +37,8 @@ class NotificationTimelineViewController: UIViewController, NeedsDependency, Med
     
     let cellFrameCache = NSCache<NSNumber, NSValue>()
 
-    init(viewModel: NotificationTimelineViewModel, context: AppContext, coordinator: SceneCoordinator) {
+    init(viewModel: NotificationTimelineViewModel) {
         self.viewModel = viewModel
-        self.context = context
-        self.coordinator = coordinator
 
         super.init(nibName: nil, bundle: nil)
 
@@ -126,7 +122,7 @@ extension NotificationTimelineViewController {
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
         Task {
-            let policy = try? await context.apiService.notificationPolicy(authenticationBox: authenticationBox)
+            let policy = try? await APIService.shared.notificationPolicy(authenticationBox: authenticationBox)
             viewModel.notificationPolicy = policy?.value
 
             await viewModel.loadLatest()
@@ -176,11 +172,15 @@ extension NotificationTimelineViewController: UITableViewDelegate, AutoGenerateT
     }
     
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        guard let item = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else {
+        
+        let sectionCount = viewModel.diffableDataSource?.numberOfSections(in: tableView) ?? 0
+        let rowCount = viewModel.diffableDataSource?.tableView(tableView, numberOfRowsInSection: indexPath.section) ?? 0
+        
+        let isLastItem = indexPath.section == sectionCount - 1 && indexPath.row == rowCount - 1
+        
+        guard isLastItem, let item = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else {
             return
         }
-        
-        // check item type inside `loadMore`
         Task {
             await viewModel.loadMore(item: item)
         }
@@ -269,7 +269,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
     
     static func validNavigateableItem(_ item: NotificationItem) -> Bool {
         switch item {
-        case .feed:
+        case .notification:
             return true
         default:
             return false
@@ -283,23 +283,54 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
         
         Task { @MainActor in
             switch item {
-            case .feed(let record):
-                guard let notification = record.notification else { return }
+            case .notification(let notificationItem):
+                let status: Mastodon.Entity.Status?
+                let account: Mastodon.Entity.Account?
+                switch notificationItem {
+                case .notification(let id):
+                    guard let notification = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.Notification  else {
+                        status = nil
+                        account = nil
+                        break
+                    }
+                    status = notification.status
+                    account = notification.account
+                    
+                case .notificationGroup(let id):
+                    guard let notificationGroup = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.NotificationGroup  else {
+                        status = nil
+                        account = nil
+                        break
+                    }
+                    if let statusID = notificationGroup.statusID {
+                        status = MastodonFeedItemCacheManager.shared.cachedItem(.status(id: statusID)) as? Mastodon.Entity.Status
+                    } else {
+                        status = nil
+                    }
+                    if notificationGroup.sampleAccountIDs.count == 1, let theOneAccountID = notificationGroup.sampleAccountIDs.first {
+                        account = MastodonFeedItemCacheManager.shared.fullAccount(theOneAccountID)
+                    } else {
+                        account = nil
+                    }
+                case .status:
+                    assertionFailure("unexpected element in notifications feed")
+                    status = nil
+                    account = nil
+                    break
+                }
                 
-                if let status = notification.status {
+                if let status {
                     let threadViewModel = ThreadViewModel(
-                        context: self.context,
                         authenticationBox: self.viewModel.authenticationBox,
                         optionalRoot: .root(context: .init(status: .fromEntity(status)))
                     )
-                    _ = self.coordinator.present(
+                    _ = self.sceneCoordinator?.present(
                         scene: .thread(viewModel: threadViewModel),
                         from: self,
                         transition: .show
                     )
-                } else {
-
-                    await DataSourceFacade.coordinateToProfileScene(provider: self, account: notification.account)
+                } else if let account {
+                    await DataSourceFacade.coordinateToProfileScene(provider: self, account: account)
                 }
             default:
                 break

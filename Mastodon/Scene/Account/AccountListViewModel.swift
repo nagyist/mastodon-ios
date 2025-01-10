@@ -14,12 +14,12 @@ import MastodonMeta
 import MastodonCore
 import MastodonUI
 
+@MainActor
 final class AccountListViewModel: NSObject {
 
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     // output
@@ -27,14 +27,13 @@ final class AccountListViewModel: NSObject {
     
     var diffableDataSource: UITableViewDiffableDataSource<Section, Item>!
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
 
         super.init()
         // end init
 
-        AuthenticationServiceProvider.shared.$authentications
+        AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .receive(on: DispatchQueue.main)
             .sink { [weak self] authentications in
                 guard let self = self else { return }
@@ -43,7 +42,7 @@ final class AccountListViewModel: NSObject {
                 var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
                 snapshot.appendSections([.main])
                 let authenticationItems: [Item] = authentications.map {
-                    Item.authentication(record: $0)
+                    Item.authentication(record: $0.authentication)
                 }
                 snapshot.appendItems(authenticationItems, toSection: .main)
                 snapshot.appendItems([.addAccount], toSection: .main)
@@ -75,12 +74,12 @@ extension AccountListViewModel {
             switch item {
             case .authentication(let record):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: AccountListTableViewCell.self), for: indexPath) as! AccountListTableViewCell
-                if let activeAuthentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first
+                if let activeAuthentication = AuthenticationServiceProvider.shared.currentActiveUser.value
                 {
                     AccountListViewModel.configure(
                         cell: cell,
                         authentication: record,
-                        activeAuthentication: activeAuthentication
+                        activeAuthentication: activeAuthentication.authentication
                     )
                 }
                 return cell
@@ -103,7 +102,7 @@ extension AccountListViewModel {
         authentication: MastodonAuthentication,
         activeAuthentication: MastodonAuthentication
     ) {
-        guard let account = authentication.account() else { return }
+        guard let account = authentication.cachedAccount() else { return }
 
         // avatar
         cell.avatarButton.avatarImageView.configure(with: account.avatarImageURL())

@@ -30,24 +30,21 @@ extension Mastodon.API.Account {
     ///   - domain: Mastodon instance domain. e.g. "example.com"
     ///   - query: `RegisterQuery` with account registration information
     ///   - authorization: App token
-    /// - Returns: `AnyPublisher` contains `Token` nested in the response
+    /// - Returns: `Token`
     public static func register(
         session: URLSession,
         domain: String,
         query: RegisterQuery,
         authorization: Mastodon.API.OAuth.Authorization
-    ) -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Token>, Error> {
+    ) async throws -> Mastodon.Entity.Token {
         let request = Mastodon.API.post(
             url: accountsEndpointURL(domain: domain),
             query: query,
             authorization: authorization
         )
-        return session.dataTaskPublisher(for: request)
-            .tryMap { data, response in
-                let value = try Mastodon.API.decode(type: Mastodon.Entity.Token.self, from: data, response: response)
-                return Mastodon.Response.Content(value: value, response: response)
-            }
-            .eraseToAnyPublisher()
+        let (data, response) = try await session.data(for: request)
+        let token = try Mastodon.API.decode(type: Mastodon.Entity.Token.self, from: data, response: response)
+        return token
     }
     
     public struct RegisterQuery: Codable, PostQuery {

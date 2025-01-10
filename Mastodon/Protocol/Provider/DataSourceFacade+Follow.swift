@@ -14,11 +14,11 @@ import MastodonLocalization
 extension DataSourceFacade {
     @MainActor
     static func responseToUserFollowAction(
-        dependency: ViewControllerWithDependencies & AuthContextProvider,
+        dependency: UIViewController & AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Relationship {
         let authBox = dependency.authenticationBox
-        let relationship = try await dependency.context.apiService.relationship(
+        let relationship = try await APIService.shared.relationship(
             forAccounts: [account], authenticationBox: authBox
         ).value.first
         
@@ -27,7 +27,7 @@ extension DataSourceFacade {
                 let performAction = {
                     FeedbackGenerator.shared.generate(.selectionChanged)
 
-                    let response = try await dependency.context.apiService.toggleFollow(
+                    let response = try await APIService.shared.toggleFollow(
                         account: account,
                         authenticationBox: dependency.authenticationBox
                     ).value
@@ -78,7 +78,7 @@ extension DataSourceFacade {
 
 extension DataSourceFacade {
     static func responseToUserFollowRequestAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: UIViewController & AuthContextProvider,
         notification: MastodonNotification,
         notificationView: NotificationView,
         query: Mastodon.API.Account.FollowRequestQuery
@@ -100,7 +100,7 @@ extension DataSourceFacade {
         await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
 
         do {
-            let newRelationship = try await dependency.context.apiService.followRequest(
+            let newRelationship = try await APIService.shared.followRequest(
                 userID: userID,
                 query: query,
                 authenticationBox: dependency.authenticationBox
@@ -129,10 +129,11 @@ extension DataSourceFacade {
                 case .notFound:
                     break
                 default:
+                    guard let coordinator = await dependency.sceneCoordinator else { return }
                     let alertController = await UIAlertController(for: error, title: nil, preferredStyle: .alert)
                     let okAction = await UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default)
                     await alertController.addAction(okAction)
-                    _ = await dependency.coordinator.present(
+                    _ = await coordinator.present(
                         scene: .alertController(alertController: alertController),
                         from: nil,
                         transition: .alertController(animated: true, completion: nil)
@@ -146,10 +147,10 @@ extension DataSourceFacade {
 
 extension DataSourceFacade {
     static func responseToShowHideReblogAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws {
-        let newRelationship = try await dependency.context.apiService.toggleShowReblogs(
+        let newRelationship = try await APIService.shared.toggleShowReblogs(
             for: account,
             authenticationBox: dependency.authenticationBox
         )

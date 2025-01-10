@@ -21,6 +21,7 @@ struct MastodonRegisterView: View {
         ScrollView(.vertical) {
             let margin: CGFloat = 16
             VStack(alignment: .leading, spacing: 16) {
+                Spacer()
                 TextField(L10n.Scene.Register.Input.DisplayName.placeholder.localizedCapitalized, text: $viewModel.name)
                     .textContentType(.name)
                     .disableAutocorrection(true)
@@ -176,7 +177,6 @@ struct MastodonRegisterView_Previews: PreviewProvider {
     static var viewModel: MastodonRegisterViewModel {
         let domain = "mstdn.jp"
         return MastodonRegisterViewModel(
-            context: .shared,
             domain: domain,
             authenticateInfo: AuthenticationViewModel.AuthenticateInfo(
                 domain: domain,
@@ -196,7 +196,8 @@ struct MastodonRegisterView_Previews: PreviewProvider {
                 tokenType: "",
                 scope: "",
                 createdAt: Date()
-            )
+            ),
+            submitValidatedUserRegistration: { (_,_) in return }
         )
     }
             

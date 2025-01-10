@@ -28,7 +28,6 @@ extension RecommendAccountSection {
 
     static func tableViewDiffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<RecommendAccountSection, RecommendAccountItem> {
         UITableViewDiffableDataSource(tableView: tableView) { tableView, indexPath, item -> UITableViewCell? in

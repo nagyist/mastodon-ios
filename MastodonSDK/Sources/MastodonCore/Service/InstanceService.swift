@@ -11,6 +11,7 @@ import CoreData
 import CoreDataStack
 import MastodonSDK
 
+@MainActor
 public final class InstanceService {
     
     var disposeBag = Set<AnyCancellable>()
@@ -27,11 +28,13 @@ public final class InstanceService {
         self.backgroundManagedObjectContext = apiService.backgroundManagedObjectContext
         self.apiService = apiService
         
-        AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
+        AuthenticationServiceProvider.shared.currentActiveUser
             .receive(on: DispatchQueue.main)
-            .compactMap { $0.first?.domain }
-            .removeDuplicates()     // prevent infinity loop
-            .asyncMap { [weak self] in await self?.updateInstance(domain: $0) }
+            .asyncMap { [weak self] in
+                if let domain = $0?.domain {
+                    await self?.updateInstance(domain: domain)
+                }
+            }
             .sink {}
             .store(in: &disposeBag)
     }
@@ -43,17 +46,18 @@ extension InstanceService {
     @MainActor
     func updateInstance(domain: String) async {
         guard let apiService else { return }
+        guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value, authBox.domain == domain else { return }
         
-        let response = try? await apiService.instance(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication)
+        let response = try? await apiService.instance(domain: domain, authenticationBox: authBox)
             .singleOutput()
             
         if response?.value.version?.majorServerVersion(greaterThanOrEquals: 4) == true {
-            guard let instanceV2 = try? await apiService.instanceV2(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication).singleOutput() else {
+            guard let instanceV2 = try? await apiService.instanceV2(domain: domain, authenticationBox: authBox).singleOutput() else {
                 return
             }
             
             self.updateInstanceV2(domain: domain, response: instanceV2)
-            if let translationResponse = try? await apiService.translationLanguages(domain: domain, authenticationBox: AuthenticationServiceProvider.shared.activeAuthentication).singleOutput() {
+            if let translationResponse = try? await apiService.translationLanguages(domain: domain, authenticationBox: authBox).singleOutput() {
                 updateTranslationLanguages(domain: domain, response: translationResponse)
             }
         } else if let response {

@@ -53,8 +53,9 @@ extension DataSourceFacade {
                 url: url
             )
         case .hashtag(_, let hashtag, _):
-            let hashtagTimelineViewModel = await HashtagTimelineViewModel(context: provider.context, authenticationBox: provider.authenticationBox, hashtag: hashtag)
-            _ = await provider.coordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: provider, transition: .show)
+            let hashtagTimelineViewModel = await HashtagTimelineViewModel(authenticationBox: provider.authenticationBox, hashtag: hashtag)
+            guard let coordinator = await provider.sceneCoordinator else { return }
+            _ = await coordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: provider, transition: .show)
         case .mention(_, let mention, let userInfo):
             await coordinateToProfileScene(
                 provider: provider,

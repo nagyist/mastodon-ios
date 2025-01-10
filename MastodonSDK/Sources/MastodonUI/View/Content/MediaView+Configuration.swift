@@ -25,7 +25,7 @@ extension MediaView {
         public let index: Int
         public let total: Int
         
-        @Published public var isReveal = true
+        public var isReveal = true
         @Published public var previewImage: UIImage?
         @Published public var blurhashImage: UIImage?
         public var blurhashImageDisposeBag = Set<AnyCancellable>()
@@ -180,7 +180,11 @@ extension MediaView.Configuration {
 }
 
 extension MediaView {
-    public static func configuration(status: MastodonStatus) -> [MediaView.Configuration] {
+    public static func configuration(status: MastodonStatus, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
+        return configuration(status: status.entity, contentDisplayMode: contentDisplayMode)
+    }
+    
+    public static func configuration(status: Mastodon.Entity.Status, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func videoInfo(from attachment: MastodonAttachment) -> MediaView.Configuration.VideoInfo {
             MediaView.Configuration.VideoInfo(
                 aspectRadio: attachment.size,
@@ -191,7 +195,7 @@ extension MediaView {
             )
         }
         
-        let attachments = status.entity.mastodonAttachments
+        let attachments = status.mastodonAttachments
         let configurations = attachments.enumerated().map { (idx, attachment) -> MediaView.Configuration in
             let configuration: MediaView.Configuration = {
                 switch attachment.kind {
@@ -234,8 +238,8 @@ extension MediaView {
                 }   // end switch
             }()
             
+            configuration.isReveal = !contentDisplayMode.shouldConcealMedia
             configuration.load()
-            configuration.isReveal = status.entity.sensitive == true ? status.isSensitiveToggled : true
             
             return configuration
         }
@@ -245,7 +249,7 @@ extension MediaView {
 }
 
 extension MediaView {
-    public static func configuration(status: Mastodon.Entity.StatusEdit) -> [MediaView.Configuration] {
+    public static func configuration(status: Mastodon.Entity.StatusEdit, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func aspectRatio(from attachment: Mastodon.Entity.Attachment) -> CGSize? {
             if let width = attachment.meta?.original?.width, let height = attachment.meta?.original?.height {
                 return CGSize(width: width, height: height)
@@ -318,7 +322,7 @@ extension MediaView {
             }()
             
             configuration?.load()
-            configuration?.isReveal = true
+            configuration?.isReveal = !contentDisplayMode.shouldConcealMedia
             
             return configuration
         }

@@ -15,10 +15,10 @@ class AccountNotificationTimelineViewController: NotificationTimelineViewControl
     let request: Mastodon.Entity.NotificationRequest
     weak var delegate: AccountNotificationTimelineViewControllerDelegate?
 
-    init(viewModel: NotificationTimelineViewModel, context: AppContext, coordinator: SceneCoordinator, notificationRequest: Mastodon.Entity.NotificationRequest) {
+    init(viewModel: NotificationTimelineViewModel, notificationRequest: Mastodon.Entity.NotificationRequest) {
         self.request = notificationRequest
 
-        super.init(viewModel: viewModel, context: context, coordinator: coordinator)
+        super.init(viewModel: viewModel)
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: nil, image: UIImage(systemName: "ellipsis.circle"), target: nil, action: nil, menu: menu())
     }
@@ -32,18 +32,18 @@ class AccountNotificationTimelineViewController: NotificationTimelineViewControl
             UIAction(title: L10n.Scene.Notification.FilteredNotification.accept, image: UIImage(systemName: "checkmark")) { [weak self] _ in
                 guard let self else { return }
 
-                coordinator.showLoading()
+                self.sceneCoordinator?.showLoading()
                 self.navigationController?.popViewController(animated: true)
                 self.delegate?.acceptRequest(self, request: request)
-                coordinator.hideLoading()
+                self.sceneCoordinator?.hideLoading()
             },
             UIAction(title: L10n.Scene.Notification.FilteredNotification.dismiss, image: NotificationRequestConstants.dismissIcon) { [weak self] _ in
                 guard let self else { return }
 
-                coordinator.showLoading()
+                self.sceneCoordinator?.showLoading()
                 self.navigationController?.popViewController(animated: true)
                 self.delegate?.dismissRequest(self, request: request)
-                coordinator.hideLoading()
+                self.sceneCoordinator?.hideLoading()
             }
         ])
 

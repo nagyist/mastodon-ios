@@ -71,12 +71,10 @@ struct MultiFollowersCountWidget: Widget {
 
 private extension MultiFollowersCountWidgetProvider {
     func loadCurrentEntry(for configuration: MultiFollowersCountIntent, in context: Context, completion: @escaping (MultiFollowersCountEntry) -> Void) {
-        Task {
-            
-            await AuthenticationServiceProvider.shared.prepareForUse()
+        Task { @MainActor in
 
             guard
-                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -88,7 +86,7 @@ private extension MultiFollowersCountWidgetProvider {
             
             if let configuredAccounts = configuration.accounts?.compactMap({ $0 }) {
                 desiredAccounts = configuredAccounts
-            } else if let currentlyLoggedInAccount = authBox.authentication.account()?.acctWithDomain {
+            } else if let currentlyLoggedInAccount = authBox.cachedAccount?.acctWithDomain {
                 desiredAccounts = [currentlyLoggedInAccount]
             } else {
                 return completion(.unconfigured)
@@ -98,8 +96,7 @@ private extension MultiFollowersCountWidgetProvider {
             
             for desiredAccount in desiredAccounts {
                 guard
-                    let resultingAccount = try await AppContext.shared
-                        .apiService
+                    let resultingAccount = try await APIService.shared
                         .search(query: .init(q: desiredAccount, type: .accounts), authenticationBox: authBox)
                         .value
                         .accounts

@@ -17,7 +17,6 @@ final class SearchResultViewModel {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let searchScope: SearchScope
     let searchText: String
@@ -46,8 +45,7 @@ final class SearchResultViewModel {
     let didDataSourceUpdate = PassthroughSubject<Void, Never>()
 
     @MainActor
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, searchScope: SearchScope = .all, searchText: String) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox, searchScope: SearchScope = .all, searchText: String) {
         self.authenticationBox = authenticationBox
         self.searchScope = searchScope
         self.searchText = searchText

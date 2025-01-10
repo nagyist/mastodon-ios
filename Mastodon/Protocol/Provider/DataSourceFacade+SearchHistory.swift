@@ -13,7 +13,7 @@ import UIKit
 extension DataSourceFacade {
 
     static func responseToCreateSearchHistory(
-        provider: ViewControllerWithDependencies & AuthContextProvider,
+        provider: UIViewController & AuthContextProvider,
         item: DataSourceItem
     ) async {
         switch item {

@@ -35,19 +35,14 @@ enum PrivacyRow {
     }
 }
 
-class PrivacyTableViewController: UIViewController, NeedsDependency {
+class PrivacyTableViewController: UIViewController {
 
-    var context: AppContext!
-    var coordinator: SceneCoordinator!
-
+    private let coordinator: SceneCoordinator
     private let tableView: UITableView
     let viewModel: PrivacyViewModel
 
-    init(context: AppContext, coordinator: SceneCoordinator, viewModel: PrivacyViewModel) {
-
-        self.context = context
+    init(coordinator: SceneCoordinator, viewModel: PrivacyViewModel) {
         self.coordinator = coordinator
-
         self.viewModel = viewModel
 
         tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -86,20 +81,8 @@ class PrivacyTableViewController: UIViewController, NeedsDependency {
         setupOnboardingAppearance()
     }
 
-    //MARK: - Actions
-    @objc private func backButtonPressed(_ sender: UIButton) {
-        navigationController?.popViewController(animated: true)
-    }
-
     @objc private func nextButtonPressed(_ sender: UIButton) {
-        let viewModel = MastodonRegisterViewModel(
-            context: context,
-            domain: viewModel.domain,
-            authenticateInfo: viewModel.authenticateInfo,
-            instance: viewModel.instance,
-            applicationToken: viewModel.applicationToken
-        )
-        _ = coordinator.present(scene: .mastodonRegister(viewModel: viewModel), from: self, transition: .show)
+        viewModel.didAccept()
     }
 }
 

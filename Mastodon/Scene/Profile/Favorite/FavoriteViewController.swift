@@ -17,10 +17,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class FavoriteViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class FavoriteViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: FavoriteViewModel!

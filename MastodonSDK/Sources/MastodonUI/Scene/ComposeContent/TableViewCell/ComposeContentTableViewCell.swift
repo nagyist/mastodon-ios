@@ -9,6 +9,13 @@ import UIKit
 import UIHostingConfigurationBackport
 
 final class ComposeContentTableViewCell: UITableViewCell {
+    
+    var contentHeight: CGFloat?
+    
+    override var intrinsicContentSize: CGSize {
+        let superContentSize = super.intrinsicContentSize
+        return CGSize(width: superContentSize.width, height: contentHeight ?? superContentSize.height)
+    }
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)

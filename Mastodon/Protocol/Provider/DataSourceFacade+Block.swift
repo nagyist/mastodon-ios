@@ -12,12 +12,12 @@ import MastodonSDK
 
 extension DataSourceFacade {
     static func responseToUserBlockAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Relationship {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
-        let apiService = dependency.context.apiService
+        let apiService = APIService.shared
         let authBox = dependency.authenticationBox
 
         let response = try await apiService.toggleBlock(
@@ -35,12 +35,12 @@ extension DataSourceFacade {
     }
 
     static func responseToDomainBlockAction(
-        dependency: NeedsDependency & AuthContextProvider,
+        dependency: AuthContextProvider,
         account: Mastodon.Entity.Account
     ) async throws -> Mastodon.Entity.Empty {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
-        let apiService = dependency.context.apiService
+        let apiService = APIService.shared
         let authBox = dependency.authenticationBox
 
         let response = try await apiService.toggleDomainBlock(account: account, authenticationBox: authBox)

@@ -15,11 +15,11 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 final class SidebarViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox?
     @Published private var isSidebarDataSourceReady = false
     @Published private var isAvatarButtonDataReady = false
@@ -34,8 +34,7 @@ final class SidebarViewModel {
         UIImage.SymbolConfiguration(weight: .bold)
     )
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox?) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox?) {
         self.authenticationBox = authenticationBox
         
         Publishers.CombineLatest(
@@ -75,7 +74,7 @@ extension SidebarViewModel {
             let imageURL: URL?
             switch item {
             case .me:
-                let account = self.authenticationBox?.authentication.account()
+                let account = self.authenticationBox?.authentication.cachedAccount()
                 imageURL = account?.avatarImageURL()
             case .home, .search, .compose, .notifications:
                 // no custom avatar for other tabs
@@ -107,7 +106,7 @@ extension SidebarViewModel {
             switch item {
                 case .notifications:
                     Publishers.CombineLatest(
-                        self.context.notificationService.unreadNotificationCountDidUpdate,
+                        NotificationService.shared.unreadNotificationCountDidUpdate,
                         self.$currentTab
                     )
                     .receive(on: DispatchQueue.main)
@@ -133,7 +132,7 @@ extension SidebarViewModel {
                     }
                     .store(in: &cell.disposeBag)
                 case .me:
-                    guard let account = self.authenticationBox?.authentication.account() else { return }
+                    guard let account = self.authenticationBox?.authentication.cachedAccount() else { return }
 
                     let currentUserDisplayName = account.displayNameWithFallback
                     cell.accessibilityHint = L10n.Scene.AccountList.tabBarHint(currentUserDisplayName)

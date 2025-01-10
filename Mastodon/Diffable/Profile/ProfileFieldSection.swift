@@ -26,7 +26,6 @@ extension ProfileFieldSection {
     
     static func diffableDataSource(
         collectionView: UICollectionView,
-        context: AppContext,
         configuration: Configuration
     ) -> UICollectionViewDiffableDataSource<ProfileFieldSection, ProfileFieldItem> {
         collectionView.register(ProfileFieldCollectionViewHeaderFooterView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: ProfileFieldCollectionViewHeaderFooterView.headerReuseIdentifer)

@@ -145,10 +145,12 @@ extension PrivacySafetyViewModel {
             let domain = authenticationBox.domain
             let userAuthorization = authenticationBox.userAuthorization
             
-            let account = try await appContext.apiService.accountVerifyCredentials(
+            let (account, _) = try await APIService.shared.verifyAndActivateUser(
                 domain: domain,
+                clientID: authenticationBox.authentication.clientID,
+                clientSecret: authenticationBox.authentication.clientSecret,
                 authorization: userAuthorization
-            ).singleOutput().value
+            )
             
             if let privacy = account.source?.privacy {
                 visibility = .from(privacy)
@@ -172,7 +174,7 @@ extension PrivacySafetyViewModel {
             let domain = authenticationBox.domain
             let userAuthorization = authenticationBox.userAuthorization
             
-            let _ = try await appContext.apiService.accountUpdateCredentials(
+            let _ = try await APIService.shared.accountUpdateCredentials(
                 domain: domain,
                 query: .init(
                     discoverable: suggestMyAccountToOthers,

@@ -33,7 +33,7 @@ public final class ComposeContentViewController: UIViewController {
     // auto complete
     private(set) lazy var autoCompleteViewController: AutoCompleteViewController = {
         let viewController = AutoCompleteViewController()
-        viewController.viewModel = AutoCompleteViewModel(context: viewModel.context, authenticationBox: viewModel.authenticationBox)
+        viewController.viewModel = AutoCompleteViewModel(authenticationBox: viewModel.authenticationBox)
         viewController.delegate = self
         // viewController.viewModel.customEmojiViewModel.value = viewModel.customEmojiViewModel
         return viewController
@@ -469,7 +469,6 @@ extension ComposeContentViewController: PHPickerViewControllerDelegate {
 
         let attachmentViewModels: [AttachmentViewModel] = results.map { result in
             AttachmentViewModel(
-                api: viewModel.context.apiService,
                 authenticationBox: viewModel.authenticationBox,
                 input: .pickerResult(result),
                 sizeLimit: viewModel.sizeLimit,
@@ -488,7 +487,6 @@ extension ComposeContentViewController: UIImagePickerControllerDelegate & UINavi
         guard let image = info[.originalImage] as? UIImage else { return }
 
         let attachmentViewModel = AttachmentViewModel(
-            api: viewModel.context.apiService,
             authenticationBox: viewModel.authenticationBox,
             input: .image(image),
             sizeLimit: viewModel.sizeLimit,
@@ -508,7 +506,6 @@ extension ComposeContentViewController: UIDocumentPickerDelegate {
         guard let url = urls.first else { return }
 
         let attachmentViewModel = AttachmentViewModel(
-            api: viewModel.context.apiService,
             authenticationBox: viewModel.authenticationBox,
             input: .url(url),
             sizeLimit: viewModel.sizeLimit,
@@ -535,7 +532,7 @@ extension ComposeContentViewController: ComposeContentToolbarViewDelegate {
             self.viewModel.isContentWarningActive.toggle()
             if self.viewModel.isContentWarningActive {
                 Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: .second / 20)     // 0.05s
+                    try? await Task.sleep(nanoseconds: .nanosPerUnit / 20)     // 0.05s
                     self.viewModel.setContentWarningTextViewFirstResponderIfNeeds()
                 }   // end Task
             } else {

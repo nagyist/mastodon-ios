@@ -113,7 +113,7 @@ extension SearchResultViewModel.State {
             
             Task {
                 do {
-                    let searchResults = try await viewModel.context.apiService.search(
+                    let searchResults = try await APIService.shared.search(
                         query: query,
                         authenticationBox: viewModel.authenticationBox
                     ).value
@@ -129,7 +129,7 @@ extension SearchResultViewModel.State {
 
                     let relationships: [Mastodon.Entity.Relationship]
                     if accounts.isNotEmpty {
-                        relationships = try await viewModel.context.apiService.relationship(
+                        relationships = try await APIService.shared.relationship(
                             forAccounts: accounts,
                             authenticationBox: viewModel.authenticationBox
                         ).value

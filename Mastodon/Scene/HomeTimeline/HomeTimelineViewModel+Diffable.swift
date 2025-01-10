@@ -8,29 +8,28 @@
 import UIKit
 import MastodonUI
 import MastodonSDK
+import MastodonCore
 
 extension HomeTimelineViewModel {
     
     func setupDiffableDataSource(
         tableView: UITableView,
+        filterContext: Mastodon.Entity.FilterContext?,
         statusTableViewCellDelegate: StatusTableViewCellDelegate,
         timelineMiddleLoaderTableViewCellDelegate: TimelineMiddleLoaderTableViewCellDelegate
     ) {
         diffableDataSource = StatusSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             configuration: StatusSection.Configuration(
-                context: context,
                 authenticationBox: authenticationBox,
                 statusTableViewCellDelegate: statusTableViewCellDelegate,
                 timelineMiddleLoaderTableViewCellDelegate: timelineMiddleLoaderTableViewCellDelegate,
-                filterContext: .home,
-                activeFilters: context.statusFilterService.$activeFilters
+                filterContext: filterContext  // should be .home
             )
         )
 
         // make initial snapshot animation smooth
-        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
         snapshot.appendSections([.main])
         diffableDataSource?.apply(snapshot)
         
@@ -45,11 +44,11 @@ extension HomeTimelineViewModel {
 
                 Task { @MainActor in
                     let oldSnapshot = diffableDataSource.snapshot()
-                    var newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem> = {
+                    var newSnapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier> = {
                         let newItems = records.map { record in
-                            StatusItem.feed(record: record)
+                            MastodonItemIdentifier.feed(record)
                         }.removingDuplicates()
-                        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+                        var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
                         snapshot.appendSections([.main])
                         snapshot.appendItems(newItems, toSection: .main)
                         return snapshot
@@ -64,7 +63,7 @@ extension HomeTimelineViewModel {
                         if isLast {
                             newSnapshot.insertItems([.bottomLoader], afterItem: item)
                         } else {
-                            newSnapshot.insertItems([.feedLoader(record: record)], afterItem: item)
+                            newSnapshot.insertItems([.feedLoader(feed: record)], afterItem: item)
                         }
                     }
 
@@ -85,12 +84,13 @@ extension HomeTimelineViewModel {
                     }
                     
                     await self.updateDataSource(snapshot: newSnapshot, animatingDifferences: false)
-                    if tableView.numberOfSections >= difference.targetIndexPath.section && tableView.numberOfRows(inSection: difference.targetIndexPath.section) >= difference.targetIndexPath.row {
+                    let tableViewContainsTargetIndexPath = difference.targetIndexPath.section < tableView.numberOfSections  && difference.targetIndexPath.row < tableView.numberOfRows(inSection: difference.targetIndexPath.section)
+                    if tableViewContainsTargetIndexPath {
                         tableView.scrollToRow(at: difference.targetIndexPath, at: .top, animated: false)
+                        var contentOffset = tableView.contentOffset
+                        contentOffset.y = tableView.contentOffset.y - difference.sourceDistanceToTableViewTopEdge
+                        tableView.setContentOffset(contentOffset, animated: false)
                     }
-                    var contentOffset = tableView.contentOffset
-                    contentOffset.y = tableView.contentOffset.y - difference.sourceDistanceToTableViewTopEdge
-                    tableView.setContentOffset(contentOffset, animated: false)
                     self.didLoadLatest.send()
                     self.hasPendingStatusEditReload = false
                 }   // end Task
@@ -104,14 +104,14 @@ extension HomeTimelineViewModel {
 extension HomeTimelineViewModel {
     
     @MainActor func updateDataSource(
-        snapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>,
+        snapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>,
         animatingDifferences: Bool
     ) async {
         await diffableDataSource?.apply(snapshot, animatingDifferences: animatingDifferences)
     }
     
     @MainActor func updateSnapshotUsingReloadData(
-        snapshot: NSDiffableDataSourceSnapshot<StatusSection, StatusItem>
+        snapshot: NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>
     ) {
         self.diffableDataSource?.applySnapshotUsingReloadData(snapshot)
     }
@@ -128,34 +128,34 @@ extension HomeTimelineViewModel {
         oldSnapshot: NSDiffableDataSourceSnapshot<S, T>,
         newSnapshot: NSDiffableDataSourceSnapshot<S, T>
     ) -> Difference<T>? {
-        guard let sourceIndexPath = (tableView.indexPathsForVisibleRows ?? []).sorted().first else { return nil }
-        let rectForSourceItemCell = tableView.rectForRow(at: sourceIndexPath)
-        let sourceDistanceToTableViewTopEdge: CGFloat = {
+        guard let currentFirstVisibleIndexPath = (tableView.indexPathsForVisibleRows ?? []).sorted().first else { return nil }
+        let rectForCurrentFirstVisibleCell = tableView.rectForRow(at: currentFirstVisibleIndexPath)
+        let currentDistanceFromFirstVisibleCellToTableViewTopEdge: CGFloat = {
             if tableView.window != nil {
-                return tableView.convert(rectForSourceItemCell, to: nil).origin.y - tableView.safeAreaInsets.top
+                return tableView.convert(rectForCurrentFirstVisibleCell, to: nil).origin.y - tableView.safeAreaInsets.top
             } else {
-                return rectForSourceItemCell.origin.y - tableView.contentOffset.y - tableView.safeAreaInsets.top
+                return rectForCurrentFirstVisibleCell.origin.y - tableView.contentOffset.y - tableView.safeAreaInsets.top
             }
         }()
 
-        guard sourceIndexPath.section < oldSnapshot.numberOfSections,
-              sourceIndexPath.row < oldSnapshot.numberOfItems(inSection: oldSnapshot.sectionIdentifiers[sourceIndexPath.section])
-        else { return nil }
+        guard currentFirstVisibleIndexPath.section < oldSnapshot.numberOfSections,
+              currentFirstVisibleIndexPath.row < oldSnapshot.numberOfItems(inSection: oldSnapshot.sectionIdentifiers[currentFirstVisibleIndexPath.section])
+        else { assertionFailure("tableview not in sync with oldSnapshot"); return nil }
         
-        let sectionIdentifier = oldSnapshot.sectionIdentifiers[sourceIndexPath.section]
-        let item = oldSnapshot.itemIdentifiers(inSection: sectionIdentifier)[sourceIndexPath.row]
+        let currentFirstVisibleSectionIdentifier = oldSnapshot.sectionIdentifiers[currentFirstVisibleIndexPath.section]
+        let currentFirstVisibleItem = oldSnapshot.itemIdentifiers(inSection: currentFirstVisibleSectionIdentifier)[currentFirstVisibleIndexPath.row]
         
-        guard let targetIndexPathRow = newSnapshot.indexOfItem(item),
-              let newSectionIdentifier = newSnapshot.sectionIdentifier(containingItem: item),
+        guard let targetIndexPathRow = newSnapshot.indexOfItem(currentFirstVisibleItem),
+              let newSectionIdentifier = newSnapshot.sectionIdentifier(containingItem: currentFirstVisibleItem),
               let targetIndexPathSection = newSnapshot.indexOfSection(newSectionIdentifier)
         else { return nil }
         
         let targetIndexPath = IndexPath(row: targetIndexPathRow, section: targetIndexPathSection)
         
         return Difference(
-            item: item,
-            sourceIndexPath: sourceIndexPath,
-            sourceDistanceToTableViewTopEdge: sourceDistanceToTableViewTopEdge,
+            item: currentFirstVisibleItem,
+            sourceIndexPath: currentFirstVisibleIndexPath,
+            sourceDistanceToTableViewTopEdge: currentDistanceFromFirstVisibleCellToTableViewTopEdge,
             targetIndexPath: targetIndexPath
         )
     }

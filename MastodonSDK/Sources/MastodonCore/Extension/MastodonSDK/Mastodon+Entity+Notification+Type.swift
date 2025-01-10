@@ -11,7 +11,7 @@ import UIKit
 import MastodonAsset
 import MastodonLocalization
 
-extension Mastodon.Entity.Notification.NotificationType {
+extension Mastodon.Entity.NotificationType {
     public var color: UIColor {
         get {
             var color: UIColor

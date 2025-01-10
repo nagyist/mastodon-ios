@@ -16,7 +16,7 @@ extension Mastodon.Entity {
     ///   2021/1/29
     /// # Reference
     ///  [Document](https://docs.joinmastodon.org/entities/report/)
-    public struct Report: Codable {
+    public struct Report: Codable, Sendable {
         public typealias ID = String
         
         public let id: ID                   //  undocumented

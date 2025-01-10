@@ -22,17 +22,14 @@ public final class SettingFetchedResultController: NSObject {
     // output
     public let settings = CurrentValueSubject<[Setting], Never>([])
     
-    public init(managedObjectContext: NSManagedObjectContext, additionalPredicate: NSPredicate?) {
+    override public init() {
         self.fetchedResultsController = {
             let fetchRequest = Setting.sortedFetchRequest
             fetchRequest.returnsObjectsAsFaults = false
-            if let additionalPredicate = additionalPredicate {
-                fetchRequest.predicate = additionalPredicate
-            }
             fetchRequest.fetchBatchSize = 20
             let controller = NSFetchedResultsController(
                 fetchRequest: fetchRequest,
-                managedObjectContext: managedObjectContext,
+                managedObjectContext: PersistenceManager.shared.mainActorManagedObjectContext,
                 sectionNameKeyPath: nil,
                 cacheName: nil
             )

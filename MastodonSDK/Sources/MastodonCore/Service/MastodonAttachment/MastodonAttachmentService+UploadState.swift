@@ -18,6 +18,7 @@ extension MastodonAttachmentService {
             self.service = service
         }
         
+        @MainActor
         public override func didEnter(from previousState: GKState?) {
             service?.uploadStateMachineSubject.send(self)
         }
@@ -51,6 +52,7 @@ extension MastodonAttachmentService.UploadState {
                 || stateClass == Processing.self
         }
         
+        @MainActor
         public override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             
@@ -67,7 +69,7 @@ extension MastodonAttachmentService.UploadState {
             )
 
             // and needs clone the `query` if needs retry
-            service.context.apiService.uploadMedia(
+            APIService.shared.uploadMedia(
                 domain: authenticationBox.domain,
                 query: query,
                 mastodonAuthenticationBox: authenticationBox,
@@ -126,7 +128,7 @@ extension MastodonAttachmentService.UploadState {
                 return
             }
          
-            service.context.apiService.getMedia(
+            APIService.shared.getMedia(
                 attachmentID: attachment.id,
                 mastodonAuthenticationBox: authenticationBox
             )

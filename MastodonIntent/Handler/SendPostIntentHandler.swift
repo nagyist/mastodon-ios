@@ -13,6 +13,7 @@ import CoreDataStack
 import MastodonSDK
 import MastodonCore
 
+@MainActor
 final class SendPostIntentHandler: NSObject {
 
     var disposeBag = Set<AnyCancellable>()
@@ -20,10 +21,7 @@ final class SendPostIntentHandler: NSObject {
     let coreDataStack = CoreDataStack()
     lazy var managedObjectContext = coreDataStack.persistentContainer.viewContext
     lazy var api: APIService = {
-        let backgroundManagedObjectContext = coreDataStack.newTaskContext()
-        return APIService(
-            backgroundManagedObjectContext: backgroundManagedObjectContext
-        )
+        return APIService.isolatedService()
     }()
 }
 
@@ -47,29 +45,20 @@ extension SendPostIntentHandler: SendPostIntentHandling {
             // fetch authentications from
             // user pick accounts
             // or fallback to active account
-            let mastodonAuthentications: [MastodonAuthentication]
+            let authBoxes: [MastodonAuthenticationBox]
             let accounts = intent.accounts ?? []
             if accounts.isEmpty {
-                // fixme: refactor this and implemented method on AuthenticationServiceProvider
-                let _authentication = AuthenticationServiceProvider.shared.authentications.sorted(by: { $0.activedAt > $1.activedAt }).first
-    
-                guard let authentication = _authentication else {
+                guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else {
                     let failureReason = APIService.APIError.implicit(.authenticationMissing).errorDescription ?? "Fail to Send Post"
                     return SendPostIntentResponse.failure(failureReason: failureReason)
                 }
-                mastodonAuthentications = [authentication]
+                authBoxes = [authBox]
             } else {
-                mastodonAuthentications = try accounts.mastodonAuthentication()
-            }
-
-            let authenticationBoxes = mastodonAuthentications.map { authentication in
-                MastodonAuthenticationBox(
-                    authentication: authentication
-                )
+                authBoxes = try accounts.mastodonAuthenticationBoxes()
             }
             
             var posts: [Post] = []
-            for authenticationBox in authenticationBoxes {
+            for authenticationBox in authBoxes {
                 let idempotencyKey = UUID().uuidString
                 let response = try await api.publishStatus(
                     domain: authenticationBox.domain,
@@ -121,7 +110,7 @@ extension SendPostIntentHandler: SendPostIntentHandling {
     }   // end func
 
     // content
-    func resolveContent(for intent: SendPostIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
+    nonisolated func resolveContent(for intent: SendPostIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
         guard let content = intent.content, !content.isEmpty else {
             completion(.needsValue())
             return
@@ -144,13 +133,25 @@ extension SendPostIntentHandler: SendPostIntentHandling {
     }
     
     func provideAccountsOptionsCollection(for intent: SendPostIntent) async throws -> INObjectCollection<Account> {
-        let accounts = try await Account.fetch()
+        let accounts = Account.loadFromCache()
         return .init(items: accounts)
     }
 
     // visibility
-    func resolveVisibility(for intent: SendPostIntent, with completion: @escaping (PostVisibilityResolutionResult) -> Void) {
+    nonisolated func resolveVisibility(for intent: SendPostIntent, with completion: @escaping (PostVisibilityResolutionResult) -> Void) {
         completion(.success(with: intent.visibility))
+    }
+
+}
+
+extension Array where Element == Account {
+    @MainActor
+    func mastodonAuthenticationBoxes() throws -> [MastodonAuthenticationBox] {
+        let identifiers = self
+            .compactMap { $0.identifier }
+            .compactMap { UUID(uuidString: $0) }
+        let results = AuthenticationServiceProvider.shared.mastodonAuthenticationBoxes.filter({ identifiers.contains($0.authentication.identifier) })
+        return results
     }
 
 }

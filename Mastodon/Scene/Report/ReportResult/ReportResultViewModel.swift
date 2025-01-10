@@ -21,7 +21,6 @@ class ReportResultViewModel: ObservableObject {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let account: Mastodon.Entity.Account
     var relationship: Mastodon.Entity.Relationship
@@ -46,13 +45,11 @@ class ReportResultViewModel: ObservableObject {
     let blockActionPublisher = PassthroughSubject<Void, Never>()
     
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         account: Mastodon.Entity.Account,
         relationship: Mastodon.Entity.Relationship,
         isReported: Bool
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.account = account
         self.relationship = relationship

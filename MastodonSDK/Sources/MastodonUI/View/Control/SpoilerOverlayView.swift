@@ -10,7 +10,7 @@ import MastodonLocalization
 import MastodonAsset
 import MetaTextKit
 
-public final class SpoilerOverlayView: UIView {
+public final class ContentConcealExplainView: UIView {
     
     let containerStackView: UIStackView = {
         let stackView = UIStackView()
@@ -44,7 +44,7 @@ public final class SpoilerOverlayView: UIView {
     
 }
 
-extension SpoilerOverlayView {
+extension ContentConcealExplainView {
     private func _init() {
         containerStackView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(containerStackView)

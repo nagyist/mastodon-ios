@@ -21,7 +21,7 @@ final class ProfileFieldAddEntryCollectionViewCell: UICollectionViewCell {
     let containerStackView = UIStackView()
 
     let editButton: UIButton = {
-        let button = HitTestExpandedButton(type: .custom)
+        let button = MinimumHitTargetButton(type: .custom)
         button.setImage(ProfileFieldAddEntryCollectionViewCell.insertButtonImage, for: .normal)
         button.contentMode = .center
         button.tintColor = .systemGreen

@@ -12,11 +12,11 @@ import SessionExporter
 import Nuke
 
 extension AttachmentViewModel {
-    func compressVideo(url: URL) async throws -> URL? {
+    func compressVideo(url: URL) async throws -> URL {
         let urlAsset = AVURLAsset(url: url)
         
-        guard let track = urlAsset.tracks(withMediaType: .video).first else {
-            return nil
+        guard let track = try await urlAsset.loadTracks(withMediaType: .video).first else {
+            throw AttachmentError.invalidAttachmentType
         }
         
         let exporter = NextLevelSessionExporter(withAsset: urlAsset)

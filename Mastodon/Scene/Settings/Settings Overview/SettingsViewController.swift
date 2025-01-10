@@ -30,7 +30,7 @@ class SettingsViewController: UIViewController {
             baseSections.insert(.init(entries: [.makeDonation, .manageDonations]), at: baseSections.count - 1)
         }
         if isDebugOrTestflightOrSimulator {
-            baseSections.append(.init(entries: [.toggleTestDonations, .clearPreviousDonationCampaigns]))
+            baseSections.append(.init(entries: [.manageBetaFeatures]))
         }
         sections = baseSections
 

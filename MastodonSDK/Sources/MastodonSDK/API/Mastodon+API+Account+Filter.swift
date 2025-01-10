@@ -11,8 +11,12 @@ import Combine
 // MARK: - Account credentials
 extension Mastodon.API.Account {
 
-    static func filtersEndpointURL(domain: String) -> URL {
+    static func filtersV1EndpointURL(domain: String) -> URL {
         return Mastodon.API.endpointURL(domain: domain).appendingPathComponent("filters")
+    }
+    
+    static func filtersV2EndpointURL(domain: String) -> URL {
+        return Mastodon.API.endpointV2URL(domain: domain).appendingPathComponent("filters")
     }
 
     /// View all filters
@@ -34,19 +38,29 @@ extension Mastodon.API.Account {
         session: URLSession,
         domain: String,
         authorization: Mastodon.API.OAuth.Authorization
-    ) -> AnyPublisher<Mastodon.Response.Content<[Mastodon.Entity.Filter]>, Error> {
-        let request = Mastodon.API.get(
-            url: filtersEndpointURL(domain: domain),
+    ) async throws -> [Mastodon.Entity.FilterInfo] {
+        let v2request = Mastodon.API.get(
+            url: filtersV2EndpointURL(domain: domain),
             query: nil,
             authorization: authorization
         )
 
-        return session.dataTaskPublisher(for: request)
-            .tryMap { data, response in
-                let value = try Mastodon.API.decode(type: [Mastodon.Entity.Filter].self, from: data, response: response)
-                return Mastodon.Response.Content(value: value, response: response)
-            }
-            .eraseToAnyPublisher()
+        do {
+            let (data, response) = try await session.data(for: v2request)
+            let value = try Mastodon.API.decode(type: [Mastodon.Entity.FilterV2].self, from: data, response: response)
+            return value
+        } catch let error {
+            guard let apiError = error as? Mastodon.API.Error, apiError.httpResponseStatus == .notFound else { throw error }
+        }
+        
+        // fallback to v1
+        let v1request = Mastodon.API.get(
+            url: filtersV1EndpointURL(domain: domain),
+            query: nil,
+            authorization: authorization
+        )
+        let (data, response) = try await session.data(for: v1request)
+        let value = try Mastodon.API.decode(type: [Mastodon.Entity.FilterV1].self, from: data, response: response)
+        return value
     }
-
 }

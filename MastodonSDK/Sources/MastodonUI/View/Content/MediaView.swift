@@ -43,15 +43,17 @@ public final class MediaView: UIView {
         return imageView
     }()
     
-    private(set) lazy var playerViewController: AVPlayerViewController = {
+    private(set) var playerViewController: AVPlayerViewController?
+    private var playerLooper: AVPlayerLooper?
+    
+    private func createPlayerViewController() -> AVPlayerViewController {
         let playerViewController = AVPlayerViewController()
         playerViewController.view.layer.masksToBounds = true
         playerViewController.view.isUserInteractionEnabled = false
         playerViewController.videoGravity = .resizeAspectFill
         playerViewController.updatesNowPlayingInfoCenter = false
         return playerViewController
-    }()
-    private var playerLooper: AVPlayerLooper?
+    }
 
     let overlayViewController: UIHostingController<InlineMediaOverlayContainer> = {
         let vc = UIHostingController(rootView: InlineMediaOverlayContainer())
@@ -127,28 +129,35 @@ extension MediaView {
         layoutAlt()
     }
     
-    private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {        
-        Publishers.CombineLatest3(
-            configuration.$isReveal,
+    private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {
+        let subscribedConfigurationIdentifier = ObjectIdentifier(configuration) // this shouldn't be necessary now, but allows a check in debug mode. https://github.com/mastodon/mastodon-ios/issues/1374
+        Publishers.CombineLatest(
             configuration.$previewImage,
             configuration.$blurhashImage
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] isReveal, previewImage, blurhashImage in
+        .sink { [weak self] previewImage, blurhashImage in
             guard let self = self else { return }
-            
-            let image = isReveal ?
+            guard let currentConfiguration = self.configuration, ObjectIdentifier(currentConfiguration) == subscribedConfigurationIdentifier else {
+                assert(false, "\(self) attempt to load an image that belongs to a configuration no longer associated with this MediaView.")
+                return
+            }
+            let image = configuration.isReveal ?
                 (previewImage ?? blurhashImage ?? MediaView.placeholderImage) :
                 (blurhashImage ?? MediaView.placeholderImage)
             self.imageView.image = image
         }
-        .store(in: &configuration.disposeBag)
+        .store(in: &_disposeBag)
 
         bindAlt(configuration: configuration, altDescription: info.altDescription)
     }
     
     private func layoutGIF() {
         // use view controller as View here
+        if playerViewController == nil {
+            playerViewController = createPlayerViewController()
+        }
+        guard let playerViewController else { return }
         playerViewController.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(playerViewController.view)
         playerViewController.view.pinToParent()
@@ -162,11 +171,21 @@ extension MediaView {
 
         guard let player = setupGIFPlayer(info: info) else { return }
         setupPlayerLooper(player: player)
+        
+        if playerViewController == nil {
+            playerViewController = createPlayerViewController()
+        }
+        guard let playerViewController else { return }
         playerViewController.player = player
         playerViewController.showsPlaybackControls = false
         
         // auto play for GIF
-        player.play()
+        if configuration.isReveal {
+            blurhashImageView.alpha = 0
+            player.play()
+        } else {
+            blurhashImageView.alpha = 1
+        }
 
         bindAlt(configuration: configuration, altDescription: info.altDescription)
     }
@@ -213,20 +232,6 @@ extension MediaView {
             .assign(to: \.image, on: blurhashImageView)
             .store(in: &_disposeBag)
         blurhashImageView.alpha = configuration.isReveal ? 0 : 1
-        
-        configuration.$isReveal
-            .dropFirst()
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isReveal in
-                guard let self = self else { return }
-                let animator = UIViewPropertyAnimator(duration: 0.3, curve: .easeInOut)
-                animator.addAnimations {
-                    self.blurhashImageView.alpha = isReveal ? 0 : 1
-                }
-                animator.startAnimation()
-            }
-            .store(in: &_disposeBag)
     }
     
     private func layoutAlt() {
@@ -235,7 +240,11 @@ extension MediaView {
         overlayViewController.view.pinToParent()
     }
     
+    @MainActor
     public func prepareForReuse() {
+        for cancellable in _disposeBag {
+            cancellable.cancel()
+        }
         _disposeBag.removeAll()
         
         // reset appearance
@@ -248,12 +257,12 @@ extension MediaView {
         imageView.image = nil
         
         // reset player
-        playerViewController.view.removeFromSuperview()
-        playerViewController.contentOverlayView.flatMap { view in
+        playerViewController?.view.removeFromSuperview()
+        playerViewController?.contentOverlayView.flatMap { view in
             view.removeConstraints(view.constraints)
         }
-        playerViewController.player?.pause()
-        playerViewController.player = nil
+        playerViewController?.player?.pause()
+        playerViewController?.player = nil
         playerLooper = nil
         
         // blurhash

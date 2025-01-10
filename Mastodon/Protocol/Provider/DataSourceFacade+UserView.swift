@@ -5,10 +5,11 @@ import MastodonUI
 import CoreDataStack
 import MastodonCore
 import MastodonSDK
+import UIKit
 
 extension DataSourceFacade {
     static func responseToUserViewButtonAction(
-        dependency: ViewControllerWithDependencies & AuthContextProvider,
+        dependency: UIViewController & AuthContextProvider,
         account: Mastodon.Entity.Account,
         buttonState: UserView.ButtonState
     ) async throws {
