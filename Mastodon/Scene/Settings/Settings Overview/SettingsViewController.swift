@@ -29,7 +29,7 @@ class SettingsViewController: UIViewController {
         if Mastodon.Entity.DonationCampaign.isEligibleForDonationsSettingsSection(domain: domain) {
             baseSections.insert(.init(entries: [.makeDonation, .manageDonations]), at: baseSections.count - 1)
         }
-        if isDebugOrTestflightOrSimulator {
+        if UserDefaults.isDebugOrTestflightOrSimulator {
             baseSections.append(.init(entries: [.manageBetaFeatures]))
         }
         sections = baseSections

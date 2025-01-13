@@ -52,8 +52,8 @@ final class NotificationTimelineViewModel {
     ) {
         self.authenticationBox = authenticationBox
         self.scope = scope
-        let useGroupedNotifications = false
-        self.feedLoader = MastodonFeedLoader(authenticationBox: authenticationBox, kind: scope.feedKind, dedupePolicy: useGroupedNotifications ? .removeOldest : .omitNewest)
+        let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
+        self.feedLoader = MastodonFeedLoader(authenticationBox: authenticationBox, kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
 
         NotificationCenter.default.addObserver(self, selector: #selector(Self.notificationFilteringChanged(_:)), name: .notificationFilteringChanged, object: nil)

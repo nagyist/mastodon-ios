@@ -14,11 +14,6 @@ import os.log
 @MainActor
 final public class MastodonFeedLoader {
     
-    public enum DeduplicationPolicy {
-        case omitNewest
-        case removeOldest
-    }
-    
     private let logger = Logger(subsystem: "MastodonFeedLoader", category: "Data")
     private static let entryNotFoundMessage = "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
     
@@ -26,14 +21,12 @@ final public class MastodonFeedLoader {
     
     private let authenticationBox: MastodonAuthenticationBox
     private let kind: MastodonFeedKind
-    private let dedupePolicy: DeduplicationPolicy
     
     private var subscriptions = Set<AnyCancellable>()
     
-    public init(authenticationBox: MastodonAuthenticationBox, kind: MastodonFeedKind, dedupePolicy: DeduplicationPolicy = .omitNewest) {
+    public init(authenticationBox: MastodonAuthenticationBox, kind: MastodonFeedKind) {
         self.authenticationBox = authenticationBox
         self.kind = kind
-        self.dedupePolicy = dedupePolicy
         
         StatusFilterService.shared.$activeFilterBox
             .sink { filterBox in
@@ -56,13 +49,7 @@ final public class MastodonFeedLoader {
     private func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeedItemIdentifier]) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
         let newRecords = await self.filter(additionalRecords, forFeed: kind, with: filterBox)
-        switch dedupePolicy {
-        case .omitNewest:
-            self.records = (self.records + newRecords).removingDuplicates()
-        case .removeOldest:
-            assertionFailure("not implemented")
-            self.records = (self.records + newRecords).removingDuplicates()
-        }
+        self.records = (self.records + newRecords).removingDuplicates()
     }
     
     public func loadInitial(kind: MastodonFeedKind) {
@@ -244,7 +231,7 @@ private extension MastodonFeedLoader {
     }
         
     private func loadNotifications(withScope scope: APIService.MastodonNotificationScope, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
-        let useGroupedNotifications = false
+        let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
         if useGroupedNotifications {
             return try await _getGroupedNotifications(withScope: scope, olderThan: maxID)
         } else {
@@ -253,7 +240,7 @@ private extension MastodonFeedLoader {
     }
     
     private func loadNotifications(withAccountID accountID: String, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
-        let useGroupedNotifications = false
+        let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
         if useGroupedNotifications {
             return try await _getGroupedNotifications(accountID: accountID, olderThan: maxID)
         } else {

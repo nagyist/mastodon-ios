@@ -2,37 +2,7 @@
 
 import Foundation
 
-public var isDebugOrTestflightOrSimulator: Bool {
-    #if DEBUG
-        return true
-    #else
-        guard let path = Bundle.main.appStoreReceiptURL?.path else {
-            return false
-        }
-        return path.contains("CoreSimulator") || path.contains("sandboxReceipt")
-    #endif
-}
-
 extension Mastodon.API {
-    public static var isTestingDonations: Bool {
-        return isDebugOrTestflightOrSimulator && useStaging
-    }
-    public static func toggleTestingDonations() {
-        useStaging = !useStaging
-    }
-    private static let stagingKey = "use_staging_for_donations_testing"
-    private static var useStaging: Bool {
-        get {
-            if UserDefaults.standard.value(forKey: stagingKey) != nil {
-                return UserDefaults.standard.bool(forKey: stagingKey)
-            } else {
-                return true
-            }
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: stagingKey)
-        }
-    }
 
     public static var donationsEndpoint: URL {
         URL(
@@ -56,7 +26,7 @@ extension Mastodon.API {
                 URLQueryItem(name: "locale", value: locale),
                 URLQueryItem(name: "seed", value: "\(seed)"),
             ]
-            if isTestingDonations {
+            if UserDefaults.standard.useStagingForDonations {
                 queryItems.append(
                     URLQueryItem(name: "environment", value: "staging"))
             }

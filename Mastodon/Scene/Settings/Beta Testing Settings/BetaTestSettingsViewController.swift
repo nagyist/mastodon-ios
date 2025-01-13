@@ -8,16 +8,16 @@ struct BetaTestSettingsViewModel {
     let testGroupedNotifications: Bool
     
     init() {
-        useStagingForDonations = Mastodon.API.isTestingDonations
-        testGroupedNotifications = UserDefaults.standard.bool(forKey: BetaTestSetting.useGroupedNotifications.userDefaultsKey)
+        useStagingForDonations = UserDefaults.standard.useStagingForDonations
+        testGroupedNotifications = UserDefaults.standard.useGroupedNotifications
     }
     
     func byToggling(_ setting: BetaTestSetting) -> BetaTestSettingsViewModel {
         switch setting {
         case .useStagingForDonations:
-            Mastodon.API.toggleTestingDonations()
+            UserDefaults.standard.toggleUseStagingForDonations()
         case .useGroupedNotifications:
-            UserDefaults.standard.set(!testGroupedNotifications, forKey: setting.userDefaultsKey)
+            UserDefaults.standard.toggleUseGroupedNotifications()
         case .clearPreviousDonationCampaigns:
             assertionFailure("this is an action, not a setting")
             break
@@ -53,15 +53,6 @@ enum BetaTestSetting: Hashable {
             return "Clear donation history"
         case .useGroupedNotifications:
             return "Test grouped notifications"
-        }
-    }
-    
-    var userDefaultsKey: String {
-        switch self {
-        case .useGroupedNotifications:
-            return "use_grouped_notifications"
-        case .useStagingForDonations, .clearPreviousDonationCampaigns:
-            return "UNEXPECTED_KEY"
         }
     }
 }
