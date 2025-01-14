@@ -1450,6 +1450,8 @@ public enum L10n {
         public static func hashtag(_ p1: Any) -> String {
           return L10n.tr("Localizable", "Scene.Search.Searching.Hashtag", String(describing: p1), fallback: "Go to #%@")
         }
+        /// No recent searches.
+        public static let noRecentSearches = L10n.tr("Localizable", "Scene.Search.Searching.NoRecentSearches", fallback: "No recent searches.")
         /// People matching "%@"
         public static func people(_ p1: Any) -> String {
           return L10n.tr("Localizable", "Scene.Search.Searching.People", String(describing: p1), fallback: "People matching \"%@\"")
@@ -1464,8 +1466,6 @@ public enum L10n {
         }
         /// Recent searches
         public static let recentSearch = L10n.tr("Localizable", "Scene.Search.Searching.RecentSearch", fallback: "Recent searches")
-        /// No search results
-        public static let noSearchResults = L10n.tr("Localizable", "Scene.Search.Searching.NoSearchResults", fallback: "No recent searches.")
         /// Open URL in Mastodon
         public static let url = L10n.tr("Localizable", "Scene.Search.Searching.Url", fallback: "Open URL in Mastodon")
         public enum EmptyState {

@@ -32,7 +32,7 @@ final class SearchHistoryViewController: UIViewController {
 
     private let noSearchResultLabel: UILabel = {
         let label: UILabel = UILabel()
-        label.text = L10n.Scene.Search.Searching.noSearchResults
+        label.text = L10n.Scene.Search.Searching.noRecentSearches
         label.textColor = .secondaryLabel
         label.isHidden = true  // Initially Hiden
         return label

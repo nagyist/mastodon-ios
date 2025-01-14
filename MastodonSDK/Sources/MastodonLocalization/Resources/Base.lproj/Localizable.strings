@@ -510,6 +510,7 @@ If you disagree with the policy for **%@**, you can go back and pick a different
 "Scene.Search.Searching.Posts" = "Posts matching \"%@\"";
 "Scene.Search.Searching.Profile" = "Go to @%@@%@";
 "Scene.Search.Searching.RecentSearch" = "Recent searches";
+"Scene.Search.Searching.NoRecentSearches" = "No recent searches.";
 "Scene.Search.Searching.Url" = "Open URL in Mastodon";
 "Scene.Search.Title" = "Search";
 "Scene.ServerPicker.Button.Category.Academia" = "academia";
