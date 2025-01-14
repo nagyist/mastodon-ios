@@ -97,7 +97,7 @@ extension DataSourceFacade {
             notification.transientFollowRequestState = .init(state: .isRejecting)
         }
 
-        await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
+        await notificationView.configure(notification: notification)
 
         do {
             let newRelationship = try await APIService.shared.followRequest(
@@ -118,11 +118,11 @@ extension DataSourceFacade {
                 UserInfoKey.relationship: newRelationship
             ])
 
-            await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
+            await notificationView.configure(notification: notification)
         } catch {
             // reset state when failure
             notification.transientFollowRequestState = .init(state: .none)
-            await notificationView.configure(notification: notification, authenticationBox: dependency.authenticationBox)
+            await notificationView.configure(notification: notification)
 
             if let error = error as? Mastodon.API.Error {
                 switch error.httpResponseStatus {

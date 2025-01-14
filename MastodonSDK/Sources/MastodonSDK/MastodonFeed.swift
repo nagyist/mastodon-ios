@@ -209,13 +209,11 @@ public class MastodonFeedItemCacheManager {
     }
     
     public func partialAccount(_ id: String) -> Mastodon.Entity.PartialAccountWithAvatar? {
-        assertionFailure("not implemented")
-        return nil
+        return partialAccountsCache[id]
     }
     
     public func fullAccount(_ id: String) -> Mastodon.Entity.Account? {
-        assertionFailure("not implemented")
-        return nil
+        return fullAccountsCache[id]
     }
     
     private func contentStatusID(forStatus statusID: String) -> String {

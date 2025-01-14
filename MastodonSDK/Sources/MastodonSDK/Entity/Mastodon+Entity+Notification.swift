@@ -56,7 +56,7 @@ extension Mastodon.Entity {
         public let id: ID
         public let notificationsCount: Int
         public let type: NotificationType
-        public let mostRecentNotificationID: ID
+        public let mostRecentNotificationID: Int
         public let pageOldestID: ID? // ID of the oldest notification from this group represented within the current page. This is only returned when paginating through notification groups. Useful when polling new notifications.
         public let pageNewestID: ID? // ID of the newest notification from this group represented within the current page. This is only returned when paginating through notification groups. Useful when polling new notifications.
         public let latestPageNotificationAt: Date? // Date at which the most recent notification from this group within the current page has been created. This is only returned when paginating through notification groups.

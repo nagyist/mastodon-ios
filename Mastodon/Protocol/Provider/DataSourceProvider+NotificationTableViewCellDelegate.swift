@@ -46,7 +46,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                     completion: { (newRelationship: Mastodon.Entity.Relationship) in
                         notification.relationship = newRelationship
                         Task { @MainActor in
-                            notificationView.configure(notification: notification, authenticationBox: self.authenticationBox)
+                            notificationView.configure(notification: notification)
                         }
                     }
                 )

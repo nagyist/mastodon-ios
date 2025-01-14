@@ -80,6 +80,7 @@ extension SearchResultViewController {
                 )
             case .notification, .notificationBanner(_):
                 assertionFailure()
+                break
             }   // end switch
 
             tableView.deselectRow(at: indexPath, animated: true)

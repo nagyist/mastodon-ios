@@ -34,13 +34,22 @@ extension NotificationTimelineViewController: DataSourceProvider {
             case .notification, .notificationGroup:
                 let item: DataSourceItem? = {
                     //                guard feed.kind == .notificationAll || feed.kind == .notificationMentions else { return nil }
-                    
-                    if let notification = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.Notification {
-                        let mastodonNotification = MastodonNotification.fromEntity(notification, relationship: nil)
-                        return .notification(record: mastodonNotification)
-                    } else {
-                        return nil
+                    if let cachedItem = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) {
+                        if let notification = cachedItem as? Mastodon.Entity.Notification {
+                            let mastodonNotification = MastodonNotification.fromEntity(notification, relationship: nil)
+                            return .notification(record: mastodonNotification)
+                        } else if let notificationGroup = cachedItem as? Mastodon.Entity.NotificationGroup {
+                            if let statusID = notificationGroup.statusID, let statusEntity = MastodonFeedItemCacheManager.shared.cachedItem(.status(id: statusID)) as? Mastodon.Entity.Status {
+                                let status = MastodonStatus.fromEntity(statusEntity)
+                                return .status(record: status)
+                            }/* else if notificationGroup.type == .follow {
+                                return .followers
+                            } */ else {
+                                return nil
+                            }
+                        }
                     }
+                    return nil
                 }()
                 return item
             case .status:
