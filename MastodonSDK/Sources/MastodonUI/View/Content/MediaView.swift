@@ -29,7 +29,6 @@ public final class MediaView: UIView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.isUserInteractionEnabled = false
-        imageView.layer.masksToBounds = true    // clip overflow
         imageView.backgroundColor = .gray
         imageView.isOpaque = true
         return imageView
@@ -39,7 +38,6 @@ public final class MediaView: UIView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.isUserInteractionEnabled = false
-        imageView.layer.masksToBounds = true    // clip overflow
         return imageView
     }()
     
@@ -70,7 +68,13 @@ public final class MediaView: UIView {
         super.init(coder: coder)
         _init()
     }
-    
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+
+        layoutImageUsingFocus(in: blurhashImageView, container: container.bounds)
+        layoutImageUsingFocus(in: imageView, container: container.bounds)
+    }
 }
 
 extension MediaView {
@@ -83,7 +87,10 @@ extension MediaView {
     public func thumbnail() -> UIImage? {
         return imageView.image ?? configuration?.previewImage
     }
-    
+
+    public func contentView() -> UIView {
+        return imageView
+    }
 }
 
 extension MediaView {
@@ -123,9 +130,9 @@ extension MediaView {
     }
     
     private func layoutImage() {
-        imageView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(imageView)
-        imageView.pinToParent()
+        container.clipsToBounds = true
+
         layoutAlt()
     }
     
@@ -146,6 +153,7 @@ extension MediaView {
                 (previewImage ?? blurhashImage ?? MediaView.placeholderImage) :
                 (blurhashImage ?? MediaView.placeholderImage)
             self.imageView.image = image
+            self.setNeedsLayout()
         }
         .store(in: &_disposeBag)
 
@@ -201,7 +209,8 @@ extension MediaView {
         let imageInfo = Configuration.ImageInfo(
             aspectRadio: info.aspectRadio,
             assetURL: info.previewURL,
-            altDescription: info.altDescription
+            altDescription: info.altDescription,
+            focus: nil
         )
         bindImage(configuration: configuration, info: imageInfo)
     }
@@ -221,9 +230,7 @@ extension MediaView {
     }
 
     private func layoutBlurhash() {
-        blurhashImageView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(blurhashImageView)
-        blurhashImageView.pinToParent()
     }
     
     private func bindBlurhash(configuration: Configuration) {
@@ -238,6 +245,42 @@ extension MediaView {
         overlayViewController.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(overlayViewController.view)
         overlayViewController.view.pinToParent()
+    }
+    
+    private func layoutImageUsingFocus(in imageView: UIImageView, container: CGRect) {
+        guard let configuration, case let .image(image) = configuration.info,
+           let focus = image.focus, let image = imageView.image else {
+            imageView.frame = container
+            return
+        }
+
+        let imageAspect = image.size.width / image.size.height
+        let containerAspect = container.size.width / container.size.height
+
+        let scaledSize: CGSize = if imageAspect > containerAspect {
+            CGSize(
+                width: image.size.width * container.size.height / image.size.height,
+                height: container.size.height
+            )
+        } else {
+            CGSize(
+                width: container.size.width,
+                height: image.size.height * container.size.width / image.size.width
+            )
+        }
+
+        let focusOffset = CGPoint(
+            x: max(
+                min(0, (container.size.width / 2 - scaledSize.width / 2) * (1 + focus.x)),
+                container.size.width - scaledSize.width
+            ),
+            y: max(
+                min(0, (container.size.height / 2 - scaledSize.height / 2) * (1 + focus.y)),
+                container.size.height - scaledSize.height
+            )
+        )
+
+        imageView.frame = CGRect(origin: focusOffset, size: scaledSize)
     }
     
     @MainActor
