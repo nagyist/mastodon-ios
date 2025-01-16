@@ -71,7 +71,7 @@ extension NotificationView {
         case .moderationWarning:
             // case handled in `AccountWarningNotificationCell.swift`
             break
-        case ._other:
+        default:
             setAuthorContainerBottomPaddingViewDisplay()
             assertionFailure()
         }
@@ -103,7 +103,7 @@ extension NotificationView {
         case .moderationWarning:
             // case handled in `AccountWarningNotificationCell.swift`
             break
-        case ._other:
+        default:
             setAuthorContainerBottomPaddingViewDisplay()
             assertionFailure()
         }
@@ -136,7 +136,7 @@ extension NotificationView {
         case .moderationWarning:
             // case handled in `AccountWarningNotificationCell.swift`
             break
-        case ._other:
+        default:
             setAuthorContainerBottomPaddingViewDisplay()
             assertionFailure()
         }
@@ -169,7 +169,7 @@ extension NotificationView {
         case .moderationWarning:
             // case handled in `AccountWarningNotificationCell.swift`
             break
-        case ._other:
+        default:
             setAuthorContainerBottomPaddingViewDisplay()
             assertionFailure()
         }
@@ -260,7 +260,7 @@ extension NotificationView {
         case .moderationWarning:
 #warning("Not implemented")
             notificationIndicatorText = createMetaContent(text: "Moderation Warning", emojis: author.emojis.asDictionary)
-        case ._other:
+        default:
             notificationIndicatorText = nil
         }
         
@@ -630,6 +630,7 @@ extension MastodonFollowRequestState.State {
 
 protocol NotificationAuthor {
     var avatarURL: URL? { get }
+    var locked: Bool { get }
 }
 
 extension Mastodon.Entity.Account: NotificationAuthor {

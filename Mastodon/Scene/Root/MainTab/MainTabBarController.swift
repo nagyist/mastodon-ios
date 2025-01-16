@@ -35,7 +35,7 @@ class MainTabBarController: UITabBarController {
     let homeTimelineViewController: HomeTimelineViewController
     let searchViewController: SearchViewController
     let composeViewController: UIViewController // placeholder
-    let notificationViewController: NotificationViewController
+    let notificationViewController: UIViewController
     var meProfileViewController: UIViewController // placeholder
 
     private(set) var isReadyForWizardAvatarButton = false
@@ -59,15 +59,22 @@ class MainTabBarController: UITabBarController {
 
         composeViewController = UIViewController()
         composeViewController.configureTabBarItem(with: .compose)
-
-        notificationViewController = NotificationViewController()
+        
+        if BetaTestSettingsViewModel().testGroupedNotifications {
+            notificationViewController = NotificationListViewController()
+        } else {
+            notificationViewController = NotificationViewController()
+        }
         notificationViewController.configureTabBarItem(with: .notifications)
+
 
         meProfileViewController = UIViewController()
         meProfileViewController.configureTabBarItem(with: .me)
 
         if let authenticationBox {
-            notificationViewController.viewModel = NotificationViewModel(context: AppContext.shared, authenticationBox: authenticationBox)
+            if let notificationController = notificationViewController as? NotificationViewController {
+                notificationController.viewModel = NotificationViewModel(context: AppContext.shared, authenticationBox: authenticationBox)
+            }
             homeTimelineViewController.viewModel = HomeTimelineViewModel(authenticationBox: authenticationBox)
             searchViewController.viewModel = SearchViewModel(authenticationBox: authenticationBox)
         }

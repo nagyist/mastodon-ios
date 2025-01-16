@@ -33,7 +33,7 @@ extension NotificationSection {
     static func diffableDataSource(
         tableView: UITableView,
         configuration: Configuration
-    ) -> UITableViewDiffableDataSource<NotificationSection, NotificationItem> {
+    ) -> UITableViewDiffableDataSource<NotificationSection, NotificationListItem> {
         tableView.register(NotificationTableViewCell.self, forCellReuseIdentifier: String(describing: NotificationTableViewCell.self))
         tableView.register(AccountWarningNotificationCell.self, forCellReuseIdentifier: AccountWarningNotificationCell.reuseIdentifier)
         tableView.register(TimelineBottomLoaderTableViewCell.self, forCellReuseIdentifier: String(describing: TimelineBottomLoaderTableViewCell.self))
@@ -57,7 +57,7 @@ extension NotificationSection {
                     return cell
                 }
 
-            case .feedLoader:
+            case .middleLoader:
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: TimelineBottomLoaderTableViewCell.self), for: indexPath) as! TimelineBottomLoaderTableViewCell
                 cell.activityIndicatorView.startAnimating()
                 return cell
@@ -78,12 +78,14 @@ extension NotificationSection {
 
 extension NotificationSection {
     
+    @MainActor
     static func configure(
         tableView: UITableView,
         cell: NotificationTableViewCell,
         itemIdentifier: MastodonFeedItemIdentifier,
         configuration: Configuration
     ) {
+        guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { assertionFailure(); return }
         StatusSection.setupStatusPollDataSource(
             authenticationBox: configuration.authenticationBox,
             statusView: cell.notificationView.statusView

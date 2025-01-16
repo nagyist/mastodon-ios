@@ -58,7 +58,7 @@ extension NotificationTimelineViewController: DataSourceProvider {
             }
         case .filteredNotificationsInfo(let policy):
             return DataSourceItem.notificationBanner(policy: policy)
-        case .bottomLoader, .feedLoader:
+        case .bottomLoader, .middleLoader:
             return nil
         }
     }

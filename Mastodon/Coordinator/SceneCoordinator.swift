@@ -124,7 +124,7 @@ final public class SceneCoordinator {
                                 )
                             case .moderationWarning:
                                 break
-                            case ._other:
+                            default:
                                 assertionFailure()
                                 break
                             }

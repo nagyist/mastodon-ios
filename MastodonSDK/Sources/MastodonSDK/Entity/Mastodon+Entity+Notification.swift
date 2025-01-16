@@ -62,8 +62,8 @@ extension Mastodon.Entity {
         public let latestPageNotificationAt: Date? // Date at which the most recent notification from this group within the current page has been created. This is only returned when paginating through notification groups.
         public let sampleAccountIDs: [String] // IDs of some of the accounts who most recently triggered notifications in this group.
         public let statusID: ID?
-        public let report: Report?
-        public let relationshipSeveranceEvent: RelationshipSeveranceEvent?
+        public let report: Report? // Attached when type of the notification is admin.report
+        public let relationshipSeveranceEvent: RelationshipSeveranceEvent? // Attached when type of the notification is severed_relationships
         public let accountWarning: AccountWarning?
         
         enum CodingKeys: String, CodingKey {
@@ -224,14 +224,18 @@ extension Mastodon.Entity {
 
 extension Mastodon.Entity {
     public enum NotificationType: RawRepresentable, Codable, Sendable {
-        case follow
-        case followRequest
-        case mention
-        case reblog
-        case favourite
-        case poll
-        case status
-        case moderationWarning
+        case follow // Someone followed you
+        case followRequest // Someone requested to follow you
+        case mention // Someone mentioned you in their status
+        case reblog // Someone boosted one of your statuses
+        case favourite // Someone favourited one of your statuses
+        case poll // A poll you have voted in or created has ended
+        case status // Someone you enabled notifications for has posted a status
+        case update // A status you interacted with has been edited
+        case adminSignUp // Someone signed up (optionally sent to admins)
+        case adminReport // A new report has been filed
+        case severedRelationships // Some of your follow relationships have been severed as a result of a moderation or block event
+        case moderationWarning  //  A moderator has taken action against your account or has sent you a warning
 
         case _other(String)
         
@@ -258,6 +262,10 @@ extension Mastodon.Entity {
             case .favourite:                    return "favourite"
             case .poll:                         return "poll"
             case .status:                       return "status"
+            case .update:                       return "update"
+            case .adminSignUp:                  return "admin.sign_up"
+            case .adminReport:                  return "admin.report"
+            case .severedRelationships:         return "severed_relationships"
             case .moderationWarning:            return "moderation_warning"
             case ._other(let value):            return value
             }

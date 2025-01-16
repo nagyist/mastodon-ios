@@ -25,7 +25,7 @@ extension NotificationTimelineViewModel {
             )
         )
 
-        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>()
+        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>()
         snapshot.appendSections([.main])
         diffableDataSource?.apply(snapshot)
         
@@ -37,11 +37,11 @@ extension NotificationTimelineViewModel {
 
                 Task {
                     let oldSnapshot = diffableDataSource.snapshot()
-                    let newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem> = {
+                    let newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem> = {
                         let newItems = records.map { record in
-                            NotificationItem.notification(record)
+                            NotificationListItem.notification(record)
                         }
-                        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>()
+                        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>()
                         snapshot.appendSections([.main])
                         if self.scope == .everything, let notificationPolicy = self.notificationPolicy, notificationPolicy.summary.pendingRequestsCount > 0 {
                             snapshot.appendItems([.filteredNotificationsInfo(policy: notificationPolicy)])
@@ -67,7 +67,7 @@ extension NotificationTimelineViewModel {
 
 extension NotificationTimelineViewModel {
     @MainActor func updateSnapshotUsingReloadData(
-        snapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>
+        snapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>
     ) async {
         await self.diffableDataSource?.applySnapshotUsingReloadData(snapshot)
     }

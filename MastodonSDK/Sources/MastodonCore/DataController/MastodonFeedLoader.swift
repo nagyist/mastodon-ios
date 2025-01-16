@@ -19,16 +19,14 @@ final public class MastodonFeedLoader {
     
     @Published public private(set) var records: [MastodonFeedItemIdentifier] = []
     
-    private let authenticationBox: MastodonAuthenticationBox
     private let kind: MastodonFeedKind
     
-    private var subscriptions = Set<AnyCancellable>()
+    private var activeFilterBoxSubscription: AnyCancellable?
     
-    public init(authenticationBox: MastodonAuthenticationBox, kind: MastodonFeedKind) {
-        self.authenticationBox = authenticationBox
+    public init(kind: MastodonFeedKind) {
         self.kind = kind
         
-        StatusFilterService.shared.$activeFilterBox
+        activeFilterBoxSubscription = StatusFilterService.shared.$activeFilterBox
             .sink { filterBox in
                 if filterBox != nil {
                     Task { [weak self] in
@@ -37,29 +35,28 @@ final public class MastodonFeedLoader {
                     }
                 }
             }
-            .store(in: &subscriptions)
     }
     
-    private func setRecordsAfterFiltering(_ newRecords: [MastodonFeedItemIdentifier]) async {
-        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records = newRecords; return }
-        let filtered = await self.filter(newRecords, forFeed: kind, with: filterBox)
-        self.records = filtered.removingDuplicates()
+    public func loadMore(newestAnchor: MastodonFeedItemIdentifier?, oldestAnchor: MastodonFeedItemIdentifier?) {
+        switch (newestAnchor, oldestAnchor) {
+        case (_, nil):
+            loadInitial(kind: kind)
+        case (_, let oldestAnchor):
+            Task {
+                let unfiltered = try await load(kind: kind, olderThan: oldestAnchor?.id)
+                await setRecordsAfterFiltering(unfiltered)
+            }
+        }
     }
     
-    private func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeedItemIdentifier]) async {
-        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
-        let newRecords = await self.filter(additionalRecords, forFeed: kind, with: filterBox)
-        self.records = (self.records + newRecords).removingDuplicates()
-    }
-    
-    public func loadInitial(kind: MastodonFeedKind) {
+    private func loadInitial(kind: MastodonFeedKind) {
         Task {
             let unfilteredRecords = try await load(kind: kind)
             await setRecordsAfterFiltering(unfilteredRecords)
         }
     }
     
-    public func loadNext(kind: MastodonFeedKind) {
+    private func loadNext(kind: MastodonFeedKind) {
         Task {
             guard let lastId = records.last?.id else {
                 return loadInitial(kind: kind)
@@ -70,19 +67,15 @@ final public class MastodonFeedLoader {
         }
     }
     
-    private func filter(_ records: [MastodonFeedItemIdentifier], forFeed feedKind: MastodonFeedKind, with filterBox: Mastodon.Entity.FilterBox) async -> [MastodonFeedItemIdentifier] {
-        
-        let filteredRecords = records.filter { itemIdentifier in
-            guard let status = MastodonFeedItemCacheManager.shared.filterableStatus(associatedWith: itemIdentifier) else { return true }
-            let filterResult = filterBox.apply(to: status, in: feedKind.filterContext)
-            switch filterResult {
-            case .hide:
-                return false
-            default:
-                return true
-            }
+    private func load(kind: MastodonFeedKind, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
+        switch kind {
+        case .notificationsAll:
+            return try await loadNotifications(withScope: .everything, olderThan: maxID)
+        case .notificationsMentionsOnly:
+            return try await loadNotifications(withScope: .mentions, olderThan: maxID)
+        case .notificationsWithAccount(let accountID):
+            return try await loadNotifications(withAccountID: accountID, olderThan: maxID)
         }
-        return filteredRecords
     }
     
     // TODO: all of these updates should happen the cached item, and then any cells referencing them should be reconfigured
@@ -217,19 +210,38 @@ final public class MastodonFeedLoader {
 //    }
 }
 
+// MARK: - Filtering
 private extension MastodonFeedLoader {
-    
-    func load(kind: MastodonFeedKind, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
-        switch kind {
-        case .notificationsAll:
-            return try await loadNotifications(withScope: .everything, olderThan: maxID)
-        case .notificationsMentionsOnly:
-            return try await loadNotifications(withScope: .mentions, olderThan: maxID)
-        case .notificationsWithAccount(let accountID):
-            return try await loadNotifications(withAccountID: accountID, olderThan: maxID)
-        }
+    private func setRecordsAfterFiltering(_ newRecords: [MastodonFeedItemIdentifier]) async {
+        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records = newRecords; return }
+        let filtered = await self.filter(newRecords, forFeed: kind, with: filterBox)
+        self.records = filtered.removingDuplicates()
     }
+    
+    private func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeedItemIdentifier]) async {
+        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
+        let newRecords = await self.filter(additionalRecords, forFeed: kind, with: filterBox)
+        self.records = (self.records + newRecords).removingDuplicates()
+    }
+    
+    private func filter(_ records: [MastodonFeedItemIdentifier], forFeed feedKind: MastodonFeedKind, with filterBox: Mastodon.Entity.FilterBox) async -> [MastodonFeedItemIdentifier] {
         
+        let filteredRecords = records.filter { itemIdentifier in
+            guard let status = MastodonFeedItemCacheManager.shared.filterableStatus(associatedWith: itemIdentifier) else { return true }
+            let filterResult = filterBox.apply(to: status, in: feedKind.filterContext)
+            switch filterResult {
+            case .hide:
+                return false
+            default:
+                return true
+            }
+        }
+        return filteredRecords
+    }
+}
+
+// MARK: - Notifications
+private extension MastodonFeedLoader {
     private func loadNotifications(withScope scope: APIService.MastodonNotificationScope, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
         let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
         if useGroupedNotifications {
@@ -251,6 +263,7 @@ private extension MastodonFeedLoader {
     private func _getUngroupedNotifications(withScope scope: APIService.MastodonNotificationScope? = nil, accountID: String? = nil, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
         
         assert(scope != nil || accountID != nil, "need a scope or an accountID")
+        guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { throw APIService.APIError.implicit(.authenticationMissing) }
         
         let notifications = try await APIService.shared.notifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
         
@@ -259,9 +272,11 @@ private extension MastodonFeedLoader {
         for relationship in relationships {
             MastodonFeedItemCacheManager.shared.addToCache(relationship)
         }
+        for notification in notifications {
+            MastodonFeedItemCacheManager.shared.addToCache(notification)
+        }
         
         return notifications.map {
-            MastodonFeedItemCacheManager.shared.addToCache($0)
             return MastodonFeedItemIdentifier.notification(id: $0.id)
         }
     }
@@ -269,6 +284,8 @@ private extension MastodonFeedLoader {
     private func _getGroupedNotifications(withScope scope: APIService.MastodonNotificationScope? = nil, accountID: String? = nil, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
         
         assert(scope != nil || accountID != nil, "need a scope or an accountID")
+        
+        guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { throw APIService.APIError.implicit(.authenticationMissing) }
         
         let results = try await APIService.shared.groupedNotifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
         
@@ -280,12 +297,15 @@ private extension MastodonFeedLoader {
                 MastodonFeedItemCacheManager.shared.addToCache(partialAccount)
             }
         }
+        
         for status in results.statuses {
             MastodonFeedItemCacheManager.shared.addToCache(status)
         }
+        for group in results.notificationGroups {
+            MastodonFeedItemCacheManager.shared.addToCache(group)
+        }
         
         return results.notificationGroups.map {
-            MastodonFeedItemCacheManager.shared.addToCache($0)
             return MastodonFeedItemIdentifier.notificationGroup(id: $0.id)
         }
     }

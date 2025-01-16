@@ -122,7 +122,8 @@ extension NotificationTimelineViewController {
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
         Task {
-            let policy = try? await APIService.shared.notificationPolicy(authenticationBox: authenticationBox)
+            guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
+            let policy = try? await APIService.shared.notificationPolicy(authenticationBox: authBox)
             viewModel.notificationPolicy = policy?.value
 
             await viewModel.loadLatest()
@@ -133,7 +134,7 @@ extension NotificationTimelineViewController {
 
 // MARK: - AuthContextProvider
 extension NotificationTimelineViewController: AuthContextProvider {
-    var authenticationBox: MastodonAuthenticationBox { viewModel.authenticationBox }
+    var authenticationBox: MastodonAuthenticationBox { AuthenticationServiceProvider.shared.currentActiveUser.value! }
 }
 
 // MARK: - UITableViewDelegate
@@ -226,7 +227,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
             return
         }
 
-        let _navigateToItem: NotificationItem? = {
+        let _navigateToItem: NotificationListItem? = {
             var index = selectedItemIndex
             while 0..<items.count ~= index {
                 index = {
@@ -253,7 +254,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
         guard let indexPathsForVisibleRows = tableView.indexPathsForVisibleRows else { return }
         guard let diffableDataSource = viewModel.diffableDataSource else { return }
         
-        var visibleItems: [NotificationItem] = indexPathsForVisibleRows.sorted().compactMap { indexPath in
+        var visibleItems: [NotificationListItem] = indexPathsForVisibleRows.sorted().compactMap { indexPath in
             guard let item = diffableDataSource.itemIdentifier(for: indexPath) else { return nil }
             guard Self.validNavigateableItem(item) else { return nil }
             return item
@@ -267,7 +268,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
         tableView.selectRow(at: indexPath, animated: true, scrollPosition: scrollPosition)
     }
     
-    static func validNavigateableItem(_ item: NotificationItem) -> Bool {
+    static func validNavigateableItem(_ item: NotificationListItem) -> Bool {
         switch item {
         case .notification:
             return true
@@ -287,7 +288,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
                 let status: Mastodon.Entity.Status?
                 let account: Mastodon.Entity.Account?
                 switch notificationItem {
-                case .notification(let id):
+                case .notification:
                     guard let notification = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.Notification  else {
                         status = nil
                         account = nil
@@ -296,7 +297,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
                     status = notification.status
                     account = notification.account
                     
-                case .notificationGroup(let id):
+                case .notificationGroup:
                     guard let notificationGroup = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem) as? Mastodon.Entity.NotificationGroup  else {
                         status = nil
                         account = nil
@@ -321,7 +322,7 @@ extension NotificationTimelineViewController: TableViewControllerNavigateable {
                 
                 if let status {
                     let threadViewModel = ThreadViewModel(
-                        authenticationBox: self.viewModel.authenticationBox,
+                        authenticationBox: self.authenticationBox,
                         optionalRoot: .root(context: .init(status: .fromEntity(status)))
                     )
                     _ = self.sceneCoordinator?.present(

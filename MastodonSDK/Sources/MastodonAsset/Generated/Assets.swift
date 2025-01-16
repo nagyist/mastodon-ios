@@ -102,6 +102,7 @@ public enum Asset {
       public static let invalid = ColorAsset(name: "Colors/TextField/invalid")
       public static let valid = ColorAsset(name: "Colors/TextField/valid")
     }
+    public static let accent = ColorAsset(name: "Colors/accent")
     public static let alertYellow = ColorAsset(name: "Colors/alert.yellow")
     public static let badgeBackground = ColorAsset(name: "Colors/badge.background")
     public static let battleshipGrey = ColorAsset(name: "Colors/battleshipGrey")

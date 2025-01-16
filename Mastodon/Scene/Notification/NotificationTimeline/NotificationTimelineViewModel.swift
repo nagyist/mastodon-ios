@@ -27,7 +27,7 @@ final class NotificationTimelineViewModel {
     @Published var lastAutomaticFetchTimestamp: Date?
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<NotificationSection, NotificationItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<NotificationSection, NotificationListItem>?
     var didLoadLatest = PassthroughSubject<Void, Never>()
 
     // bottom loader
@@ -53,7 +53,7 @@ final class NotificationTimelineViewModel {
         self.authenticationBox = authenticationBox
         self.scope = scope
         let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
-        self.feedLoader = MastodonFeedLoader(authenticationBox: authenticationBox, kind: scope.feedKind)
+        self.feedLoader = MastodonFeedLoader(kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
 
         NotificationCenter.default.addObserver(self, selector: #selector(Self.notificationFilteringChanged(_:)), name: .notificationFilteringChanged, object: nil)
@@ -109,7 +109,7 @@ extension NotificationTimelineViewModel {
     func loadLatest() async {
         isLoadingLatest = true
         defer { isLoadingLatest = false }
-        feedLoader.loadInitial(kind: scope.feedKind)
+        feedLoader.loadMore(newestAnchor: nil, oldestAnchor: nil)
         didLoadLatest.send()
     }
     
