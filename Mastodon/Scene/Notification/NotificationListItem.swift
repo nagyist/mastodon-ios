@@ -13,7 +13,20 @@ enum NotificationListItem: Hashable {
     case filteredNotificationsInfo(policy: Mastodon.Entity.NotificationPolicy)
     case notification(MastodonFeedItemIdentifier)
     case middleLoader(after: MastodonFeedItemIdentifier, before: MastodonFeedItemIdentifier)
-    case bottomLoader  // TODO: not sure we need/want this?
+    case bottomLoader
+    
+    var nextFetchAnchors: (MastodonFeedItemIdentifier?, MastodonFeedItemIdentifier?) {
+        switch self {
+        case .filteredNotificationsInfo:
+            return (nil, nil)
+        case .notification(let identifier):
+            return (identifier, nil)
+        case .middleLoader(let after, let before):
+            return (after, before)
+        case .bottomLoader:
+            return (nil, nil)
+        }
+    }
 }
 
 extension NotificationListItem: Identifiable {

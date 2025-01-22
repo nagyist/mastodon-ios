@@ -37,15 +37,14 @@ final public class MastodonFeedLoader {
             }
     }
     
-    public func loadMore(newestAnchor: MastodonFeedItemIdentifier?, oldestAnchor: MastodonFeedItemIdentifier?) {
-        switch (newestAnchor, oldestAnchor) {
-        case (_, nil):
-            loadInitial(kind: kind)
-        case (_, let oldestAnchor):
+    public func loadMore(olderThan: MastodonFeedItemIdentifier?, newerThan: MastodonFeedItemIdentifier?) {
+        if let olderThan {
             Task {
-                let unfiltered = try await load(kind: kind, olderThan: oldestAnchor?.id)
+                let unfiltered = try await load(kind: kind, olderThan: olderThan.id)
                 await setRecordsAfterFiltering(unfiltered)
             }
+        } else {
+            loadInitial(kind: kind)
         }
     }
     

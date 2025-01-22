@@ -155,7 +155,7 @@ fileprivate class NotificationListViewModel: ObservableObject {
                 // TODO: add the filtered notifications announcement if needed
                 self?.notificationItems = updatedItems
             }
-        feedLoader.loadMore(newestAnchor: nil, oldestAnchor: nil)
+        feedLoader.loadMore(olderThan: nil, newerThan: nil)
     }
 }
 

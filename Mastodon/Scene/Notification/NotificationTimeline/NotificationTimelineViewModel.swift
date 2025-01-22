@@ -52,7 +52,6 @@ final class NotificationTimelineViewModel {
     ) {
         self.authenticationBox = authenticationBox
         self.scope = scope
-        let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
         self.feedLoader = MastodonFeedLoader(kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
 
@@ -109,12 +108,22 @@ extension NotificationTimelineViewModel {
     func loadLatest() async {
         isLoadingLatest = true
         defer { isLoadingLatest = false }
-        feedLoader.loadMore(newestAnchor: nil, oldestAnchor: nil)
+        feedLoader.loadMore(olderThan: nil, newerThan: nil)
         didLoadLatest.send()
     }
     
     // load timeline gap
-    func loadMore(item: NotificationItem) async {
-        feedLoader.loadNext(kind: scope.feedKind)
+    func loadMore(item: NotificationListItem) async {
+        let olderThan: MastodonFeedItemIdentifier?
+        let newerThan: MastodonFeedItemIdentifier?
+        switch item {
+        case .notification, .middleLoader:
+            (olderThan, newerThan) = item.nextFetchAnchors
+        case .bottomLoader:
+            (olderThan, newerThan) = diffableDataSource?.snapshot().itemIdentifiers.last(where: { $0 != .bottomLoader })?.nextFetchAnchors ?? (nil, nil)
+        case .filteredNotificationsInfo:
+            return
+        }
+        feedLoader.loadMore(olderThan: olderThan, newerThan: newerThan)
     }
 }
