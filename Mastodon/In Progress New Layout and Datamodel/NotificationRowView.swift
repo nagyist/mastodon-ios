@@ -118,7 +118,7 @@ struct AvatarGroupRow: View {
     
     var body: some View {
         HStack(alignment: .center) {
-            ForEach(avatars, id: \.self) { avatarUrl in
+            ForEach(avatars, id: \.self) { avatarUrl in  // TODO: url of default image for missing avatar can occur multiple times, but id needs to be unique
                 AsyncImage(
                     url: avatarUrl,
                     content: { image in
