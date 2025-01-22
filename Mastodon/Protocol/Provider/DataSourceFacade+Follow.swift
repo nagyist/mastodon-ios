@@ -56,7 +56,7 @@ extension DataSourceFacade {
                             
                             continuation.resume(returning: relationship)
                         } else {
-                            continuation.resume(throwing: AppError.unexpected)
+                            continuation.resume(throwing: AppError.unexpected())
                         }
                     }
                     alert.addAction(cancel)

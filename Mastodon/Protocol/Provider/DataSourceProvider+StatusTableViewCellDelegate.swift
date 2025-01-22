@@ -315,13 +315,16 @@ extension StatusTableViewCellDelegate where Self: DataSourceProvider & AuthConte
                     authenticationBox: authenticationBox
                 ).value
                 
-                guard let entity = poll.status?.entity else { return }
+                guard let entity = poll.status?.entity else { throw AppError.unexpected("Poll vote recorded but could not be updated in view") }
                 
                 let newStatus: MastodonStatus = .fromEntity(entity)
                 newStatus.poll = MastodonPoll(poll: newPoll, status: newStatus)
                 
                 self.update(status: newStatus, intent: .pollVote)
             } catch {
+                let alert = UIAlertController(title: "Poll Error", message: "Something went wrong while processing your response: \(error)", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .cancel))
+                self.sceneCoordinator?.tabBarController.showAlert(alert)
                 statusView.viewModel.isVoting = false
             }
             
