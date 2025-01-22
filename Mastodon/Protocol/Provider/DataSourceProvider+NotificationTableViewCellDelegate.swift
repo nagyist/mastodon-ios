@@ -120,6 +120,9 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 notificationView: notificationView,
                 query: .accept
             )
+            if let self = self as? NotificationTimelineViewController {
+                self.didActOnFollowRequest(notification, approved: true)
+            }
         }
     }
     
@@ -136,7 +139,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 return
             }
             guard case let .notification(notification) = item else {
-                assertionFailure("only works for status data provider")
+                assertionFailure("only works for notification")
                 return
             }
 
@@ -146,6 +149,9 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 notificationView: notificationView,
                 query: .reject
             )
+            if let self = self as? NotificationTimelineViewController {
+                self.didActOnFollowRequest(notification, approved: false)
+            }
         }
     }
 }

@@ -47,6 +47,10 @@ class NotificationTimelineViewController: UIViewController, MediaPreviewableView
     }
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    
+    func didActOnFollowRequest(_ notification: MastodonNotification, approved: Bool) {
+        viewModel.didActOnFollowRequest(notification, approved: approved)
+    }
 }
 
 extension NotificationTimelineViewController {

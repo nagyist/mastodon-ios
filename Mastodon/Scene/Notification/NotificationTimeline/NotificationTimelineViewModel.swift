@@ -70,6 +70,21 @@ final class NotificationTimelineViewModel {
             await self.loadLatest()
         }
     }
+    
+    func didActOnFollowRequest(_ notification: MastodonNotification, approved: Bool) {
+        defer {
+            Task {
+                await loadLatest()
+            }
+        }
+        guard var currentSnapshot = diffableDataSource?.snapshot() else { return }
+        let identifier = NotificationListItem.notification(.notification(id: notification.id))
+        if currentSnapshot.itemIdentifiers.contains(identifier) {
+            if !approved {
+                currentSnapshot.deleteItems([identifier])
+            }
+        }
+    }
 }
 
 extension NotificationTimelineViewModel {
