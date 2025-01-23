@@ -75,6 +75,11 @@ public final class MediaView: UIView {
         layoutImageUsingFocus(in: blurhashImageView, container: container.bounds)
         layoutImageUsingFocus(in: imageView, container: container.bounds)
     }
+    
+    deinit {
+        playerLooper?.disableLooping()
+        playerViewController?.player?.pause()
+    }
 }
 
 extension MediaView {
@@ -184,6 +189,7 @@ extension MediaView {
             playerViewController = createPlayerViewController()
         }
         guard let playerViewController else { return }
+        playerViewController.player?.pause()
         playerViewController.player = player
         playerViewController.showsPlaybackControls = false
         
@@ -300,13 +306,14 @@ extension MediaView {
         imageView.image = nil
         
         // reset player
+        playerLooper?.disableLooping()
+        playerLooper = nil
+        playerViewController?.player?.pause()
         playerViewController?.view.removeFromSuperview()
         playerViewController?.contentOverlayView.flatMap { view in
             view.removeConstraints(view.constraints)
         }
-        playerViewController?.player?.pause()
         playerViewController?.player = nil
-        playerLooper = nil
         
         // blurhash
         blurhashImageView.removeFromSuperview()
@@ -340,6 +347,7 @@ extension MediaView {
     private func setupPlayerLooper(player: AVPlayer) {
         guard let queuePlayer = player as? AVQueuePlayer else { return }
         guard let templateItem = queuePlayer.items().first else { return }
+        playerLooper?.disableLooping()
         playerLooper = AVPlayerLooper(player: queuePlayer, templateItem: templateItem)
     }
     
