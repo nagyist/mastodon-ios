@@ -9,7 +9,6 @@ import Combine
 import CoreData
 import CoreDataStack
 import UIKit
-import AVKit
 import AlamofireImage
 import MastodonMeta
 import MastodonSDK

@@ -5,9 +5,7 @@
 //  Created by sxiaojian on 2021/2/5.
 //
 
-import func AVFoundation.AVMakeRect
 import UIKit
-import AVKit
 import Combine
 import CoreData
 import CoreDataStack

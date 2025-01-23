@@ -9,7 +9,6 @@
 // to following the text checker auto-correct behavior
 
 import UIKit
-import AVKit
 import Combine
 import GameplayKit
 import MastodonAsset
