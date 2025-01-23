@@ -20,9 +20,7 @@ final class MediaPreviewVideoViewController: UIViewController {
     let previewImageView = UIImageView()
     
     deinit {
-        playerViewController.player?.pause()
-        try? AVAudioSession.sharedInstance().setCategory(.ambient)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        viewModel.playbackState = .paused
     }
     
 }
@@ -32,11 +30,12 @@ extension MediaPreviewVideoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        playerViewController.willMove(toParent: self)
         addChild(playerViewController)
         playerViewController.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(playerViewController.view)
-        playerViewController.view.pinToParent()
         playerViewController.didMove(toParent: self)
+        playerViewController.view.pinToParent()
         
         if let contentOverlayView = playerViewController.contentOverlayView {
             previewImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -56,7 +55,6 @@ extension MediaPreviewVideoViewController {
             playerViewController.showsPlaybackControls = false
         }
         
-        viewModel.player?.play()
         viewModel.playbackState = .playing
      
         if let previewURL = viewModel.item.previewURL {
@@ -74,12 +72,6 @@ extension MediaPreviewVideoViewController {
                 }
                 .store(in: &disposeBag)
         }
-    }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-
-        playerViewController.didMove(toParent: self)
     }
     
 }
