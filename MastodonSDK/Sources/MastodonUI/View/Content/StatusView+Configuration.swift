@@ -488,7 +488,7 @@ extension StatusView {
         guard let poll = statusEdit.poll else { return }
 
         let pollItems = poll.options.map { PollItem.history(option: $0) }
-        self.viewModel.pollItems = pollItems
+        self.viewModel.pollItems = pollItems.removingDuplicates()
         pollStatusStackView.isHidden = true
 
         var _snapshot = NSDiffableDataSourceSnapshot<PollSection, PollItem>()
@@ -506,7 +506,7 @@ extension StatusView {
 
         let options = poll.options
         let items: [PollItem] = options.map { .option(record: $0) }
-        self.viewModel.pollItems = items
+        self.viewModel.pollItems = items.removingDuplicates()
 
         let hasSelectedOption = options.contains(where: { $0.isSelected == true })
         viewModel.isVoteButtonEnabled = hasSelectedOption
@@ -551,7 +551,7 @@ extension StatusView {
 
         let options = poll.options
         let items: [PollItem] = options.map { .pollOption($0) }
-        self.viewModel.pollItems = items
+        self.viewModel.pollItems = items.removingDuplicates()
 
         viewModel.isVoteButtonEnabled = !viewModel.selectedPollItems.isEmpty
 
