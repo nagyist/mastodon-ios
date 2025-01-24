@@ -29,11 +29,8 @@ public final class UserView: UIView {
 
     public weak var delegate: UserViewDelegate?
     
-    public var disposeBag = Set<AnyCancellable>()
-    
     public private(set) lazy var viewModel: ViewModel = {
         let viewModel = ViewModel()
-        viewModel.bind(userView: self)
         return viewModel
     }()
     
@@ -122,11 +119,6 @@ public final class UserView: UIView {
     }()
             
     public func prepareForReuse() {
-        disposeBag.removeAll()
-        
-        // viewModel.objects.removeAll()
-        viewModel.authorAvatarImageURL = nil
-        
         avatarButton.avatarImageView.cancelTask()
         setButtonState(.none)
     }
