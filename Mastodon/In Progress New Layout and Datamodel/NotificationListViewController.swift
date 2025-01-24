@@ -89,7 +89,7 @@ struct NotificationListView: View {
     
     @ViewBuilder func rowView(_ notificationListItem: NotificationListItem) -> some View {
         switch notificationListItem {
-        case .bottomLoader, .middleLoader:
+        case .bottomLoader:
             Text("loader not yet implemented")
         case .filteredNotificationsInfo:
             Text("filtered notifications not yet implemented")

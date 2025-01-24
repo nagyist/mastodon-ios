@@ -14,6 +14,28 @@ import os.log
 @MainActor
 final public class MastodonFeedLoader {
     
+    struct FeedLoadRequest: Equatable {
+        let olderThan: MastodonFeedItemIdentifier?
+        let newerThan: MastodonFeedItemIdentifier?
+        
+        var maxID: String? { olderThan?.id }
+        
+        var resultsInsertionPoint: InsertLocation {
+            if olderThan != nil {
+                return .end
+            } else if newerThan != nil {
+                return .start
+            } else {
+                return .replace
+            }
+        }
+        enum InsertLocation {
+            case start
+            case end
+            case replace
+        }
+    }
+    
     private let logger = Logger(subsystem: "MastodonFeedLoader", category: "Data")
     private static let entryNotFoundMessage = "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
     
@@ -37,43 +59,26 @@ final public class MastodonFeedLoader {
             }
     }
     
+    private var mostRecentLoad: FeedLoadRequest?
+    
     public func loadMore(olderThan: MastodonFeedItemIdentifier?, newerThan: MastodonFeedItemIdentifier?) {
-        if let olderThan {
-            Task {
-                let unfiltered = try await load(kind: kind, olderThan: olderThan.id)
-                await setRecordsAfterFiltering(unfiltered)
-            }
-        } else {
-            loadInitial(kind: kind)
-        }
-    }
-    
-    private func loadInitial(kind: MastodonFeedKind) {
+        let request = FeedLoadRequest(olderThan: olderThan, newerThan: newerThan)
         Task {
-            let unfilteredRecords = try await load(kind: kind)
-            await setRecordsAfterFiltering(unfilteredRecords)
+            let unfiltered = try await load(request)
+            await insertRecordsAfterFiltering(at: request.resultsInsertionPoint, additionalRecords:unfiltered)
         }
     }
     
-    private func loadNext(kind: MastodonFeedKind) {
-        Task {
-            guard let lastId = records.last?.id else {
-                return loadInitial(kind: kind)
-            }
-            
-            let unfiltered = try await load(kind: kind, olderThan: lastId)
-            await self.appendRecordsAfterFiltering(unfiltered)
-        }
-    }
-    
-    private func load(kind: MastodonFeedKind, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
+    private func load(_ request: FeedLoadRequest) async throws -> [MastodonFeedItemIdentifier] {
+        guard request != mostRecentLoad else { throw AppError.badRequest }
+        mostRecentLoad = request
         switch kind {
         case .notificationsAll:
-            return try await loadNotifications(withScope: .everything, olderThan: maxID)
+            return try await loadNotifications(withScope: .everything, olderThan: request.maxID)
         case .notificationsMentionsOnly:
-            return try await loadNotifications(withScope: .mentions, olderThan: maxID)
+            return try await loadNotifications(withScope: .mentions, olderThan: request.maxID)
         case .notificationsWithAccount(let accountID):
-            return try await loadNotifications(withAccountID: accountID, olderThan: maxID)
+            return try await loadNotifications(withAccountID: accountID, olderThan: request.maxID)
         }
     }
     
@@ -217,10 +222,19 @@ private extension MastodonFeedLoader {
         self.records = filtered.removingDuplicates()
     }
     
-    private func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeedItemIdentifier]) async {
+    private func insertRecordsAfterFiltering(at insertionPoint: FeedLoadRequest.InsertLocation,  additionalRecords: [MastodonFeedItemIdentifier]) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
         let newRecords = await self.filter(additionalRecords, forFeed: kind, with: filterBox)
-        self.records = (self.records + newRecords).removingDuplicates()
+        var combinedRecords = self.records
+        switch insertionPoint {
+        case .start:
+            combinedRecords = newRecords + combinedRecords
+        case .end:
+            combinedRecords.append(contentsOf: newRecords)
+        case .replace:
+            combinedRecords = newRecords
+        }
+        self.records = combinedRecords.removingDuplicates()
     }
     
     private func filter(_ records: [MastodonFeedItemIdentifier], forFeed feedKind: MastodonFeedKind, with filterBox: Mastodon.Entity.FilterBox) async -> [MastodonFeedItemIdentifier] {

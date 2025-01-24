@@ -187,7 +187,7 @@ extension NotificationTimelineViewController: UITableViewDelegate, AutoGenerateT
             return
         }
         Task {
-            await viewModel.loadMore(item: item)
+            await viewModel.loadMore(olderThan: item, newerThan: nil)
         }
     }
 

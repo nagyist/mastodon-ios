@@ -123,22 +123,26 @@ extension NotificationTimelineViewModel {
     func loadLatest() async {
         isLoadingLatest = true
         defer { isLoadingLatest = false }
-        feedLoader.loadMore(olderThan: nil, newerThan: nil)
+        let currentFirst = diffableDataSource?.snapshot().itemIdentifiers.first
+        await loadMore(olderThan: nil, newerThan: currentFirst)
         didLoadLatest.send()
     }
     
-    // load timeline gap
-    func loadMore(item: NotificationListItem) async {
-        let olderThan: MastodonFeedItemIdentifier?
-        let newerThan: MastodonFeedItemIdentifier?
-        switch item {
-        case .notification, .middleLoader:
-            (olderThan, newerThan) = item.nextFetchAnchors
-        case .bottomLoader:
-            (olderThan, newerThan) = diffableDataSource?.snapshot().itemIdentifiers.last(where: { $0 != .bottomLoader })?.nextFetchAnchors ?? (nil, nil)
-        case .filteredNotificationsInfo:
-            return
+    func loadMore(olderThan: NotificationListItem?, newerThan: NotificationListItem?) async {
+        
+        func fetchAnchor(for item: NotificationListItem?) -> MastodonFeedItemIdentifier? {
+            switch item {
+            case .notification:
+                return item?.fetchAnchor
+            case .bottomLoader:
+                return diffableDataSource?.snapshot().itemIdentifiers.last(where: { $0.fetchAnchor != nil })?.fetchAnchor
+            case .filteredNotificationsInfo:
+                return  diffableDataSource?.snapshot().itemIdentifiers.first(where: { $0.fetchAnchor != nil })?.fetchAnchor
+            case .none:
+                return nil
+            }
         }
-        feedLoader.loadMore(olderThan: olderThan, newerThan: newerThan)
+        
+        feedLoader.loadMore(olderThan: fetchAnchor(for: olderThan), newerThan: fetchAnchor(for: newerThan))
     }
 }
