@@ -30,7 +30,7 @@ extension UserDefaults {
     
     @objc public dynamic var useGroupedNotifications: Bool {
         get {
-            register(defaults: [#function: true])
+            register(defaults: [#function: false])
             return bool(forKey: #function) && UserDefaults.isDebugOrTestflightOrSimulator
         }
         set { self[#function] = newValue }
