@@ -127,8 +127,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private func handleUniversalLink(userActivity: NSUserActivity) {
         guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let incomingURL = userActivity.webpageURL,
-              let components = NSURLComponents(url: incomingURL, resolvingAgainstBaseURL: true) else {
+              let incomingURL = userActivity.webpageURL else { return }
+        openUniversalLink(incomingURL)
+    }
+    
+    private func openUniversalLink(_ incomingURL: URL) {
+        guard let components = NSURLComponents(url: incomingURL, resolvingAgainstBaseURL: true) else {
             return
         }
 
@@ -336,6 +340,15 @@ extension SceneDelegate {
             let viewModel = SearchDetailViewModel(authenticationBox: authenticationBox, initialSearchText: searchQuery)
             coordinator?.present(scene: .searchDetail(viewModel: viewModel), from: nil, transition: .show)
         default:
+            var openableUrl: URL?
+            if let host = url.host(percentEncoded: false) {
+                openableUrl = URL(string: "https://" + host)
+            } else {
+                openableUrl = URL(string: "https://")
+            }
+            openableUrl?.append(path: url.path())
+            guard let openableUrl else { return }
+            openUniversalLink(openableUrl)
             return
         }
     }
