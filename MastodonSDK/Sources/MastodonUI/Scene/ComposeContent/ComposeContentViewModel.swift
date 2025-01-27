@@ -162,9 +162,13 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
             if case .reply(let record) = destination {
                 let repliedStatusVisibility = record.entity.visibility
                 switch repliedStatusVisibility {
-                case .public, .unlisted:
+                case .public:
                     // keep default
                     break
+                case .unlisted:
+                    if visibility == .public {
+                        visibility = .unlisted
+                    }
                 case .private:
                     visibility = .private
                 case .direct:
