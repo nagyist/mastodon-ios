@@ -14,20 +14,13 @@ import MastodonSDK
 @MainActor
 public final class InstanceService {
     
+    static let shared = InstanceService()
+    
     var disposeBag = Set<AnyCancellable>()
-
-    // input
-    let backgroundManagedObjectContext: NSManagedObjectContext
-    weak var apiService: APIService?
     
     // output
 
-    init(
-        apiService: APIService
-    ) {
-        self.backgroundManagedObjectContext = apiService.backgroundManagedObjectContext
-        self.apiService = apiService
-        
+    init() {
         AuthenticationServiceProvider.shared.currentActiveUser
             .receive(on: DispatchQueue.main)
             .asyncMap { [weak self] in
@@ -45,7 +38,7 @@ extension InstanceService {
     
     @MainActor
     func updateInstance(domain: String) async {
-        guard let apiService else { return }
+        let apiService = APIService.shared
         guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value, authBox.domain == domain else { return }
         
         let response = try? await apiService.instance(domain: domain, authenticationBox: authBox)

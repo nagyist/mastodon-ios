@@ -87,6 +87,9 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
         accountCreatedAt: Date
     ) -> Self {
         let now = Date()
+        Task {
+            await InstanceService.shared.updateInstance(domain: domain)
+        }
         return MastodonAuthentication(
             identifier: .init(),
             domain: domain,
