@@ -166,4 +166,9 @@ extension UserTimelineViewController: UIScrollViewDelegate {
             viewModel.stateMachine.enter(UserTimelineViewModel.State.Loading.self)
         }
     }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        Self.scrollViewDidScrollToEnd(scrollView) {
+            viewModel.stateMachine.enter(UserTimelineViewModel.State.Loading.self)
+        }
+    }
 }
