@@ -33,7 +33,7 @@ extension NotificationView {
     public func configure(notificationItem: MastodonFeedItemIdentifier) {
         let item = MastodonFeedItemCacheManager.shared.cachedItem(notificationItem)
         if let notification = item as? Mastodon.Entity.Notification {
-            configure(notificationType: notification.type, status: notification.status)
+            configure(notificationType: notification.type, status: notification.latestStatus)
             configure(notification: notification)
         } else if let notificationGroup = item as? Mastodon.Entity.NotificationGroup {
             let status: Mastodon.Entity.Status?
@@ -91,12 +91,12 @@ extension NotificationView {
         case .followRequest:
             setFollowRequestAdaptiveMarginContainerViewDisplay(isHidden: false)
         case .mention, .status:
-            if let status = notification.status {
+            if let status = notification.latestStatus {
                 statusView.configure(status: status, contentDisplayMode: contentDisplayMode(status))
                 setStatusViewDisplay()
             }
         case .reblog, .favourite, .poll:
-            if let status = notification.status {
+            if let status = notification.latestStatus {
                 quoteStatusView.configure(status: status, contentDisplayMode: contentDisplayMode(status))
                 setQuoteStatusViewDisplay()
             }

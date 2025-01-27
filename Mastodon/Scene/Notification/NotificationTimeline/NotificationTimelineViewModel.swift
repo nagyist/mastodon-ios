@@ -119,6 +119,11 @@ extension NotificationTimelineViewModel {
 
 extension NotificationTimelineViewModel {
     
+    func reloadData() {
+        guard let diffableDataSource else { return }
+        diffableDataSource.applySnapshotUsingReloadData(diffableDataSource.snapshot())
+    }
+    
     // load lastest
     func loadLatest() async {
         isLoadingLatest = true

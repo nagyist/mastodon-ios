@@ -30,6 +30,7 @@ extension NotificationSection {
         let filterContext: Mastodon.Entity.FilterContext?
     }
     
+    @MainActor
     static func diffableDataSource(
         tableView: UITableView,
         configuration: Configuration
@@ -80,7 +81,7 @@ extension NotificationSection {
         itemIdentifier: MastodonFeedItemIdentifier,
         configuration: Configuration
     ) {
-        guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { assertionFailure(); return }
+        guard AuthenticationServiceProvider.shared.currentActiveUser.value != nil else { assertionFailure(); return }
         StatusSection.setupStatusPollDataSource(
             authenticationBox: configuration.authenticationBox,
             statusView: cell.notificationView.statusView

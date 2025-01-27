@@ -303,13 +303,13 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 assertionFailure("only works for status data provider")
                 return
             }
-            guard let status = notification.status?.reblog ?? notification.status else {
+            guard let status = await notification.entity.latestStatus ??  notification.status?.entity else {
                 assertionFailure()
                 return
             }
             try await DataSourceFacade.responseToActionToolbar(
                 provider: self,
-                status: status,
+                status: MastodonStatus.fromEntity(status),
                 action: action,
                 sender: button
             )

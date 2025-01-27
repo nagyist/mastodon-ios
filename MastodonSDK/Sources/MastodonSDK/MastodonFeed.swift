@@ -313,3 +313,15 @@ public class MastodonFeedItemCacheManager {
         }
     }
 }
+
+extension Mastodon.Entity.Notification {
+    
+    @MainActor
+    public var latestStatus: Mastodon.Entity.Status? {
+        var freshStatus: Mastodon.Entity.Status? = nil
+        if let statusID = status?.id {
+            freshStatus = MastodonFeedItemCacheManager.shared.cachedItem(.status(id: statusID)) as? Mastodon.Entity.Status
+        }
+        return freshStatus ?? status
+    }
+}
