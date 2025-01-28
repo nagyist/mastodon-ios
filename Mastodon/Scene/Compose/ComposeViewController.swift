@@ -516,16 +516,15 @@ extension ComposeViewController {
         case .publishPost:
             publishBarButtonItemPressed(publishBarButtonItem)
         case .mediaBrowse:
-            guard !isViewControllerIsAlreadyModal(composeContentViewController.documentPickerController) else { return }
+            guard composeContentViewController.documentPickerController.presentingViewController == nil else { return }
             present(composeContentViewController.documentPickerController, animated: true, completion: nil)
         case .mediaPhotoLibrary:
-            guard !isViewControllerIsAlreadyModal(composeContentViewController.photoLibraryPicker) else { return }
-            present(composeContentViewController.photoLibraryPicker, animated: true, completion: nil)
+            composeContentViewController.presentPhotoLibraryPicker()
         case .mediaCamera:
             guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
                 return
             }
-            guard !isViewControllerIsAlreadyModal(composeContentViewController.imagePickerController) else { return }
+            guard composeContentViewController.imagePickerController.presentingViewController == nil else { return }
             present(composeContentViewController.imagePickerController, animated: true, completion: nil)
         case .togglePoll:
             composeContentViewModel.isPollActive.toggle()
@@ -540,10 +539,6 @@ extension ComposeViewController {
         case .selectVisibilityDirect:
             composeContentViewModel.visibility = .direct
         }
-    }
-    
-    private func isViewControllerIsAlreadyModal(_ viewController: UIViewController) -> Bool {
-        return viewController.presentingViewController != nil
     }
     
 }

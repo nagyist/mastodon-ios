@@ -172,9 +172,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
             }
         }   // end Task
         self.uploadTask = uploadTask
-        Task {
-            await uploadTask.value
-        }
     }
     
     deinit {
