@@ -545,12 +545,13 @@ extension StatusView {
     private func configurePoll(status: Mastodon.Entity.Status) {
         let status = status.reblog ?? status
         
-        guard let poll = status.poll else {
+        guard let pollEntity = status.poll else {
             return
         }
 
+        let poll = MastodonPoll(poll: pollEntity, status: MastodonStatus.fromEntity(status))
         let options = poll.options
-        let items: [PollItem] = options.map { .pollOption($0) }
+        let items: [PollItem] = options.map { .option(record: $0) }
         self.viewModel.pollItems = items.removingDuplicates()
 
         viewModel.isVoteButtonEnabled = !viewModel.selectedPollItems.isEmpty
