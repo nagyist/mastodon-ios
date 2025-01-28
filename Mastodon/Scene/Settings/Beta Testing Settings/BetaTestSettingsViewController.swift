@@ -52,7 +52,7 @@ enum BetaTestSetting: Hashable {
         case .clearPreviousDonationCampaigns:
             return "Clear donation history"
         case .useGroupedNotifications:
-            return "Test grouped notifications"
+            return "Test grouped notifications (WORK IN PROGRESS!)"
         }
     }
 }
@@ -131,6 +131,9 @@ class BetaTestSettingsViewController: UIViewController {
     }
     @objc func didToggleGroupedNotifications(_ sender: UISwitch) {
         viewModel = viewModel.byToggling(.useGroupedNotifications)
+        let alert = UIAlertController(title: "Relaunch Required", message: "This change will not take effect until you relaunch the app.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
     
     func loadFromViewModel(animated: Bool = true) {
