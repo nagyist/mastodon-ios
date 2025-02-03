@@ -207,6 +207,8 @@ extension Mastodon.Entity.NotificationType {
                     composedString = nameComponent + AttributedString(" boosted:")
                 case .mention:
                     composedString = nameComponent + AttributedString(" mentioned you:")
+                case .poll:
+                    composedString = nameComponent + AttributedString(" ran a poll that you voted in") // TODO: add count of how many others voted
                 case .status:
                     composedString = nameComponent + AttributedString(" posted:")
                 case .adminSignUp:
