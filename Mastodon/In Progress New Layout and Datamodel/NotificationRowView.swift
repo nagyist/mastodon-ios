@@ -592,8 +592,11 @@ struct _NotificationRowView: View {
                 }
             }
             
-            // VSTACK OF CONTENT COMPONENT VIEWS
+            // VSTACK OF HEADER AND CONTENT COMPONENT VIEWS
             VStack() {
+                ForEach(viewModel.headerComponents) {
+                    componentView($0)
+                }
                 ForEach(viewModel.contentComponents) {
                     componentView($0)
                 }
@@ -622,8 +625,10 @@ struct _NotificationRowView: View {
         }
     }
     
-    func displayableAvatarCount(fittingWidth: CGFloat, totalAvatarCount: Int, totalActorCount: Int) -> Int {
-        var maxAvatarCount = Int(floor(fittingWidth / (smallAvatarSize + avatarSpacing)))
+    func displayableAvatarCount(totalAvatarCount: Int, totalActorCount: Int) -> Int {
+        // Make space for the "+ more" label
+        // Unfortunately, using GeometryReader to avoid using a default max count resulted in weird layout side-effects.
+        var maxAvatarCount = 8
         if maxAvatarCount < totalActorCount {
             maxAvatarCount = maxAvatarCount - 2
         }
@@ -636,8 +641,7 @@ struct _NotificationRowView: View {
     
     @ViewBuilder
     func avatarRow(accountInfo: NotificationSourceAccounts, trailingElement: RelationshipElement) -> some View {
-        GeometryReader { geom in
-            let maxAvatarCount = displayableAvatarCount(fittingWidth: geom.size.width, totalAvatarCount: accountInfo.avatarUrls.count, totalActorCount: accountInfo.totalActorCount)
+            let maxAvatarCount = displayableAvatarCount( totalAvatarCount: accountInfo.avatarUrls.count, totalActorCount: accountInfo.totalActorCount)
             let needsMoreLabel = accountInfo.totalActorCount > maxAvatarCount
             HStack(alignment: .center) {
                 ForEach(accountInfo.avatarUrls.prefix(maxAvatarCount), id: \.self) {
@@ -663,8 +667,6 @@ struct _NotificationRowView: View {
                 Spacer().frame(minWidth: 0, maxWidth: .infinity)
                 avatarRowTrailingElement(trailingElement, grouped: accountInfo.totalActorCount > 1)
             }
-            .fixedSize()
-        }
     }
     
     @ViewBuilder
@@ -753,21 +755,22 @@ class _NotificationViewModel: ObservableObject {
     let type: Mastodon.Entity.NotificationType
     let presentError: (Error) -> ()
     public let iconInfo: NotificationIconInfo?
-    @Published public var contentComponents: [NotificationViewComponent] = []
+    @Published public var headerComponents: [NotificationViewComponent] = []
+    public var contentComponents: [NotificationViewComponent] = []
     
     private(set) var avatarRow: NotificationViewComponent? {
         didSet {
-            resetContentComponents()
+            resetHeaderComponents()
         }
     }
-    private(set) var additionalComponents: [NotificationViewComponent] = [] {
+    private(set) var headerTextComponents: [NotificationViewComponent] = [] {
         didSet {
-            resetContentComponents()
+            resetHeaderComponents()
         }
     }
     
-    private func resetContentComponents() {
-        contentComponents = ([avatarRow] + additionalComponents).compactMap { $0 }
+    private func resetHeaderComponents() {
+        headerComponents = ([avatarRow] + headerTextComponents).compactMap { $0 }
     }
     
     init(_ notificationInfo: NotificationInfo, presentError: @escaping (Error)->()) {
@@ -791,73 +794,61 @@ class _NotificationViewModel: ObservableObject {
             }
             avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: accountID, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), avatarRowAdditionalElement)
             if let accountName = notificationInfo.primaryAuthorAccount?.displayNameWithFallback {
-                additionalComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: accountName), totalAuthorCount: notificationInfo.authorsCount))]
+                headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: accountName), totalAuthorCount: notificationInfo.authorsCount))]
             }
         case .mention, .status:
             // TODO: eventually make this full status style, not inline
             // TODO: distinguish mentions from replies
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = notificationInfo.statusViewModel {
                 avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
-                additionalComponents = [
-                    .text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount)),
-                    .status(statusViewModel)
-                ]
+                headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount))]
+                contentComponents = [.status(statusViewModel)]
             } else {
-                additionalComponents = [._other("POST BY UNKNOWN ACCOUNT")]
+                headerTextComponents = [._other("POST BY UNKNOWN ACCOUNT")]
             }
         case .reblog, .favourite:
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = notificationInfo.statusViewModel {
                 avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
-                additionalComponents = [
-                    .text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount)),
-                    .status(statusViewModel)
-                ]
+                headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount))]
+                contentComponents = [.status(statusViewModel)]
             } else {
-                additionalComponents = [._other("REBLOGGED/FAVOURITED BY UNKNOWN ACCOUNT")]
+                headerTextComponents = [._other("REBLOGGED/FAVOURITED BY UNKNOWN ACCOUNT")]
             }
         case .poll, .update:
             if let author = notificationInfo.authorName, let statusViewModel = notificationInfo.statusViewModel {
-                additionalComponents = [
-                    .text(notificationInfo.type.actionSummaryLabel(firstAuthor: author, totalAuthorCount: notificationInfo.authorsCount)),
-                    .status(statusViewModel)
-                ]
+                headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: author, totalAuthorCount: notificationInfo.authorsCount))]
+                contentComponents = [.status(statusViewModel)]
             } else {
-                additionalComponents = [._other("POLL/UPDATE FROM UNKNOWN ACCOUNT")]
+                headerTextComponents = [._other("POLL/UPDATE FROM UNKNOWN ACCOUNT")]
             }
         case .adminSignUp:
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let authorName = notificationInfo.authorName {
                 avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
-                additionalComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: authorName, totalAuthorCount: notificationInfo.authorsCount))]
+                headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: authorName, totalAuthorCount: notificationInfo.authorsCount))]
             } else {
-                additionalComponents = [._other("ADMIN_SIGNUP NOTIFICATION")]
+                headerTextComponents = [._other("ADMIN_SIGNUP NOTIFICATION")]
             }
         case .adminReport:
-            var components = [NotificationViewComponent?]()
             if let summary = notificationInfo.ruleViolationReport?.summary {
-                components.append(.text(summary))
+                headerTextComponents = [.text(summary)]
             }
             if let comment = notificationInfo.ruleViolationReport?.displayableComment {
-                components.append(.text(comment))
+                contentComponents = [.text(comment)]
             }
-            additionalComponents = components.compactMap { $0 }
         case .severedRelationships:
-            var components = [NotificationViewComponent?]()
             if let summary = notificationInfo.relationshipSeveranceEvent?.summary {
-                components.append(.text(summary))
+                headerTextComponents = [.text(summary)]
             } else {
-                components.append(._other("An admin action removed some of your followers or accounts that you followed."))
+                headerTextComponents = [._other("An admin action removed some of your followers or accounts that you followed.")]
             }
-            components.append(.hyperlinkButton("Learn more about server blocks", nil)) // TODO: localization and go somewhere
-            additionalComponents = components.compactMap { $0 }
+            contentComponents = [.hyperlinkButton("Learn more about server blocks", nil)] // TODO: localization and go somewhere
         case .moderationWarning:
-            additionalComponents = [
-                .text(AttributedString("Your account has received a moderation warning.")), // TODO: localization
-                .hyperlinkButton("Learn more", nil) // TODO: localization and go somewhere
-            ]
+            headerTextComponents = [.text(AttributedString("Your account has received a moderation warning."))] // TODO: localization
+            contentComponents = [.hyperlinkButton("Learn more", nil)] // TODO: localization and go somewhere
         case ._other(let text):
-            additionalComponents = [._other("UNEXPECTED NOTIFICATION TYPE: \(text)")]
+            headerTextComponents = [._other("UNEXPECTED NOTIFICATION TYPE: \(text)")]
         }
-        resetContentComponents()
+        resetHeaderComponents()
     }
     
     public func prepareForDisplay() {
