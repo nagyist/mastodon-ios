@@ -269,6 +269,8 @@ public enum L10n {
         public static func muteUser(_ p1: Any) -> String {
           return L10n.tr("Localizable", "Common.Controls.Friendship.MuteUser", String(describing: p1), fallback: "Mute %@")
         }
+        /// Mutual
+        public static let mutual = L10n.tr("Localizable", "Common.Controls.Friendship.Mutual", fallback: "Mutual")
         /// Pending
         public static let pending = L10n.tr("Localizable", "Common.Controls.Friendship.Pending", fallback: "Pending")
         /// Request

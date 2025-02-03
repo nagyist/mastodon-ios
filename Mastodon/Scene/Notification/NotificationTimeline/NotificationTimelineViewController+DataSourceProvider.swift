@@ -56,6 +56,9 @@ extension NotificationTimelineViewController: DataSourceProvider {
                 assertionFailure("unexpected item in notifications feed")
                 return nil
             }
+        case .groupedNotification:
+            assertionFailure("grouped notifications are not supported in the legacy NotificationTimelineViewController")
+            return nil
         case .filteredNotificationsInfo(let policy):
             return DataSourceItem.notificationBanner(policy: policy)
         case .bottomLoader:

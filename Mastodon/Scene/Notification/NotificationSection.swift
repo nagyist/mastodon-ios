@@ -57,6 +57,9 @@ extension NotificationSection {
                     )
                     return cell
                 }
+            case .groupedNotification:
+                assertionFailure("grouped notifications cannot be displayed in the legacy notification screen")
+                return nil
             case .bottomLoader:
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: TimelineBottomLoaderTableViewCell.self), for: indexPath) as! TimelineBottomLoaderTableViewCell
                 cell.activityIndicatorView.startAnimating()

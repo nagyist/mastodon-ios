@@ -11,6 +11,13 @@ class NotificationListViewController: UIHostingController<NotificationListView> 
         let viewModel = NotificationListViewModel()
         let root = NotificationListView(viewModel: viewModel)
         super.init(rootView: root)
+        
+        viewModel.presentError = { error in
+            let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self.sceneCoordinator?.rootViewController?.topMost?.present(alert, animated: true)
+        }
+        
         viewModel.navigateToScene = { [weak self] scene, transition in
             guard let self else { return }
             self.sceneCoordinator?.present(scene: scene, from: self, transition: transition)
@@ -77,6 +84,14 @@ struct NotificationListView: View {
             List {
                 ForEach(viewModel.notificationItems) { item in
                     rowView(item)
+                        .onAppear {
+                            switch item {
+                            case .groupedNotification(let viewModel):
+                                viewModel.prepareForDisplay()
+                            default:
+                                break
+                            }
+                        }
                         .onTapGesture {
                             didTap(item: item)
                         }
@@ -94,9 +109,10 @@ struct NotificationListView: View {
         case .filteredNotificationsInfo:
             Text("filtered notifications not yet implemented")
         case .notification(let feedItemIdentifier):
+            Text("obsolete item")
+        case .groupedNotification(let viewModel):
             // TODO: implement unread using Mastodon.Entity.Marker
-            let viewModel = NotificationRowViewModel.viewModel(feedItemIdentifier: feedItemIdentifier, isUnread: false)
-            GroupedNotificationRowView(viewModel: viewModel)
+            _NotificationRowView(viewModel: viewModel)
         }
     }
     
@@ -137,20 +153,21 @@ fileprivate class NotificationListViewModel: ObservableObject {
     @Published var notificationItems: [NotificationListItem] = []
     
     private var feedSubscription: AnyCancellable?
-    private var feedLoader = MastodonFeedLoader(kind: .notificationsAll)
-    
-    init() {
-        createNewFeedLoader()
+    private var feedLoader = GroupedNotificationFeedLoader(kind: .notificationsAll, presentError: { _ in })
+    fileprivate var presentError: ((Error)->()) = { _ in } {
+        didSet {
+            createNewFeedLoader()
+        }
     }
     
     private func createNewFeedLoader() {
-        feedLoader = MastodonFeedLoader(kind: displayedNotifications.feedKind)
+        feedLoader = GroupedNotificationFeedLoader(kind: displayedNotifications.feedKind, presentError: presentError)
         feedSubscription = feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in
                 // TODO: add middle loader and bottom loader?
-                let updatedItems = records.compactMap {
-                    NotificationListItem.fromMastodonFeedItemIdentifier($0)
+                let updatedItems = records.map {
+                    NotificationListItem.groupedNotification($0)
                 }
                 // TODO: add the filtered notifications announcement if needed
                 self?.notificationItems = updatedItems

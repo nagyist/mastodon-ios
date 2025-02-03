@@ -11,7 +11,8 @@ import MastodonSDK
 
 enum NotificationListItem: Hashable {
     case filteredNotificationsInfo(policy: Mastodon.Entity.NotificationPolicy)
-    case notification(MastodonFeedItemIdentifier)
+    case notification(MastodonFeedItemIdentifier) // TODO: remove
+    case groupedNotification(_NotificationViewModel)
     case bottomLoader
     
     var fetchAnchor: MastodonFeedItemIdentifier? {
@@ -20,6 +21,8 @@ enum NotificationListItem: Hashable {
             return nil
         case .notification(let identifier):
             return identifier
+        case .groupedNotification(let viewModel):
+            return viewModel.identifier
         case .bottomLoader:
             return nil
         }
@@ -35,6 +38,8 @@ extension NotificationListItem: Identifiable {
             return "filtered_notifications_info"
         case .notification(let identifier):
             return identifier.id
+        case .groupedNotification(let viewModel):
+            return viewModel.identifier.id
         case .bottomLoader:
             return "bottom_loader"
         }

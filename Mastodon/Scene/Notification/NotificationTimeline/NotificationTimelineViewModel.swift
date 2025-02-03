@@ -143,6 +143,8 @@ extension NotificationTimelineViewModel {
                 return diffableDataSource?.snapshot().itemIdentifiers.last(where: { $0.fetchAnchor != nil })?.fetchAnchor
             case .filteredNotificationsInfo:
                 return  diffableDataSource?.snapshot().itemIdentifiers.first(where: { $0.fetchAnchor != nil })?.fetchAnchor
+            case .groupedNotification(let viewModel):
+                return viewModel.identifier
             case .none:
                 return nil
             }

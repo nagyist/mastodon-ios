@@ -147,13 +147,11 @@ public extension Mastodon.Entity.Status {
         }
     }
     
-    @MainActor
     func viewModel() -> ViewModel {
         let displayableContent = contentAsAttributedString(content)
         return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain)
     }
     
-    @MainActor
     private func contentAsAttributedString(_ htmlContent: String?) -> AttributedString {
         guard let htmlContent else { return AttributedString() }
         let data = Data(htmlContent.utf8)

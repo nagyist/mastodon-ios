@@ -14,13 +14,13 @@ class NotificationRowViewModel: ObservableObject {
     let grouped: Bool
     let authorAvatarUrls: [URL]
     let authorsDescription: String
-    let authorName: String
+    let authorName: Mastodon.Entity.NotificationType.AuthorName?
     
     static func viewModel(feedItemIdentifier: MastodonFeedItemIdentifier, isUnread: Bool) -> NotificationRowViewModel {
         guard let notificationInfo = MastodonFeedItemCacheManager.shared.cachedItem(feedItemIdentifier) as? NotificationInfo else { return MissingNotificationViewModel(nil, feedItemIdentifier: feedItemIdentifier, isUnread: false) }
         switch notificationInfo.type {
-        case .follow:
-            return FollowNotificationViewModel(notificationInfo, feedItemIdentifier: feedItemIdentifier, isUnread: isUnread)
+//        case .follow:
+//            return FollowNotificationViewModel(notificationInfo, feedItemIdentifier: feedItemIdentifier, isUnread: isUnread)
         case .status, .reblog, .mention, .favourite:
             return StatusNotificationViewModel(notificationInfo, feedItemIdentifier: feedItemIdentifier, isUnread: isUnread)
         default:
@@ -36,7 +36,7 @@ class NotificationRowViewModel: ObservableObject {
         self.isUnread = isUnread
         let item = MastodonFeedItemCacheManager.shared.cachedItem(feedItemIdentifier) as? NotificationInfo
         grouped = item?.isGrouped ?? false
-        authorName = item?.authorName ?? ""
+        authorName = item?.authorName
         authorsDescription = item?.authorsDescription ?? ""
         authorAvatarUrls = item?.authorAvatarUrls ?? []
     }
@@ -45,34 +45,34 @@ class NotificationRowViewModel: ObservableObject {
 class MissingNotificationViewModel: NotificationRowViewModel {
 }
 
-class FollowNotificationViewModel: NotificationRowViewModel {
-    @Published var followButtonAction: AvailableFollowAction = .unfetched
-    
-    init(_ notification: NotificationInfo, feedItemIdentifier: MastodonFeedItemIdentifier, isUnread: Bool) {
-        assert(notification.type == .follow)
-        super.init(notification, feedItemIdentifier: feedItemIdentifier, isUnread: isUnread)
-        if notification.type == .follow && !notification.isGrouped {
-            followButtonAction = .fetching
-            print("about to fetch for \(notification.authorName)")
-            updateAvailableFollowAction()
-        } else {
-            followButtonAction = .noneNeeded
-        }
-    }
-    
-    private func updateAvailableFollowAction() {
-        Task {
-            guard let notificationInfo else { followButtonAction = .noneNeeded; return }
-            if let followAction = await notificationInfo.availableFollowAction() {
-                print("had cached answer for \(notificationInfo.authorName)")
-                followButtonAction = followAction
-            } else {
-                print("fetching relationship to derive answer for \(notificationInfo.authorName)")
-                followButtonAction = await notificationInfo.fetchAvailableFollowAction()
-            }
-        }
-    }
-}
+//class FollowNotificationViewModel: NotificationRowViewModel {
+//    @Published var followButtonAction: RelationshipElement = .unfetched(<#Mastodon.Entity.NotificationType#>, accountID: <#String#>)
+//
+//    init(_ notification: NotificationInfo, feedItemIdentifier: MastodonFeedItemIdentifier, isUnread: Bool) {
+//        assert(notification.type == .follow)
+//        super.init(notification, feedItemIdentifier: feedItemIdentifier, isUnread: isUnread)
+//        if notification.type == .follow && !notification.isGrouped {
+//            followButtonAction = .fetching
+//            print("about to fetch for \(notification.authorName)")
+//            updateAvailableFollowAction()
+//        } else {
+//            followButtonAction = .noneNeeded
+//        }
+//    }
+//    
+//    private func updateAvailableFollowAction() {
+//        Task {
+//            guard let notificationInfo else { followButtonAction = .noneNeeded; return }
+//            if let followAction = await notificationInfo.availableFollowAction() {
+//                print("had cached answer for \(notificationInfo.authorName)")
+//                followButtonAction = followAction
+//            } else {
+//                print("fetching relationship to derive answer for \(notificationInfo.authorName)")
+//                followButtonAction = await notificationInfo.fetchAvailableFollowAction()
+//            }
+//        }
+//    }
+//}
 
 class StatusNotificationViewModel: NotificationRowViewModel {
     let postedContent: Mastodon.Entity.Status? // TODO: make this non-optional eventually

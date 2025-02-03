@@ -322,6 +322,17 @@ private extension MastodonFeedLoader {
             return MastodonFeedItemIdentifier.notificationGroup(id: $0.id)
         }
     }
+    
+    private func _getGroupedNotificationResults(withScope scope: APIService.MastodonNotificationScope? = nil, accountID: String? = nil, olderThan maxID: String? = nil) async throws -> Mastodon.Entity.GroupedNotificationsResults {
+        
+        assert(scope != nil || accountID != nil, "need a scope or an accountID")
+        
+        guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { throw APIService.APIError.implicit(.authenticationMissing) }
+        
+        let results = try await APIService.shared.groupedNotifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
+        
+        return results
+    }
 }
 
 extension MastodonFeedKind {

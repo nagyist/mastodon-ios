@@ -241,6 +241,7 @@
             "friendship": {
                 "follow": "Follow",
                 "following": "Following",
+                "mutual": "Mutual"
                 "request": "Request",
                 "pending": "Pending",
                 "block": "Block",

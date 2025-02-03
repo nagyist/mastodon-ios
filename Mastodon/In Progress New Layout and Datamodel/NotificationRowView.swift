@@ -18,8 +18,8 @@ struct GroupedNotificationRowView: View {
     
     var body: some View {
             HStack(alignment: .top) {
-                if let iconName = viewModel.type.iconSystemName(grouped: viewModel.grouped) {
-                    NotificationIconView(for: viewModel.type, iconName: iconName)
+                if viewModel.type.shouldShowIcon(grouped: viewModel.grouped) {
+                    NotificationIconView(NotificationIconInfo(notificationType: viewModel.type, isGrouped: viewModel.grouped))
                 }
                 VStack(alignment: .leading) {
                     contentView()
@@ -40,30 +40,6 @@ struct GroupedNotificationRowView: View {
         // TODO: implement unread with Mastodon.Entity.Marker
         
         switch viewModel {
-        case is FollowNotificationViewModel:
-            if viewModel.grouped {
-                AvatarGroupRow(avatars: viewModel.authorAvatarUrls)
-                Text("\(viewModel.authorsDescription) followed you")
-            } else {
-                let viewModel = viewModel as! FollowNotificationViewModel
-                HStack {
-                    AvatarGroupRow(avatars: viewModel.authorAvatarUrls)
-                    switch viewModel.followButtonAction {
-                    case .action(let buttonText):
-                        Button(buttonText) {}
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                            .bold()
-                        // TODO: implement follow action
-                    case .unfetched, .fetching:
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                    case .noneNeeded, .error:
-                        Spacer().frame(width: 0)
-                    }
-                }
-                Text("\(viewModel.authorName) followed you")
-            }
         case is StatusNotificationViewModel:
             if viewModel.type == .status {
                 TimelinePostCell(viewModel.feedItemIdentifier, includePadding: false)
@@ -139,6 +115,11 @@ struct AvatarGroupRow: View {
 }
 
 extension Mastodon.Entity.NotificationType {
+    
+    func shouldShowIcon(grouped: Bool) -> Bool {
+        return iconSystemName(grouped: grouped) != nil
+    }
+    
     func iconSystemName(grouped: Bool = false) -> String? {
         switch self {
         case .favourite:
@@ -152,16 +133,26 @@ extension Mastodon.Entity.NotificationType {
                 return "person.fill.badge.plus"
             }
         case .poll:
-            return "chart.bar.xaxis"
+            return "chart.bar.yaxis"
         case .adminReport:
             return "info.circle"
         case .severedRelationships:
             return "person.badge.minus"
         case .moderationWarning:
-            return "exclamationmark.shield"
+            return "exclamationmark.shield.fill"
         case ._other:
             return "questionmark.square.dashed"
-        case .followRequest, .mention, .status, .update, .adminSignUp:
+        case .mention:
+            // TODO: make this nil when full status view is available
+            return "quote.bubble.fill"
+        case .status:
+            // TODO: make this nil when full status view is available
+            return "bell.fill"
+        case .followRequest:
+            return "person.fill.badge.plus"
+        case .update:
+            return "pencil"
+        case .adminSignUp:
             return nil
         }
     }
@@ -172,29 +163,123 @@ extension Mastodon.Entity.NotificationType {
             return .orange
         case .reblog:
             return .green
-        case .follow:
+        case .follow, .followRequest, .status, .mention, .update:
             return Color(asset: Asset.Colors.accent)
-        case .poll:
+        case .poll, .severedRelationships, .moderationWarning,  .adminReport, .adminSignUp:
             return .secondary
-        case .adminReport:
-            return Color(asset: Asset.Colors.accent)
-        case .severedRelationships:
-            return .secondary
-        case .moderationWarning:
-            return Color(asset: Asset.Colors.accent)
         case ._other:
             return .gray
-        case .followRequest, .mention, .status, .update, .adminSignUp:
-            return .gray
+        }
+    }
+    
+    enum AuthorName {
+        case me
+        case other(named: String)
+        
+        var string: String {
+            switch self {
+            case .me:
+                return "You"
+            case .other(let name):
+                return name
+            }
+        }
+    }
+    func actionSummaryLabel(firstAuthor: AuthorName, totalAuthorCount: Int) -> AttributedString {
+        // TODO: L10n strings
+        switch firstAuthor {
+        case .me:
+            assert(totalAuthorCount == 1)
+            assert(self == .poll)
+            return "Your poll has ended"
+        case .other(let firstAuthorName):
+            let nameComponent = boldedNameStringComponent(firstAuthorName)
+            var composedString: AttributedString
+            if totalAuthorCount == 1 {
+                switch self {
+                case .favourite:
+                    composedString = nameComponent + AttributedString(" favorited:")
+                case .follow:
+                    composedString = nameComponent + AttributedString(" followed you")
+                case .followRequest:
+                    composedString = nameComponent + AttributedString(" requested to follow you")
+                case .reblog:
+                    composedString = nameComponent + AttributedString(" boosted:")
+                case .mention:
+                    composedString = nameComponent + AttributedString(" mentioned you:")
+                case .status:
+                    composedString = nameComponent + AttributedString(" posted:")
+                case .adminSignUp:
+                    composedString = nameComponent + AttributedString(" signed up")
+                default:
+                    composedString = nameComponent + AttributedString("did something?")
+                }
+            } else {
+                switch self {
+                case .favourite:
+                    composedString = nameComponent + AttributedString(" and \(totalAuthorCount - 1) others favorited:")
+                case .follow:
+                    composedString = nameComponent + AttributedString(" and \(totalAuthorCount - 1) others followed you")
+                case .reblog:
+                    composedString = nameComponent + AttributedString(" and \(totalAuthorCount - 1) others boosted:")
+                default:
+                    composedString = nameComponent + AttributedString(" and \(totalAuthorCount - 1) others did something")
+                }
+            }
+            let nameStyling = AttributeContainer.font(.system(.body, weight: .bold))
+            let nameContainer = AttributeContainer.personNameComponent(.givenName)
+            composedString.replaceAttributes(nameContainer, with: nameStyling)
+            return composedString
         }
     }
 }
 
+extension Mastodon.Entity.Report {
+    // TODO: localization (inc. plurals)
+    // "Someone reported X posts from someone else for rule violation"
+    var summary: AttributedString {
+        if let targetedAccountName = targetAccount?.displayNameWithFallback {
+            let boldedName = boldedNameStringComponent(targetedAccountName)
+            if let postCount = flaggedStatusIDs?.count {
+                return AttributedString("Someone reported \(postCount) posts from ") + boldedName + AttributedString(" for rule violation.")
+            } else {
+                    return AttributedString("Someone reported ") + boldedName + AttributedString(" for rule violation.")
+            }
+        } else {
+            return AttributedString("RULE VIOLATION REPORT")
+        }
+    }
+    var displayableComment: AttributedString? {
+        if let comment {
+            return AttributedString(comment)
+        } else {
+            return nil
+        }
+    }
+}
+
+var listFormatter = ListFormatter()
+
+extension Mastodon.Entity.RelationshipSeveranceEvent {
+    // TODO: details and localization
+    // Ideal example: "An admin from a.b has blocked c.d, including x of your followers and y accounts you follow."
+    // For now: "An admin action has blocked x of your followers and y accounts that you follow"
+    var summary: AttributedString? {
+        let baseString = "Your admins have blocked "
+        let lostFollowersString = followersCount > 0 ? "\(followersCount) of your followers" : nil
+        let lostFollowingString = followingCount > 0 ? "\(followingCount) accounts that you follow" : nil
+        guard let followersAndFollowingString = listFormatter.string(from: [lostFollowersString, lostFollowingString].compactMap { $0 } ) else {
+            return nil
+        }
+        return AttributedString(baseString + followersAndFollowingString + ".")
+    }
+}
+
 @ViewBuilder
-func NotificationIconView(for type: Mastodon.Entity.NotificationType, iconName: String) -> some View {
+func NotificationIconView(_ info: NotificationIconInfo) -> some View {
     HStack {
-        Image(systemName: iconName)
-            .foregroundStyle(type.iconColor)
+        Image(systemName: info.notificationType.iconSystemName(grouped: info.isGrouped) ?? "questionmark.square.dashed")
+            .foregroundStyle(info.notificationType.iconColor)
     }
     .font(.system(size: 25))
     .frame(width: 44)
@@ -202,50 +287,82 @@ func NotificationIconView(for type: Mastodon.Entity.NotificationType, iconName: 
     .fontWeight(.semibold)
 }
 
-enum AvailableFollowAction: Equatable {
-    case unfetched
-    case fetching
-    case error(Error)
+
+enum RelationshipElement: Equatable {
     case noneNeeded
-    case action(buttonText: String)
+    case unfetched(Mastodon.Entity.NotificationType, accountID: String)
+    case fetching
+    case error(Error?)
+    case followButton
+    case requestButton
+    case acceptRejectButtons(isFollowing: Bool)
+    case acceptedLabel
+    case rejectedLabel
+    case mutualLabel
+    case followingLabel
+    case pendingRequestLabel
     
     var description: String {
         switch self {
+        case .noneNeeded:
+            return "noneNeeded"
         case .unfetched:
             return "unfetched"
         case .fetching:
             return "fetching"
-        case .error(let error):
-            return "error(\(error.localizedDescription))"
-        case .noneNeeded:
-            return "noneNeeded"
-        case .action(let buttonText):
-            return "action(\(buttonText))"
+        case .error:
+            return "error"
+        case .followButton:
+            return "follow"
+        case .requestButton:
+            return "request"
+        case .acceptRejectButtons:
+            return "acceptReject"
+        case .acceptedLabel:
+            return "accepted"
+        case .rejectedLabel:
+            return "rejected"
+        case .mutualLabel:
+            return "mutual"
+        case .followingLabel:
+            return "following"
+        case .pendingRequestLabel:
+            return "pending"
         }
     }
     
-    static func == (lhs: AvailableFollowAction, rhs: AvailableFollowAction) -> Bool {
+    static func == (lhs: RelationshipElement, rhs: RelationshipElement) -> Bool {
         return lhs.description == rhs.description
     }
     
 }
 
 protocol NotificationInfo {
+    var id: String { get }
     var type: Mastodon.Entity.NotificationType { get }
     var isGrouped: Bool { get }
+    var notificationsCount: Int { get }
     var authorsCount: Int { get }
     var primaryAuthorAccount: Mastodon.Entity.Account? { get }
-    var authorName: String { get }
+    var authorName: Mastodon.Entity.NotificationType.AuthorName? { get }
     var authorAvatarUrls: [URL] { get }
-    func availableFollowAction() async -> AvailableFollowAction?
-    func fetchAvailableFollowAction() async -> AvailableFollowAction
+    func availableRelationshipElement() async -> RelationshipElement?
+    func fetchRelationshipElement() async -> RelationshipElement
+    var statusViewModel: Mastodon.Entity.Status.ViewModel? { get }
+    var ruleViolationReport: Mastodon.Entity.Report? { get }
+    var relationshipSeveranceEvent: Mastodon.Entity.RelationshipSeveranceEvent? { get }
 }
 extension NotificationInfo {
-    var authorsDescription: String {
-        if authorsCount > 1 {
-            return "\(authorName) and \(authorsCount - 1) others"
-        } else {
-            return authorName
+    var authorsDescription: String? {
+        switch authorName {
+        case .me, .none:
+            return nil
+        case .other(let name):
+            if authorsCount > 1 {
+                return "\(name) and \(authorsCount - 1) others"
+            } else {
+                return name
+            }
         }
     }
     var avatarCount: Int {
@@ -256,10 +373,55 @@ extension NotificationInfo {
     }
 }
 
+struct GroupedNotificationInfo: NotificationInfo {
+    func availableRelationshipElement() async -> RelationshipElement? {
+        return relationshipElement
+    }
+    
+    func fetchRelationshipElement() async -> RelationshipElement {
+        return relationshipElement
+    }
+    
+    let id: String
+    
+    let type: MastodonSDK.Mastodon.Entity.NotificationType
+    
+    let authorsCount: Int
+    
+    let notificationsCount: Int
+    
+    let primaryAuthorAccount: MastodonSDK.Mastodon.Entity.Account?
+    
+    let authorName: Mastodon.Entity.NotificationType.AuthorName?
+    
+    let authorAvatarUrls: [URL]
+    
+    var relationshipElement: RelationshipElement {
+        switch type {
+        case .follow, .followRequest:
+            if let primaryAuthorAccount {
+                return .unfetched(type, accountID: primaryAuthorAccount.id)
+            } else {
+                return .error(nil)
+            }
+        default:
+            return .noneNeeded
+        }
+    }
+    
+    let statusViewModel: Mastodon.Entity.Status.ViewModel?
+    let ruleViolationReport: Mastodon.Entity.Report?
+    let relationshipSeveranceEvent: Mastodon.Entity.RelationshipSeveranceEvent?
+}
+
 extension Mastodon.Entity.Notification: NotificationInfo {
+    
     var authorsCount: Int { 1 }
+    var notificationsCount: Int { 1 }
     var primaryAuthorAccount: Mastodon.Entity.Account? { account }
-    var authorName: String { account.displayNameWithFallback }
+    var authorName: Mastodon.Entity.NotificationType.AuthorName? {
+        .other(named: account.displayNameWithFallback)
+    }
     var authorAvatarUrls: [URL] {
         if let domain = account.domain {
             return [account.avatarImageURLWithFallback(domain: domain)]
@@ -271,21 +433,19 @@ extension Mastodon.Entity.Notification: NotificationInfo {
     }
     
     @MainActor
-    func availableFollowAction() -> AvailableFollowAction? {
+    func availableRelationshipElement() -> RelationshipElement? {
         if let relationship = MastodonFeedItemCacheManager.shared.currentRelationship(toAccount: account.id) {
-            if let text = relationship.followButtonText {
-                return .action(buttonText: text)
-            }
+            return relationship.relationshipElement
         }
         return nil
     }
     
     @MainActor
-    func fetchAvailableFollowAction() async -> AvailableFollowAction {
+    func fetchRelationshipElement() async -> RelationshipElement {
         do {
             try await fetchRelationship()
-            if let availableAction = availableFollowAction() {
-                return availableAction
+            if let available = availableRelationshipElement() {
+                return available
             } else {
                 return .noneNeeded
             }
@@ -297,6 +457,10 @@ extension Mastodon.Entity.Notification: NotificationInfo {
         guard let authBox = await AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
         let relationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: authBox)
         await MastodonFeedItemCacheManager.shared.addToCache(relationship)
+    }
+    
+    var statusViewModel: Mastodon.Entity.Status.ViewModel? {
+        return status?.viewModel()
     }
 }
 
@@ -311,9 +475,9 @@ extension Mastodon.Entity.NotificationGroup: NotificationInfo {
     var authorsCount: Int { notificationsCount }
     
     @MainActor
-    var authorName: String {
-        guard let firstAccountID = sampleAccountIDs.first, let firstAccount = MastodonFeedItemCacheManager.shared.fullAccount(firstAccountID) else { return "" }
-        return firstAccount.displayNameWithFallback
+    var authorName: Mastodon.Entity.NotificationType.AuthorName? {
+        guard let firstAccountID = sampleAccountIDs.first, let firstAccount = MastodonFeedItemCacheManager.shared.fullAccount(firstAccountID) else { return .none }
+        return .other(named: firstAccount.displayNameWithFallback)
     }
     
     @MainActor
@@ -334,21 +498,21 @@ extension Mastodon.Entity.NotificationGroup: NotificationInfo {
     }
     
     @MainActor
-    func availableFollowAction() -> AvailableFollowAction? {
+    func availableRelationshipElement() -> RelationshipElement? {
         guard authorsCount == 1 && type == .follow else { return .noneNeeded }
         guard let firstAccountID = sampleAccountIDs.first else { return .noneNeeded }
-        if let relationship = MastodonFeedItemCacheManager.shared.currentRelationship(toAccount: firstAccountID), let text = relationship.followButtonText {
-            return .action(buttonText: text)
+        if let relationship = MastodonFeedItemCacheManager.shared.currentRelationship(toAccount: firstAccountID) {
+            return relationship.relationshipElement
         }
         return nil
     }
     
     @MainActor
-    func fetchAvailableFollowAction() async -> AvailableFollowAction {
+    func fetchRelationshipElement() async -> RelationshipElement {
         do {
             try await fetchRelationship()
-            if let availableAction = availableFollowAction() {
-                return availableAction
+            if let available = availableRelationshipElement() {
+                return available
             } else {
                 return .noneNeeded
             }
@@ -364,24 +528,503 @@ extension Mastodon.Entity.NotificationGroup: NotificationInfo {
             await MastodonFeedItemCacheManager.shared.addToCache(relationship)
         }
     }
+    
+    var statusViewModel: MastodonSDK.Mastodon.Entity.Status.ViewModel? {
+        return nil
+    }
 }
 
 extension Mastodon.Entity.Relationship {
     @MainActor
-    var followButtonText: String? {
-        if following {
-            return L10n.Common.Controls.Friendship.following
-        } else {
+    var relationshipElement: RelationshipElement? {
+        switch (following, followedBy) {
+        case (true, true):
+            return .mutualLabel
+        case (true, false):
+            return .followingLabel
+        case (false, true):
             if let account: NotificationAuthor = MastodonFeedItemCacheManager.shared.fullAccount(id) ?? MastodonFeedItemCacheManager.shared.partialAccount(id),
                account.locked
             {
                 if requested {
-                    return L10n.Common.Controls.Friendship.pending
+                    return .pendingRequestLabel
                 } else {
-                    return L10n.Common.Controls.Friendship.request
+                    return .requestButton
                 }
             }
-            return L10n.Common.Controls.Friendship.follow
+            return .followButton
+        case (false, false):
+            return nil
         }
     }
 }
+
+struct NotificationIconInfo {
+    let notificationType: Mastodon.Entity.NotificationType
+    let isGrouped: Bool
+}
+
+struct NotificationSourceAccounts {
+    let firstAccountID: String?
+    let avatarUrls: [URL]
+    let totalActorCount: Int
+    
+    init(firstAccountID: String?, avatarUrls: [URL], totalActorCount: Int) {
+        self.firstAccountID = firstAccountID
+        self.avatarUrls = avatarUrls.removingDuplicates()
+        self.totalActorCount = totalActorCount
+    }
+}
+
+struct _NotificationRowView: View {
+    @ObservedObject var viewModel: _NotificationViewModel
+    
+    var body: some View {
+        HStack {
+            if let iconInfo = viewModel.iconInfo {
+                // LEFT GUTTER WITH TOP-ALIGNED ICON
+                VStack {
+                    Spacer()
+                    NotificationIconView(iconInfo)
+                    Spacer().frame(maxHeight: .infinity)
+                }
+            }
+            
+            // VSTACK OF CONTENT COMPONENT VIEWS
+            VStack() {
+                ForEach(viewModel.contentComponents) {
+                    componentView($0)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    func componentView(_ component: NotificationViewComponent) -> some View {
+        switch component {
+        case .avatarRow(let accountInfo, let addition):
+            avatarRow(accountInfo: accountInfo, trailingElement: addition)
+        case .text(let string):
+            Text(string)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        case .status(let viewModel):
+            InlinePostPreview(viewModel: viewModel)
+        case .hyperlinkButton(let label, let url):
+            Button(label) {
+                // TODO: open url
+            }
+            .bold()
+            .tint(Color(asset: Asset.Colors.accent))
+        case ._other(let string):
+            Text(string)
+        }
+    }
+    
+    @ScaledMetric private var smallAvatarSize: CGFloat = 32
+    private let avatarShape = RoundedRectangle(cornerRadius: 8)
+    private let maxAvatars = 8
+    @ViewBuilder
+    func avatarRow(accountInfo: NotificationSourceAccounts, trailingElement: RelationshipElement) -> some View {
+        let needsMoreLabel = accountInfo.totalActorCount > max(maxAvatars, accountInfo.avatarUrls.count)
+        HStack(alignment: .center) {
+            ForEach(accountInfo.avatarUrls.prefix(maxAvatars), id: \.self) {
+                AsyncImage(
+                    url: $0,
+                    content: { image in
+                        image.resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .clipShape(avatarShape)
+                    },
+                    placeholder: {
+                        avatarShape
+                            .foregroundStyle(Color(UIColor.secondarySystemFill))
+                    }
+                )
+                .frame(width: smallAvatarSize, height: smallAvatarSize)
+            }
+            if needsMoreLabel {
+                Text("+ more")
+            }
+            Spacer().frame(minWidth: 0, maxWidth: .infinity)
+            avatarRowTrailingElement(trailingElement, grouped: accountInfo.totalActorCount > 1)
+        }
+    }
+    
+    @ViewBuilder
+    func avatarRowTrailingElement(_ elementType: RelationshipElement, grouped: Bool) -> some View {
+        switch (elementType, grouped) {
+        case (.fetching, false):
+            ProgressView().progressViewStyle(.circular)
+        case (.followButton, false):
+            Button(L10n.Common.Controls.Friendship.follow) {
+                viewModel.doAvatarRowButtonAction()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .bold()
+        case (.requestButton, false):
+            Button(L10n.Common.Controls.Friendship.request) {
+                viewModel.doAvatarRowButtonAction()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .bold()
+        case (.acceptRejectButtons(let isFollowing), false):
+            HStack {
+                
+                if isFollowing {
+                    Text(L10n.Common.Controls.Friendship.following)
+                }
+                
+                Button(L10n.Scene.Notification.FollowRequest.reject) {
+                    viewModel.doAvatarRowButtonAction(false)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .bold()
+                
+                Button(L10n.Scene.Notification.FollowRequest.accept) {
+                    viewModel.doAvatarRowButtonAction(true)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .bold()
+            }
+        case (.acceptedLabel, false):
+            Text(L10n.Scene.Notification.FollowRequest.accepted)
+        case (.rejectedLabel, false):
+            Text(L10n.Scene.Notification.FollowRequest.rejected)
+        case (.mutualLabel, false):
+            Text(L10n.Common.Controls.Friendship.mutual)
+        case (.followingLabel, false):
+            Text(L10n.Common.Controls.Friendship.following)
+        case (.pendingRequestLabel, false):
+            Text(L10n.Common.Controls.Friendship.pending)
+        case (.error(_), _):
+            Image(systemName: "exclamationmark.triangle").foregroundStyle(.gray)
+        default:
+            Spacer().frame(width: 0)
+        }
+    }
+}
+
+enum NotificationViewComponent: Identifiable {
+    case avatarRow(NotificationSourceAccounts, RelationshipElement)
+    case text(AttributedString)
+    case status(Mastodon.Entity.Status.ViewModel)
+    case hyperlinkButton(String, URL?)
+    case _other(String)
+    
+    var id: String {
+        switch self {
+        case .avatarRow:
+            return "avatar_row"
+        case .text(let string):
+            return string.description
+        case .status:
+            return "status"
+        case .hyperlinkButton(let text, _):
+            return text
+        case ._other(let string):
+            return string
+        }
+    }
+}
+
+class _NotificationViewModel: ObservableObject {
+    let identifier: MastodonFeedItemIdentifier
+    let type: Mastodon.Entity.NotificationType
+    let presentError: (Error) -> ()
+    public let iconInfo: NotificationIconInfo?
+    @Published public var contentComponents: [NotificationViewComponent] = []
+    
+    private(set) var avatarRow: NotificationViewComponent? {
+        didSet {
+            resetContentComponents()
+        }
+    }
+    private(set) var additionalComponents: [NotificationViewComponent] = [] {
+        didSet {
+            resetContentComponents()
+        }
+    }
+    
+    private func resetContentComponents() {
+        contentComponents = ([avatarRow] + additionalComponents).compactMap { $0 }
+    }
+    
+    init(_ notificationInfo: NotificationInfo, presentError: @escaping (Error)->()) {
+        
+        self.identifier = .notificationGroup(id: notificationInfo.id)
+        self.type = notificationInfo.type
+        self.iconInfo = NotificationIconInfo(notificationType: notificationInfo.type, isGrouped: notificationInfo.isGrouped)
+        self.presentError = presentError
+        
+        switch notificationInfo.type {
+            
+        case .follow, .followRequest:
+            let avatarRowAdditionalElement: RelationshipElement
+            let accountID: String?
+            if let account = notificationInfo.primaryAuthorAccount {
+                accountID = account.id
+                avatarRowAdditionalElement = .unfetched(notificationInfo.type, accountID: account.id)
+            } else {
+                accountID = nil
+                avatarRowAdditionalElement = .error(nil)
+            }
+            avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: accountID, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), avatarRowAdditionalElement)
+            if let accountName = notificationInfo.primaryAuthorAccount?.displayNameWithFallback {
+                additionalComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: accountName), totalAuthorCount: notificationInfo.authorsCount))]
+            }
+        case .mention, .status:
+            // TODO: eventually make this full status style, not inline
+            // TODO: distinguish mentions from replies
+            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = notificationInfo.statusViewModel {
+                avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
+                additionalComponents = [
+                    .text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount)),
+                    .status(statusViewModel)
+                ]
+            } else {
+                additionalComponents = [._other("POST BY UNKNOWN ACCOUNT")]
+            }
+        case .reblog, .favourite:
+            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = notificationInfo.statusViewModel {
+                avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
+                additionalComponents = [
+                    .text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount)),
+                    .status(statusViewModel)
+                ]
+            } else {
+                additionalComponents = [._other("REBLOGGED/FAVOURITED BY UNKNOWN ACCOUNT")]
+            }
+        case .poll, .update:
+            if let author = notificationInfo.authorName, let statusViewModel = notificationInfo.statusViewModel {
+                additionalComponents = [
+                    .text(notificationInfo.type.actionSummaryLabel(firstAuthor: author, totalAuthorCount: notificationInfo.authorsCount)),
+                    .status(statusViewModel)
+                ]
+            } else {
+                additionalComponents = [._other("POLL/UPDATE FROM UNKNOWN ACCOUNT")]
+            }
+        case .adminSignUp:
+            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let authorName = notificationInfo.authorName {
+                avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
+                additionalComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: authorName, totalAuthorCount: notificationInfo.authorsCount))]
+            } else {
+                additionalComponents = [._other("ADMIN_SIGNUP NOTIFICATION")]
+            }
+        case .adminReport:
+            var components = [NotificationViewComponent?]()
+            if let summary = notificationInfo.ruleViolationReport?.summary {
+                components.append(.text(summary))
+            }
+            if let comment = notificationInfo.ruleViolationReport?.displayableComment {
+                components.append(.text(comment))
+            }
+            additionalComponents = components.compactMap { $0 }
+        case .severedRelationships:
+            var components = [NotificationViewComponent?]()
+            if let summary = notificationInfo.relationshipSeveranceEvent?.summary {
+                components.append(.text(summary))
+            } else {
+                components.append(._other("An admin action removed some of your followers or accounts that you followed."))
+            }
+            components.append(.hyperlinkButton("Learn more about server blocks", nil)) // TODO: localization and go somewhere
+            additionalComponents = components.compactMap { $0 }
+        case .moderationWarning:
+            additionalComponents = [
+                .text(AttributedString("Your account has received a moderation warning.")), // TODO: localization
+                .hyperlinkButton("Learn more", nil) // TODO: localization and go somewhere
+            ]
+        case ._other(let text):
+            additionalComponents = [._other("UNEXPECTED NOTIFICATION TYPE: \(text)")]
+        }
+        resetContentComponents()
+    }
+    
+    public func prepareForDisplay() {
+        if let avatarRow {
+            switch avatarRow {
+            case .avatarRow(let sourceAccounts, let additionalElement):
+                switch additionalElement {
+                case .unfetched:
+                    fetchRelationshipElement(sourceAccounts: sourceAccounts)
+                default:
+                    break
+                }
+            case .text, .status, .hyperlinkButton, ._other:
+                break
+            }
+        }
+        
+    }
+    
+    private func fetchRelationshipElement(sourceAccounts: NotificationSourceAccounts) {
+        switch type {
+        case .follow, .followRequest:
+            guard let accountID = sourceAccounts.firstAccountID else { return }
+            avatarRow = .avatarRow(sourceAccounts, .fetching)
+            
+            Task { @MainActor in
+                let element: RelationshipElement
+                do {
+                    if let relationship = try await fetchRelationship(to: accountID) {
+                        
+                        switch (type, relationship.following) {
+                        case (.follow, true):
+                            element = .mutualLabel
+                        case (.follow, false):
+                            element = .followButton
+                        case (.followRequest, _):
+                            element = .acceptRejectButtons(isFollowing: relationship.following)
+                        default:
+                            element = .noneNeeded
+                        }
+                    } else {
+                        element = .noneNeeded
+                    }
+                } catch {
+                    element = .error(error)
+                }
+                
+                avatarRow = .avatarRow(sourceAccounts, element)
+            }
+        default:
+            avatarRow = .avatarRow(sourceAccounts, .noneNeeded)
+        }
+    }
+    
+    private func fetchRelationship(to accountID: String) async throws -> Mastodon.Entity.Relationship? {
+        guard let authBox = await AuthenticationServiceProvider.shared.currentActiveUser.value else { return nil }
+        if let relationship = try await APIService.shared.relationship(forAccountIds: [accountID], authenticationBox: authBox).value.first {
+            return relationship
+        } else {
+            return nil
+        }
+    }
+}
+
+extension _NotificationViewModel: Equatable {
+    public static func ==(lhs: _NotificationViewModel, rhs: _NotificationViewModel) -> Bool {
+        return lhs.identifier == rhs.identifier
+    }
+}
+    
+extension _NotificationViewModel {
+    
+    public func doAvatarRowButtonAction(_ accept: Bool = true) {
+        guard let avatarRow else { return }
+        FeedbackGenerator.shared.generate(.selectionChanged)
+        Task {
+            switch avatarRow {
+            case .avatarRow(let accountInfo, let relationshipElement):
+                switch relationshipElement {
+                case .followButton, .requestButton:
+                    await doFollow(accountInfo)
+                case .acceptRejectButtons:
+                    await doAcceptFollowRequest(accountInfo, accept: accept)
+                default:
+                    return
+                }
+            default:
+                return
+            }
+        }
+    }
+    
+    @MainActor
+    private func doFollow(_ accountInfo: NotificationSourceAccounts) async {
+        guard let accountID = accountInfo.firstAccountID, let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
+        let startingAvatarRow = avatarRow
+        avatarRow = .avatarRow(accountInfo, .fetching)
+        do {
+            let updatedElement: RelationshipElement
+            let response = try await APIService.shared.follow(accountID, authenticationBox: authBox)
+            if response.following {
+                updatedElement = .followingLabel
+            } else if response.requested {
+                updatedElement = .pendingRequestLabel
+            } else {
+                updatedElement = .error(nil)
+            }
+            avatarRow = .avatarRow(accountInfo, updatedElement)
+        } catch {
+            presentError(error)
+            avatarRow = startingAvatarRow
+        }
+    }
+    
+    @MainActor
+    private func doAcceptFollowRequest(_ accountInfo: NotificationSourceAccounts, accept: Bool) async {
+        guard let accountID = accountInfo.firstAccountID, let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { return }
+        let startingAvatarRow = avatarRow
+        avatarRow = .avatarRow(accountInfo, .fetching)
+        do {
+            let expectedFollowedByResult = accept
+            let newRelationship = try await APIService.shared.followRequest(
+                userID: accountID,
+                query: accept ? .accept : .reject,
+                authenticationBox: authBox
+            ).value
+            guard newRelationship.followedBy == expectedFollowedByResult else {
+                self.avatarRow = .avatarRow(accountInfo, .error(nil))
+                return
+            }
+            self.avatarRow = .avatarRow(accountInfo, accept ? .acceptedLabel : .rejectedLabel)
+        } catch {
+            presentError(error)
+            self.avatarRow = startingAvatarRow
+        }
+    }
+}
+
+extension _NotificationViewModel {
+    static func viewModelsFromGroupedNotificationResults(_ results: Mastodon.Entity.GroupedNotificationsResults, myAccountID: String, presentError: @escaping (Error)->()) -> [_NotificationViewModel] {
+        let fullAccounts = results.accounts.reduce(into: [String : Mastodon.Entity.Account]()) { partialResult, account in
+            partialResult[account.id] = account
+        }
+        let partialAccounts = results.partialAccounts? .reduce(into: [String : Mastodon.Entity.PartialAccountWithAvatar]()) { partialResult, account in
+            partialResult[account.id] = account
+        }
+        
+        let statuses = results.statuses.reduce(into: [String: Mastodon.Entity.Status](), { partialResult, status in
+            partialResult[status.id] = status
+        })
+        
+        return results.notificationGroups.map { group in
+            var primaryAccount: Mastodon.Entity.Account? = nil
+            for accountID in group.sampleAccountIDs {
+                if let fullAccount = fullAccounts[accountID] {
+                    primaryAccount = fullAccount
+                    break
+                }
+            }
+            
+            let avatarUrls = group.sampleAccountIDs.compactMap { accountID in
+                return fullAccounts[accountID]?.avatarURL ?? partialAccounts?[accountID]?.avatarURL
+            }
+            
+            let authorName: Mastodon.Entity.NotificationType.AuthorName?
+            if primaryAccount?.id == myAccountID {
+                authorName = .me
+            } else if let name = primaryAccount?.displayNameWithFallback {
+                authorName = .other(named: name)
+            } else {
+                authorName = nil
+            }
+            
+            let status = group.statusID == nil ? nil : statuses[group.statusID!]
+            
+            let info = GroupedNotificationInfo(id: group.id, type: group.type, authorsCount: group.authorsCount, notificationsCount: group.notificationsCount, primaryAuthorAccount: primaryAccount, authorName: authorName, authorAvatarUrls: avatarUrls, statusViewModel: status?.viewModel(), ruleViolationReport: group.ruleViolationReport, relationshipSeveranceEvent: group.relationshipSeveranceEvent)
+            
+            return _NotificationViewModel(info, presentError: presentError)
+        }
+    }
+}
+
+func boldedNameStringComponent(_ name: String) -> AttributedString {
+    let nameComponent = PersonNameComponents(givenName: name).formatted(.name(style: .long).attributed)
+    return nameComponent
+}
+
