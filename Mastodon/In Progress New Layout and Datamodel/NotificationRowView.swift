@@ -622,33 +622,48 @@ struct _NotificationRowView: View {
         }
     }
     
+    func displayableAvatarCount(fittingWidth: CGFloat, totalAvatarCount: Int, totalActorCount: Int) -> Int {
+        var maxAvatarCount = Int(floor(fittingWidth / (smallAvatarSize + avatarSpacing)))
+        if maxAvatarCount < totalActorCount {
+            maxAvatarCount = maxAvatarCount - 2
+        }
+        return maxAvatarCount
+    }
+    
     @ScaledMetric private var smallAvatarSize: CGFloat = 32
+    private let avatarSpacing: CGFloat = 8
     private let avatarShape = RoundedRectangle(cornerRadius: 8)
-    private let maxAvatars = 8
+    
     @ViewBuilder
     func avatarRow(accountInfo: NotificationSourceAccounts, trailingElement: RelationshipElement) -> some View {
-        let needsMoreLabel = accountInfo.totalActorCount > max(maxAvatars, accountInfo.avatarUrls.count)
-        HStack(alignment: .center) {
-            ForEach(accountInfo.avatarUrls.prefix(maxAvatars), id: \.self) {
-                AsyncImage(
-                    url: $0,
-                    content: { image in
-                        image.resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .clipShape(avatarShape)
-                    },
-                    placeholder: {
-                        avatarShape
-                            .foregroundStyle(Color(UIColor.secondarySystemFill))
-                    }
-                )
-                .frame(width: smallAvatarSize, height: smallAvatarSize)
+        GeometryReader { geom in
+            let maxAvatarCount = displayableAvatarCount(fittingWidth: geom.size.width, totalAvatarCount: accountInfo.avatarUrls.count, totalActorCount: accountInfo.totalActorCount)
+            let needsMoreLabel = accountInfo.totalActorCount > maxAvatarCount
+            HStack(alignment: .center) {
+                ForEach(accountInfo.avatarUrls.prefix(maxAvatarCount), id: \.self) {
+                    AsyncImage(
+                        url: $0,
+                        content: { image in
+                            image.resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .clipShape(avatarShape)
+                        },
+                        placeholder: {
+                            avatarShape
+                                .foregroundStyle(Color(UIColor.secondarySystemFill))
+                        }
+                    )
+                    .frame(width: smallAvatarSize, height: smallAvatarSize)
+                }
+                if needsMoreLabel {
+                    Text("+ more")
+                        .fixedSize()
+                        .lineLimit(1)
+                }
+                Spacer().frame(minWidth: 0, maxWidth: .infinity)
+                avatarRowTrailingElement(trailingElement, grouped: accountInfo.totalActorCount > 1)
             }
-            if needsMoreLabel {
-                Text("+ more")
-            }
-            Spacer().frame(minWidth: 0, maxWidth: .infinity)
-            avatarRowTrailingElement(trailingElement, grouped: accountInfo.totalActorCount > 1)
+            .fixedSize()
         }
     }
     
