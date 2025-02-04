@@ -14,12 +14,15 @@ import os.log
 
 @MainActor
 final public class GroupedNotificationFeedLoader {
+    
+    struct FeedLoadResult {
+        let allRecords: [_NotificationViewModel]
+        let canLoadOlder: Bool
+    }
 
     struct FeedLoadRequest: Equatable {
-        let olderThan: MastodonFeedItemIdentifier?
-        let newerThan: MastodonFeedItemIdentifier?
-
-        var maxID: String? { olderThan?.id }
+        let olderThan: String?
+        let newerThan: String?
 
         var resultsInsertionPoint: InsertLocation {
             if olderThan != nil {
@@ -42,7 +45,7 @@ final public class GroupedNotificationFeedLoader {
     private static let entryNotFoundMessage =
         "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
 
-    @Published private(set) var records: [_NotificationViewModel] = []
+    @Published private(set) var records: FeedLoadResult = FeedLoadResult(allRecords: [], canLoadOlder: true)
 
     private let kind: MastodonFeedKind
     private let presentError: (Error) -> Void
@@ -60,17 +63,17 @@ final public class GroupedNotificationFeedLoader {
                 if filterBox != nil {
                     Task { [weak self] in
                         guard let self else { return }
-                        await self.setRecordsAfterFiltering(self.records)
+                        let curAllRecords = self.records.allRecords
+                        let curCanLoadOlder = self.records.canLoadOlder
+                        await self.setRecordsAfterFiltering(curAllRecords, canLoadOlder: curCanLoadOlder)
                     }
                 }
             }
     }
 
-    private var mostRecentLoad: FeedLoadRequest?
-
     public func loadMore(
-        olderThan: MastodonFeedItemIdentifier?,
-        newerThan: MastodonFeedItemIdentifier?
+        olderThan: String?,
+        newerThan: String?
     ) {
         let request = FeedLoadRequest(
             olderThan: olderThan, newerThan: newerThan)
@@ -81,22 +84,36 @@ final public class GroupedNotificationFeedLoader {
             )
         }
     }
+    
+    public func asyncLoadMore(
+        olderThan: String?,
+        newerThan: String?
+    ) async {
+        let request = FeedLoadRequest(
+            olderThan: olderThan, newerThan: newerThan)
+        do {
+            let unfiltered = try await load(request)
+            await insertRecordsAfterFiltering(
+                at: request.resultsInsertionPoint, additionalRecords: unfiltered
+            )
+        } catch {
+            presentError(error)
+        }
+    }
 
     private func load(_ request: FeedLoadRequest) async throws
         -> [_NotificationViewModel]
     {
-        guard request != mostRecentLoad else { throw AppError.badRequest }
-        mostRecentLoad = request
         switch kind {
         case .notificationsAll:
             return try await loadNotifications(
-                withScope: .everything, olderThan: request.maxID)
+                withScope: .everything, olderThan: request.olderThan)
         case .notificationsMentionsOnly:
             return try await loadNotifications(
-                withScope: .mentions, olderThan: request.maxID)
+                withScope: .mentions, olderThan: request.olderThan)
         case .notificationsWithAccount(let accountID):
             return try await loadNotifications(
-                withAccountID: accountID, olderThan: request.maxID)
+                withAccountID: accountID, olderThan: request.olderThan)
         }
     }
 }
@@ -104,37 +121,43 @@ final public class GroupedNotificationFeedLoader {
 // MARK: - Filtering
 extension GroupedNotificationFeedLoader {
     private func setRecordsAfterFiltering(
-        _ newRecords: [_NotificationViewModel]
+        _ newRecords: [_NotificationViewModel],
+        canLoadOlder: Bool
     ) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else {
-            self.records = newRecords
+            self.records = FeedLoadResult(allRecords: newRecords.removingDuplicates(), canLoadOlder: canLoadOlder)
             return
         }
         let filtered = await self.filter(
             newRecords, forFeed: kind, with: filterBox)
-        self.records = filtered.removingDuplicates()
+        self.records = FeedLoadResult(allRecords: filtered.removingDuplicates(), canLoadOlder: canLoadOlder)
     }
 
     private func insertRecordsAfterFiltering(
         at insertionPoint: FeedLoadRequest.InsertLocation,
         additionalRecords: [_NotificationViewModel]
     ) async {
-        guard let filterBox = StatusFilterService.shared.activeFilterBox else {
-            self.records += additionalRecords
-            return
+        let newRecords: [_NotificationViewModel]
+        if let filterBox = StatusFilterService.shared.activeFilterBox {
+            newRecords = await self.filter(
+                additionalRecords, forFeed: kind, with: filterBox)
+        } else {
+            newRecords = additionalRecords
         }
-        let newRecords = await self.filter(
-            additionalRecords, forFeed: kind, with: filterBox)
-        var combinedRecords = self.records
+        var canLoadOlder = self.records.canLoadOlder
+        var combinedRecords = self.records.allRecords
         switch insertionPoint {
         case .start:
-            combinedRecords = newRecords + combinedRecords
+            combinedRecords = (newRecords + combinedRecords).removingDuplicates()
         case .end:
-            combinedRecords.append(contentsOf: newRecords)
+            let prevLast = combinedRecords.last
+            combinedRecords = (combinedRecords + newRecords).removingDuplicates()
+            let curLast = combinedRecords.last
+            canLoadOlder = !(prevLast == curLast)
         case .replace:
-            combinedRecords = newRecords
+            combinedRecords = newRecords.removingDuplicates()
         }
-        self.records = combinedRecords.removingDuplicates()
+        self.records = FeedLoadResult(allRecords: combinedRecords, canLoadOlder: canLoadOlder)
     }
 
     private func filter(

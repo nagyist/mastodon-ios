@@ -88,6 +88,8 @@ struct NotificationListView: View {
                             switch item {
                             case .groupedNotification(let viewModel):
                                 viewModel.prepareForDisplay()
+                            case .bottomLoader:
+                                loadMore()
                             default:
                                 break
                             }
@@ -98,6 +100,9 @@ struct NotificationListView: View {
                 }
             }
             .listStyle(.plain)
+            .refreshable {
+                await viewModel.refreshFeedFromTop()
+            }
         }
         
     }
@@ -105,7 +110,11 @@ struct NotificationListView: View {
     @ViewBuilder func rowView(_ notificationListItem: NotificationListItem) -> some View {
         switch notificationListItem {
         case .bottomLoader:
-            Text("loader not yet implemented")
+            HStack {
+                Spacer()
+                ProgressView().progressViewStyle(.circular)
+                Spacer()
+            }
         case .filteredNotificationsInfo:
             Text("filtered notifications not yet implemented")
         case .notification(let feedItemIdentifier):
@@ -114,6 +123,10 @@ struct NotificationListView: View {
             // TODO: implement unread using Mastodon.Entity.Marker
             _NotificationRowView(viewModel: viewModel)
         }
+    }
+    
+    func loadMore() {
+        viewModel.loadOlder()
     }
     
     func didTap(item: NotificationListItem) {
@@ -165,14 +178,26 @@ fileprivate class NotificationListViewModel: ObservableObject {
         feedSubscription = feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in
-                // TODO: add middle loader and bottom loader?
-                let updatedItems = records.map {
+                var updatedItems = records.allRecords.map {
                     NotificationListItem.groupedNotification($0)
+                }
+                if records.canLoadOlder {
+                    updatedItems.append(.bottomLoader)
                 }
                 // TODO: add the filtered notifications announcement if needed
                 self?.notificationItems = updatedItems
             }
         feedLoader.loadMore(olderThan: nil, newerThan: nil)
+    }
+    
+    public func refreshFeedFromTop() async {
+        let newestKnown = feedLoader.records.allRecords.first?.newestID
+        await feedLoader.asyncLoadMore(olderThan: nil, newerThan: newestKnown)
+    }
+    
+    public func loadOlder() {
+        let oldestKnown = feedLoader.records.allRecords.last?.oldestID
+        feedLoader.loadMore(olderThan: oldestKnown, newerThan: nil)
     }
 }
 

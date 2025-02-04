@@ -341,6 +341,8 @@ enum RelationshipElement: Equatable {
 
 protocol NotificationInfo {
     var id: String { get }
+    var newestNotificationID: String { get }
+    var oldestNotificationID: String { get }
     var type: Mastodon.Entity.NotificationType { get }
     var isGrouped: Bool { get }
     var notificationsCount: Int { get }
@@ -385,6 +387,8 @@ struct GroupedNotificationInfo: NotificationInfo {
     }
     
     let id: String
+    let oldestNotificationID: String
+    let newestNotificationID: String
     
     let type: MastodonSDK.Mastodon.Entity.NotificationType
     
@@ -417,6 +421,13 @@ struct GroupedNotificationInfo: NotificationInfo {
 }
 
 extension Mastodon.Entity.Notification: NotificationInfo {
+    
+    var oldestNotificationID: String {
+        return id
+    }
+    var newestNotificationID: String {
+        return id
+    }
     
     var authorsCount: Int { 1 }
     var notificationsCount: Int { 1 }
@@ -467,6 +478,13 @@ extension Mastodon.Entity.Notification: NotificationInfo {
 }
 
 extension Mastodon.Entity.NotificationGroup: NotificationInfo {
+    
+    var newestNotificationID: String {
+        return pageNewestID ?? "\(mostRecentNotificationID)"
+    }
+    var oldestNotificationID: String {
+        return pageOldestID ?? "\(mostRecentNotificationID)"
+    }
     
     @MainActor
     var primaryAuthorAccount: Mastodon.Entity.Account? {
@@ -752,6 +770,8 @@ enum NotificationViewComponent: Identifiable {
 
 class _NotificationViewModel: ObservableObject {
     let identifier: MastodonFeedItemIdentifier
+    let oldestID: String?
+    let newestID: String?
     let type: Mastodon.Entity.NotificationType
     let presentError: (Error) -> ()
     public let iconInfo: NotificationIconInfo?
@@ -776,6 +796,8 @@ class _NotificationViewModel: ObservableObject {
     init(_ notificationInfo: NotificationInfo, presentError: @escaping (Error)->()) {
         
         self.identifier = .notificationGroup(id: notificationInfo.id)
+        self.oldestID = notificationInfo.oldestNotificationID
+        self.newestID = notificationInfo.newestNotificationID
         self.type = notificationInfo.type
         self.iconInfo = NotificationIconInfo(notificationType: notificationInfo.type, isGrouped: notificationInfo.isGrouped)
         self.presentError = presentError
@@ -1024,7 +1046,20 @@ extension _NotificationViewModel {
             
             let status = group.statusID == nil ? nil : statuses[group.statusID!]
             
-            let info = GroupedNotificationInfo(id: group.id, type: group.type, authorsCount: group.authorsCount, notificationsCount: group.notificationsCount, primaryAuthorAccount: primaryAccount, authorName: authorName, authorAvatarUrls: avatarUrls, statusViewModel: status?.viewModel(), ruleViolationReport: group.ruleViolationReport, relationshipSeveranceEvent: group.relationshipSeveranceEvent)
+            let info = GroupedNotificationInfo(
+                id: group.id,
+                oldestNotificationID: group.oldestNotificationID,
+                newestNotificationID: group.newestNotificationID,
+                type: group.type,
+                authorsCount: group.authorsCount,
+                notificationsCount: group.notificationsCount,
+                primaryAuthorAccount: primaryAccount,
+                authorName: authorName,
+                authorAvatarUrls: avatarUrls,
+                statusViewModel: status?.viewModel(),
+                ruleViolationReport: group.ruleViolationReport,
+                relationshipSeveranceEvent: group.relationshipSeveranceEvent
+            )
             
             return _NotificationViewModel(info, presentError: presentError)
         }
