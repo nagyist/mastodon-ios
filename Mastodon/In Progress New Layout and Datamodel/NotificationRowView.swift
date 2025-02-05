@@ -354,7 +354,6 @@ protocol NotificationInfo {
     var authorAvatarUrls: [URL] { get }
     func availableRelationshipElement() async -> RelationshipElement?
     func fetchRelationshipElement() async -> RelationshipElement
-    var statusViewModel: Mastodon.Entity.Status.ViewModel? { get }
     var ruleViolationReport: Mastodon.Entity.Report? { get }
     var relationshipSeveranceEvent: Mastodon.Entity.RelationshipSeveranceEvent? { get }
 }
@@ -473,10 +472,6 @@ extension Mastodon.Entity.Notification: NotificationInfo {
         let relationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: authBox)
         await MastodonFeedItemCacheManager.shared.addToCache(relationship)
     }
-    
-    var statusViewModel: Mastodon.Entity.Status.ViewModel? {
-        return status?.viewModel()
-    }
 }
 
 extension Mastodon.Entity.NotificationGroup: NotificationInfo {
@@ -587,12 +582,15 @@ struct NotificationIconInfo {
 }
 
 struct NotificationSourceAccounts {
-    let firstAccountID: String?
+    let primaryAuthorAccount: Mastodon.Entity.Account?
+    var firstAccountID: String? {
+        return primaryAuthorAccount?.id
+    }
     let avatarUrls: [URL]
     let totalActorCount: Int
     
-    init(firstAccountID: String?, avatarUrls: [URL], totalActorCount: Int) {
-        self.firstAccountID = firstAccountID
+    init(primaryAuthorAccount: Mastodon.Entity.Account?, avatarUrls: [URL], totalActorCount: Int) {
+        self.primaryAuthorAccount = primaryAuthorAccount
         self.avatarUrls = avatarUrls.removingDuplicates()
         self.totalActorCount = totalActorCount
     }
@@ -629,11 +627,25 @@ struct _NotificationRowView: View {
         switch component {
         case .avatarRow(let accountInfo, let addition):
             avatarRow(accountInfo: accountInfo, trailingElement: addition)
+                .onTapGesture {
+                    if accountInfo.totalActorCount == 1, let primaryAuthorAccount = accountInfo.primaryAuthorAccount {
+                        Task {
+                            do {
+                                try await viewModel.navigateToProfile(primaryAuthorAccount)
+                            } catch {
+                                viewModel.presentError(error)
+                            }
+                        }
+                    }
+                }
         case .text(let string):
             Text(string)
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .status(let viewModel):
             InlinePostPreview(viewModel: viewModel)
+                .onTapGesture {
+                    viewModel.navigateToStatus()
+                }
         case .hyperlinkButton(let label, let url):
             Button(label) {
                 // TODO: open url
@@ -775,6 +787,7 @@ class _NotificationViewModel: ObservableObject {
     let oldestID: String?
     let newestID: String?
     let type: Mastodon.Entity.NotificationType
+    let navigateToScene: (SceneCoordinator.Scene, SceneCoordinator.Transition)->()
     let presentError: (Error) -> ()
     public let iconInfo: NotificationIconInfo?
     @Published public var headerComponents: [NotificationViewComponent] = []
@@ -795,13 +808,14 @@ class _NotificationViewModel: ObservableObject {
         headerComponents = ([avatarRow] + headerTextComponents).compactMap { $0 }
     }
     
-    init(_ notificationInfo: NotificationInfo, presentError: @escaping (Error)->()) {
+    init(_ notificationInfo: NotificationInfo, navigateToScene: @escaping (SceneCoordinator.Scene, SceneCoordinator.Transition)->(), presentError: @escaping (Error)->()) {
         
         self.identifier = .notificationGroup(id: notificationInfo.id)
         self.oldestID = notificationInfo.oldestNotificationID
         self.newestID = notificationInfo.newestNotificationID
         self.type = notificationInfo.type
         self.iconInfo = NotificationIconInfo(notificationType: notificationInfo.type, isGrouped: notificationInfo.isGrouped)
+        self.navigateToScene = navigateToScene
         self.presentError = presentError
         
         switch notificationInfo.type {
@@ -816,30 +830,30 @@ class _NotificationViewModel: ObservableObject {
                 accountID = nil
                 avatarRowAdditionalElement = .error(nil)
             }
-            avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: accountID, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), avatarRowAdditionalElement)
+            avatarRow = .avatarRow(NotificationSourceAccounts(primaryAuthorAccount: notificationInfo.primaryAuthorAccount, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), avatarRowAdditionalElement)
             if let accountName = notificationInfo.primaryAuthorAccount?.displayNameWithFallback {
                 headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: accountName), totalAuthorCount: notificationInfo.authorsCount))]
             }
         case .mention, .status:
             // TODO: eventually make this full status style, not inline
             // TODO: distinguish mentions from replies
-            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = notificationInfo.statusViewModel {
-                avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
+            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = (notificationInfo as? GroupedNotificationInfo)?.statusViewModel {
+                avatarRow = .avatarRow(NotificationSourceAccounts(primaryAuthorAccount: primaryAuthorAccount, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
                 headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount))]
                 contentComponents = [.status(statusViewModel)]
             } else {
                 headerTextComponents = [._other("POST BY UNKNOWN ACCOUNT")]
             }
         case .reblog, .favourite:
-            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = notificationInfo.statusViewModel {
-                avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
+            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let statusViewModel = (notificationInfo as? GroupedNotificationInfo)?.statusViewModel {
+                avatarRow = .avatarRow(NotificationSourceAccounts(primaryAuthorAccount: primaryAuthorAccount, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
                 headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: .other(named: primaryAuthorAccount.displayNameWithFallback), totalAuthorCount: notificationInfo.authorsCount))]
                 contentComponents = [.status(statusViewModel)]
             } else {
                 headerTextComponents = [._other("REBLOGGED/FAVOURITED BY UNKNOWN ACCOUNT")]
             }
         case .poll, .update:
-            if let author = notificationInfo.authorName, let statusViewModel = notificationInfo.statusViewModel {
+            if let author = notificationInfo.authorName, let statusViewModel = (notificationInfo as? GroupedNotificationInfo)?.statusViewModel {
                 headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: author, totalAuthorCount: notificationInfo.authorsCount))]
                 contentComponents = [.status(statusViewModel)]
             } else {
@@ -847,7 +861,7 @@ class _NotificationViewModel: ObservableObject {
             }
         case .adminSignUp:
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount, let authorName = notificationInfo.authorName {
-                avatarRow = .avatarRow(NotificationSourceAccounts(firstAccountID: primaryAuthorAccount.id, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
+                avatarRow = .avatarRow(NotificationSourceAccounts(primaryAuthorAccount: primaryAuthorAccount, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), .noneNeeded)
                 headerTextComponents = [.text(notificationInfo.type.actionSummaryLabel(firstAuthor: authorName, totalAuthorCount: notificationInfo.authorsCount))]
             } else {
                 headerTextComponents = [._other("ADMIN_SIGNUP NOTIFICATION")]
@@ -935,6 +949,16 @@ class _NotificationViewModel: ObservableObject {
             return nil
         }
     }
+    
+    func navigateToProfile(_ account: Mastodon.Entity.Account) async throws {
+        guard let me = await AuthenticationServiceProvider.shared.currentActiveUser.value?.cachedAccount else { return }
+        if me.id == account.id {
+            navigateToScene(.profile(.me(me)), .show)
+        } else {
+            let relationship = try await fetchRelationship(to: account.id)
+            navigateToScene(.profile(.notMe(me: me, displayAccount: account, relationship: relationship)), .show)
+        }
+    }
 }
 
 extension _NotificationViewModel: Equatable {
@@ -1012,7 +1036,7 @@ extension _NotificationViewModel {
 }
 
 extension _NotificationViewModel {
-    static func viewModelsFromGroupedNotificationResults(_ results: Mastodon.Entity.GroupedNotificationsResults, myAccountID: String, presentError: @escaping (Error)->()) -> [_NotificationViewModel] {
+    static func viewModelsFromGroupedNotificationResults(_ results: Mastodon.Entity.GroupedNotificationsResults, myAccountID: String, navigateToScene: @escaping (SceneCoordinator.Scene, SceneCoordinator.Transition)->(), presentError: @escaping (Error)->()) -> [_NotificationViewModel] {
         let fullAccounts = results.accounts.reduce(into: [String : Mastodon.Entity.Account]()) { partialResult, account in
             partialResult[account.id] = account
         }
@@ -1058,12 +1082,18 @@ extension _NotificationViewModel {
                 primaryAuthorAccount: primaryAccount,
                 authorName: authorName,
                 authorAvatarUrls: avatarUrls,
-                statusViewModel: status?.viewModel(),
+                statusViewModel: status?.viewModel(
+                    navigateToStatus: {
+                        Task {
+                            guard let authBox = await AuthenticationServiceProvider.shared.currentActiveUser.value, let status else { return }
+                            await navigateToScene(.thread(viewModel: ThreadViewModel(authenticationBox: authBox, optionalRoot: .root(context: .init(status: MastodonStatus(entity: status, showDespiteContentWarning: false))))), .show)
+                        }
+                    }),
                 ruleViolationReport: group.ruleViolationReport,
                 relationshipSeveranceEvent: group.relationshipSeveranceEvent
             )
             
-            return _NotificationViewModel(info, presentError: presentError)
+            return _NotificationViewModel(info, navigateToScene: navigateToScene, presentError: presentError)
         }
     }
 }
@@ -1097,15 +1127,16 @@ public extension Mastodon.Entity.Status {
         public var needsUserAttribution: Bool {
             return accountDisplayName != nil || accountFullName != nil
         }
+        public let navigateToStatus: ()->()
     }
     
-    func viewModel() -> ViewModel {
+    func viewModel(navigateToStatus: @escaping ()->()) -> ViewModel {
         let displayableContent: AttributedString
         if let content {
             displayableContent = attributedString(fromHtml: content, emojis: account.emojis.asDictionary)
         } else {
             displayableContent = AttributedString()
         }
-        return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain, accountAvatarUrl: account.avatarImageURL())
+        return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain, accountAvatarUrl: account.avatarImageURL(), navigateToStatus: navigateToStatus)
     }
 }

@@ -48,13 +48,15 @@ final public class GroupedNotificationFeedLoader {
     @Published private(set) var records: FeedLoadResult = FeedLoadResult(allRecords: [], canLoadOlder: true)
 
     private let kind: MastodonFeedKind
+    private let navigateToScene: (SceneCoordinator.Scene, SceneCoordinator.Transition)->()
     private let presentError: (Error) -> Void
 
     private var activeFilterBoxSubscription: AnyCancellable?
 
-    public init(kind: MastodonFeedKind, presentError: @escaping (Error) -> Void)
+    init(kind: MastodonFeedKind, navigateToScene: @escaping (SceneCoordinator.Scene, SceneCoordinator.Transition)->(), presentError: @escaping (Error) -> Void)
     {
         self.kind = kind
+        self.navigateToScene = navigateToScene
         self.presentError = presentError
 
         activeFilterBoxSubscription = StatusFilterService.shared
@@ -218,6 +220,7 @@ extension GroupedNotificationFeedLoader {
         return notifications.map {
             _NotificationViewModel(
                 $0,
+                navigateToScene: navigateToScene,
                 presentError: { [weak self] error in self?.presentError(error) }
             )
         }
@@ -245,6 +248,7 @@ extension GroupedNotificationFeedLoader {
             .viewModelsFromGroupedNotificationResults(
                 results,
                 myAccountID: authenticationBox.userID,
+                navigateToScene: navigateToScene,
                 presentError: { [weak self] error in self?.presentError(error) }
             )
     }

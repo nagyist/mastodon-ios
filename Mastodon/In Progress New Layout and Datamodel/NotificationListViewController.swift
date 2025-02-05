@@ -20,7 +20,9 @@ class NotificationListViewController: UIHostingController<NotificationListView> 
         
         viewModel.navigateToScene = { [weak self] scene, transition in
             guard let self else { return }
-            self.sceneCoordinator?.present(scene: scene, from: self, transition: transition)
+            Task { @MainActor in
+                self.sceneCoordinator?.present(scene: scene, from: self, transition: transition)
+            }
         }
     }
     
@@ -140,13 +142,15 @@ struct NotificationListView: View {
                 switch (notificationInfo.type, notificationInfo.isGrouped) {
                 case (.follow, false):
                     guard let notificationAuthor = notificationInfo.primaryAuthorAccount else { return }
-                    viewModel.navigateToScene?(.profile(.notMe(me: me, displayAccount: notificationAuthor, relationship: MastodonFeedItemCacheManager.shared.currentRelationship(toAccount: notificationAuthor.id))), .show)
+                    viewModel.navigateToScene(.profile(.notMe(me: me, displayAccount: notificationAuthor, relationship: MastodonFeedItemCacheManager.shared.currentRelationship(toAccount: notificationAuthor.id))), .show)
                 case (.follow, true):
-                    viewModel.navigateToScene?(.follower(viewModel: FollowerListViewModel(authenticationBox: authBox, domain: me.domain, userID: me.id)), .show)
+                    viewModel.navigateToScene(.follower(viewModel: FollowerListViewModel(authenticationBox: authBox, domain: me.domain, userID: me.id)), .show)
                 default:
                     break
                 }
             }
+        case .groupedNotification(let notificationViewModel):
+            break
         default:
             return
         }
@@ -156,7 +160,6 @@ struct NotificationListView: View {
 @MainActor
 fileprivate class NotificationListViewModel: ObservableObject {
     
-    var navigateToScene: ((SceneCoordinator.Scene, SceneCoordinator.Transition)->())?
     
     @Published var displayedNotifications: ListType = .everything {
         didSet {
@@ -166,7 +169,14 @@ fileprivate class NotificationListViewModel: ObservableObject {
     @Published var notificationItems: [NotificationListItem] = []
     
     private var feedSubscription: AnyCancellable?
-    private var feedLoader = GroupedNotificationFeedLoader(kind: .notificationsAll, presentError: { _ in })
+    private var feedLoader = GroupedNotificationFeedLoader(kind: .notificationsAll, navigateToScene: { _, _ in }, presentError: { _ in })
+    
+    fileprivate var navigateToScene: ((SceneCoordinator.Scene, SceneCoordinator.Transition)->()) = { _,_ in }
+    {
+        didSet {
+            createNewFeedLoader()
+        }
+    }
     fileprivate var presentError: ((Error)->()) = { _ in } {
         didSet {
             createNewFeedLoader()
@@ -174,7 +184,7 @@ fileprivate class NotificationListViewModel: ObservableObject {
     }
     
     private func createNewFeedLoader() {
-        feedLoader = GroupedNotificationFeedLoader(kind: displayedNotifications.feedKind, presentError: presentError)
+        feedLoader = GroupedNotificationFeedLoader(kind: displayedNotifications.feedKind, navigateToScene: navigateToScene, presentError: presentError)
         feedSubscription = feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in

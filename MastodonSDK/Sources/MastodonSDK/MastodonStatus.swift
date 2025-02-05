@@ -78,7 +78,7 @@ public final class MastodonStatus: ObservableObject {
     
     @Published public var poll: MastodonPoll?
     
-    init(entity: Mastodon.Entity.Status, showDespiteContentWarning: Bool) {
+    public init(entity: Mastodon.Entity.Status, showDespiteContentWarning: Bool) {
         self.entity = entity
         self.showDespiteContentWarning = showDespiteContentWarning
         
