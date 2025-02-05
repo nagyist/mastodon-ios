@@ -419,6 +419,8 @@ struct GroupedNotificationInfo: NotificationInfo {
     let statusViewModel: Mastodon.Entity.Status.ViewModel?
     let ruleViolationReport: Mastodon.Entity.Report?
     let relationshipSeveranceEvent: Mastodon.Entity.RelationshipSeveranceEvent?
+    
+    let defaultNavigation: (()->())?
 }
 
 extension Mastodon.Entity.Notification: NotificationInfo {
@@ -789,6 +791,7 @@ class _NotificationViewModel: ObservableObject {
     let type: Mastodon.Entity.NotificationType
     let navigateToScene: (SceneCoordinator.Scene, SceneCoordinator.Transition)->()
     let presentError: (Error) -> ()
+    let defaultNavigation: (()->())?
     public let iconInfo: NotificationIconInfo?
     @Published public var headerComponents: [NotificationViewComponent] = []
     public var contentComponents: [NotificationViewComponent] = []
@@ -817,17 +820,19 @@ class _NotificationViewModel: ObservableObject {
         self.iconInfo = NotificationIconInfo(notificationType: notificationInfo.type, isGrouped: notificationInfo.isGrouped)
         self.navigateToScene = navigateToScene
         self.presentError = presentError
+        if let notificationInfo = notificationInfo as? GroupedNotificationInfo {
+            defaultNavigation = notificationInfo.defaultNavigation
+        } else {
+            defaultNavigation = nil
+        }
         
         switch notificationInfo.type {
             
         case .follow, .followRequest:
             let avatarRowAdditionalElement: RelationshipElement
-            let accountID: String?
             if let account = notificationInfo.primaryAuthorAccount {
-                accountID = account.id
                 avatarRowAdditionalElement = .unfetched(notificationInfo.type, accountID: account.id)
             } else {
-                accountID = nil
                 avatarRowAdditionalElement = .error(nil)
             }
             avatarRow = .avatarRow(NotificationSourceAccounts(primaryAuthorAccount: notificationInfo.primaryAuthorAccount, avatarUrls: notificationInfo.authorAvatarUrls, totalActorCount: notificationInfo.authorsCount), avatarRowAdditionalElement)
@@ -1090,11 +1095,64 @@ extension _NotificationViewModel {
                         }
                     }),
                 ruleViolationReport: group.ruleViolationReport,
-                relationshipSeveranceEvent: group.relationshipSeveranceEvent
+                relationshipSeveranceEvent: group.relationshipSeveranceEvent,
+                defaultNavigation: {
+                    guard let navigation = defaultNavigation(group.type, isGrouped: group.isGrouped, primaryAccount: primaryAccount) else { return }
+                    Task {
+                        guard let scene = await navigation.destinationScene() else { return }
+                        navigateToScene(scene, .show)
+                    }
+                }
             )
             
             return _NotificationViewModel(info, navigateToScene: navigateToScene, presentError: presentError)
         }
+    }
+    
+    enum NotificationNavigation {
+        case myFollowers
+        case profile(Mastodon.Entity.Account)
+        
+        func destinationScene() async -> SceneCoordinator.Scene? {
+            guard let authBox = await AuthenticationServiceProvider.shared.currentActiveUser.value, let myAccount = await authBox.cachedAccount else { return nil }
+            switch self {
+            case .myFollowers:
+                return .follower(viewModel: FollowerListViewModel(authenticationBox: authBox, domain: myAccount.domain, userID: myAccount.id))
+            case .profile(let account):
+                if myAccount.id == account.id {
+                    return .profile(.me(account))
+                } else {
+                    return .profile(.notMe(me: myAccount, displayAccount: account, relationship: nil))
+                }
+            }
+        }
+    }
+    
+    static func defaultNavigation(_ notificationType: Mastodon.Entity.NotificationType, isGrouped: Bool, primaryAccount: Mastodon.Entity.Account?) -> NotificationNavigation? {
+        
+        switch notificationType {
+        case .favourite, .mention, .reblog, .poll, .status, .update:
+            break // The status will go to the status. The actor, if only one, will go to their profile.
+        case .follow:
+            if isGrouped {
+                return .myFollowers
+            } else if let primaryAccount {
+                return .profile(primaryAccount)
+            }
+        case .followRequest, .adminSignUp:
+            if let primaryAccount {
+                return .profile(primaryAccount)
+            }
+        case .adminReport:
+            break
+        case .severedRelationships:
+            return .myFollowers
+        case .moderationWarning:
+            break
+        case ._other(_):
+            break
+        }
+        return nil
     }
 }
 

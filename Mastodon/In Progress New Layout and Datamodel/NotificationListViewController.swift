@@ -150,7 +150,7 @@ struct NotificationListView: View {
                 }
             }
         case .groupedNotification(let notificationViewModel):
-            break
+            notificationViewModel.defaultNavigation?()
         default:
             return
         }
