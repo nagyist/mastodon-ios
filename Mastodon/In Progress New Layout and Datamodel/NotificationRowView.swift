@@ -1093,6 +1093,7 @@ public extension Mastodon.Entity.Status {
         public let isPinned: Bool
         public let accountDisplayName: String?
         public let accountFullName: String?
+        public let accountAvatarUrl: URL?
         public var needsUserAttribution: Bool {
             return accountDisplayName != nil || accountFullName != nil
         }
@@ -1105,6 +1106,6 @@ public extension Mastodon.Entity.Status {
         } else {
             displayableContent = AttributedString()
         }
-        return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain)
+        return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain, accountAvatarUrl: account.avatarImageURL())
     }
 }
