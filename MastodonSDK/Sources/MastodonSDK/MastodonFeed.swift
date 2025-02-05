@@ -136,39 +136,9 @@ public enum MastodonFeedKind {
     case notificationsWithAccount(String)
 }
 
-public extension Mastodon.Entity.Status {
-    struct ViewModel {
-        public let content: AttributedString
-        public let isPinned: Bool
-        public let accountDisplayName: String?
-        public let accountFullName: String?
-        public var needsUserAttribution: Bool {
-            return accountDisplayName != nil || accountFullName != nil
-        }
-    }
-    
-    func viewModel() -> ViewModel {
-        let displayableContent = contentAsAttributedString(content)
-        return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain)
-    }
-    
-    private func contentAsAttributedString(_ htmlContent: String?) -> AttributedString {
-        guard let htmlContent else { return AttributedString() }
-        let data = Data(htmlContent.utf8)
-        do {
-            let attributedString = try NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil)
-            return AttributedString(attributedString)
-        } catch {
-            return AttributedString(error.localizedDescription)
-        }
-    }
-
-}
-
 @MainActor
 public class MastodonFeedItemCacheManager {
     private var statusCache = [ String : Mastodon.Entity.Status ]()
-    private var statusViewModelCache = [ String : Mastodon.Entity.Status.ViewModel ]()
     private var notificationsCache = [ String : Mastodon.Entity.Notification ]()
     private var groupedNotificationsCache = [ String : Mastodon.Entity.NotificationGroup ]()
     private var relationshipsCache = [ String : Mastodon.Entity.Relationship ]() // key is id of the not-me account
@@ -192,7 +162,6 @@ public class MastodonFeedItemCacheManager {
         if let status = item as? Mastodon.Entity.Status {
             statusCache[status.id] = status
             let displayableStatus = status.reblog ?? status
-            statusViewModelCache[status.id] = displayableStatus.viewModel()
         } else if let notification = item as? Mastodon.Entity.Notification {
             notificationsCache[notification.id] = notification
         } else if let notificationGroup = item as? Mastodon.Entity.NotificationGroup {
@@ -218,20 +187,6 @@ public class MastodonFeedItemCacheManager {
         case .notificationGroup(let id):
             return groupedNotificationsCache[id]
         }
-    }
-    
-    public func statusViewModel(associatedWith identifier: MastodonFeedItemIdentifier) -> Mastodon.Entity.Status.ViewModel? {
-        if case let .status(id) = identifier {
-            if let cachedModel = statusViewModelCache[id] {
-                return cachedModel
-            }
-        }
-        guard let cachedStatus = filterableStatus(associatedWith: identifier) else { return nil }
-        if let cachedModel = statusViewModelCache[cachedStatus.id] {
-            return cachedModel
-        }
-        guard let id = cachedStatus.reblog?.id else { return nil }
-        return statusViewModelCache[id]
     }
     
     public func filterableStatus(associatedWith identifier: MastodonFeedItemIdentifier) -> Mastodon.Entity.Status? {

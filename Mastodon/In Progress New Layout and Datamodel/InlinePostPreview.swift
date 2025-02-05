@@ -36,8 +36,10 @@ struct InlinePostPreview: View {
             }
             .lineLimit(1)
             .font(.subheadline)
-            Text(viewModel.content)
-                .lineLimit(3)
+            if let content = viewModel.content {
+                Text(content)
+                    .lineLimit(3)
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity)

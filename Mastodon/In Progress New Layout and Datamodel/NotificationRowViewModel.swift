@@ -32,7 +32,7 @@ class NotificationRowViewModel: ObservableObject {
         self.notificationInfo = notification
         self.type = notification?.type ?? ._other("missing")
         self.feedItemIdentifier = feedItemIdentifier
-        self.postViewModel = MastodonFeedItemCacheManager.shared.statusViewModel(associatedWith: feedItemIdentifier)
+        self.postViewModel = nil //MastodonFeedItemCacheManager.shared.statusViewModel(associatedWith: feedItemIdentifier)
         self.isUnread = isUnread
         let item = MastodonFeedItemCacheManager.shared.cachedItem(feedItemIdentifier) as? NotificationInfo
         grouped = item?.isGrouped ?? false

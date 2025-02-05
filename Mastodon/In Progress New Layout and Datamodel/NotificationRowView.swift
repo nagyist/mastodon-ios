@@ -5,6 +5,8 @@ import MastodonAsset
 import MastodonLocalization
 import MastodonCore
 import Combine
+import MetaTextKit
+import MastodonMeta
 
 // TODO: all strings need localization
 
@@ -1071,3 +1073,38 @@ func boldedNameStringComponent(_ name: String) -> AttributedString {
     return nameComponent
 }
 
+let metaTextForHtmlToAttributedStringConversion = MetaText()
+func attributedString(fromHtml html: String, emojis: [MastodonContent.Shortcode : String]) -> AttributedString {
+    let content = MastodonContent(content: html, emojis: emojis)
+    metaTextForHtmlToAttributedStringConversion.reset()
+    do {
+        let metaContent = try MastodonMetaContent.convert(document: content)
+        metaTextForHtmlToAttributedStringConversion.configure(content: metaContent)
+        guard let nsAttributedString = metaTextForHtmlToAttributedStringConversion.textView.attributedText else { throw AppError.unexpected("could not get attributed string from html") }
+        return AttributedString(nsAttributedString)
+    } catch {
+        return AttributedString(html)
+    }
+}
+
+public extension Mastodon.Entity.Status {
+    struct ViewModel {
+        public let content: AttributedString?
+        public let isPinned: Bool
+        public let accountDisplayName: String?
+        public let accountFullName: String?
+        public var needsUserAttribution: Bool {
+            return accountDisplayName != nil || accountFullName != nil
+        }
+    }
+    
+    func viewModel() -> ViewModel {
+        let displayableContent: AttributedString
+        if let content {
+            displayableContent = attributedString(fromHtml: content, emojis: account.emojis.asDictionary)
+        } else {
+            displayableContent = AttributedString()
+        }
+        return ViewModel(content: displayableContent, isPinned: false, accountDisplayName: account.displayName, accountFullName: account.acctWithDomain)
+    }
+}

@@ -72,10 +72,6 @@ struct TimelinePostCell: View {
                     if let authorAccountName = viewModel.authorAccountName, let authorAccountFullNameWithDomain = viewModel.authorAccountFullNameWithDomain {
                         AuthorHeader(displayName: authorAccountName, fullAccountName: authorAccountFullNameWithDomain)
                     }
-                    if let content = MastodonFeedItemCacheManager.shared.statusViewModel(associatedWith: viewModel.feedItemIdentifier)?.content {
-                        Text(content)
-                            .font(.callout)
-                    }
                     if viewModel.showMediaGrid {
                         MediaGrid()
                     }
