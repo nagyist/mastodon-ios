@@ -75,6 +75,8 @@ struct NotificationListView: View {
 
     var body: some View {
         VStack {
+            Spacer().frame(maxHeight: 8)
+            
             HStack {
                 Spacer()
                 Picker(selection: $viewModel.displayedNotifications) {
