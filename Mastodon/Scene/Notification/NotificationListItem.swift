@@ -11,10 +11,10 @@ import MastodonSDK
 
 enum NotificationListItem: Hashable {
     case filteredNotificationsInfo(policy: Mastodon.Entity.NotificationPolicy)
-    case notification(MastodonFeedItemIdentifier) // TODO: remove
-    case groupedNotification(_NotificationViewModel)
+    case notification(MastodonFeedItemIdentifier)  // TODO: remove
+    case groupedNotification(NotificationRowViewModel)
     case bottomLoader
-    
+
     var fetchAnchor: MastodonFeedItemIdentifier? {
         switch self {
         case .filteredNotificationsInfo:
@@ -31,7 +31,7 @@ enum NotificationListItem: Hashable {
 
 extension NotificationListItem: Identifiable {
     typealias ID = String
-    
+
     var id: ID {
         switch self {
         case .filteredNotificationsInfo:

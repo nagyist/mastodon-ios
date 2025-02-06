@@ -14,9 +14,9 @@ import os.log
 
 @MainActor
 final public class GroupedNotificationFeedLoader {
-    
+
     struct FeedLoadResult {
-        let allRecords: [_NotificationViewModel]
+        let allRecords: [NotificationRowViewModel]
         let canLoadOlder: Bool
     }
 
@@ -45,16 +45,22 @@ final public class GroupedNotificationFeedLoader {
     private static let entryNotFoundMessage =
         "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
 
-    @Published private(set) var records: FeedLoadResult = FeedLoadResult(allRecords: [], canLoadOlder: true)
+    @Published private(set) var records: FeedLoadResult = FeedLoadResult(
+        allRecords: [], canLoadOlder: true)
 
     private let kind: MastodonFeedKind
-    private let navigateToScene: (SceneCoordinator.Scene, SceneCoordinator.Transition)->()
-    private let presentError: (Error) -> Void
+    private let navigateToScene:
+        ((SceneCoordinator.Scene, SceneCoordinator.Transition) -> Void)?
+    private let presentError: ((Error) -> Void)?
 
     private var activeFilterBoxSubscription: AnyCancellable?
 
-    init(kind: MastodonFeedKind, navigateToScene: @escaping (SceneCoordinator.Scene, SceneCoordinator.Transition)->(), presentError: @escaping (Error) -> Void)
-    {
+    init(
+        kind: MastodonFeedKind,
+        navigateToScene: (
+            (SceneCoordinator.Scene, SceneCoordinator.Transition) -> Void
+        )?, presentError: ((Error) -> Void)?
+    ) {
         self.kind = kind
         self.navigateToScene = navigateToScene
         self.presentError = presentError
@@ -67,7 +73,8 @@ final public class GroupedNotificationFeedLoader {
                         guard let self else { return }
                         let curAllRecords = self.records.allRecords
                         let curCanLoadOlder = self.records.canLoadOlder
-                        await self.setRecordsAfterFiltering(curAllRecords, canLoadOlder: curCanLoadOlder)
+                        await self.setRecordsAfterFiltering(
+                            curAllRecords, canLoadOlder: curCanLoadOlder)
                     }
                 }
             }
@@ -86,7 +93,7 @@ final public class GroupedNotificationFeedLoader {
             )
         }
     }
-    
+
     public func asyncLoadMore(
         olderThan: String?,
         newerThan: String?
@@ -99,12 +106,12 @@ final public class GroupedNotificationFeedLoader {
                 at: request.resultsInsertionPoint, additionalRecords: unfiltered
             )
         } catch {
-            presentError(error)
+            presentError?(error)
         }
     }
 
     private func load(_ request: FeedLoadRequest) async throws
-        -> [_NotificationViewModel]
+        -> [NotificationRowViewModel]
     {
         switch kind {
         case .notificationsAll:
@@ -123,23 +130,27 @@ final public class GroupedNotificationFeedLoader {
 // MARK: - Filtering
 extension GroupedNotificationFeedLoader {
     private func setRecordsAfterFiltering(
-        _ newRecords: [_NotificationViewModel],
+        _ newRecords: [NotificationRowViewModel],
         canLoadOlder: Bool
     ) async {
         guard let filterBox = StatusFilterService.shared.activeFilterBox else {
-            self.records = FeedLoadResult(allRecords: newRecords.removingDuplicates(), canLoadOlder: canLoadOlder)
+            self.records = FeedLoadResult(
+                allRecords: newRecords.removingDuplicates(),
+                canLoadOlder: canLoadOlder)
             return
         }
         let filtered = await self.filter(
             newRecords, forFeed: kind, with: filterBox)
-        self.records = FeedLoadResult(allRecords: filtered.removingDuplicates(), canLoadOlder: canLoadOlder)
+        self.records = FeedLoadResult(
+            allRecords: filtered.removingDuplicates(),
+            canLoadOlder: canLoadOlder)
     }
 
     private func insertRecordsAfterFiltering(
         at insertionPoint: FeedLoadRequest.InsertLocation,
-        additionalRecords: [_NotificationViewModel]
+        additionalRecords: [NotificationRowViewModel]
     ) async {
-        let newRecords: [_NotificationViewModel]
+        let newRecords: [NotificationRowViewModel]
         if let filterBox = StatusFilterService.shared.activeFilterBox {
             newRecords = await self.filter(
                 additionalRecords, forFeed: kind, with: filterBox)
@@ -150,22 +161,26 @@ extension GroupedNotificationFeedLoader {
         var combinedRecords = self.records.allRecords
         switch insertionPoint {
         case .start:
-            combinedRecords = (newRecords + combinedRecords).removingDuplicates()
+            combinedRecords = (newRecords + combinedRecords)
+                .removingDuplicates()
         case .end:
             let prevLast = combinedRecords.last
-            combinedRecords = (combinedRecords + newRecords).removingDuplicates()
+            combinedRecords = (combinedRecords + newRecords)
+                .removingDuplicates()
             let curLast = combinedRecords.last
             canLoadOlder = !(prevLast == curLast)
         case .replace:
             combinedRecords = newRecords.removingDuplicates()
         }
-        self.records = FeedLoadResult(allRecords: combinedRecords, canLoadOlder: canLoadOlder)
+        self.records = FeedLoadResult(
+            allRecords: combinedRecords, canLoadOlder: canLoadOlder)
     }
 
     private func filter(
-        _ records: [_NotificationViewModel], forFeed feedKind: MastodonFeedKind,
+        _ records: [NotificationRowViewModel],
+        forFeed feedKind: MastodonFeedKind,
         with filterBox: Mastodon.Entity.FilterBox
-    ) async -> [_NotificationViewModel] {
+    ) async -> [NotificationRowViewModel] {
         return records
     }
 }
@@ -175,14 +190,14 @@ extension GroupedNotificationFeedLoader {
     private func loadNotifications(
         withScope scope: APIService.MastodonNotificationScope,
         olderThan maxID: String? = nil
-    ) async throws -> [_NotificationViewModel] {
+    ) async throws -> [NotificationRowViewModel] {
         return try await getGroupedNotifications(
             withScope: scope, olderThan: maxID)
     }
 
     private func loadNotifications(
         withAccountID accountID: String, olderThan maxID: String? = nil
-    ) async throws -> [_NotificationViewModel] {
+    ) async throws -> [NotificationRowViewModel] {
         return try await getGroupedNotifications(
             accountID: accountID, olderThan: maxID)
     }
@@ -190,7 +205,7 @@ extension GroupedNotificationFeedLoader {
     private func getGroupedNotifications(
         withScope scope: APIService.MastodonNotificationScope? = nil,
         accountID: String? = nil, olderThan maxID: String? = nil
-    ) async throws -> [_NotificationViewModel] {
+    ) async throws -> [NotificationRowViewModel] {
 
         assert(scope != nil || accountID != nil, "need a scope or an accountID")
 
@@ -205,18 +220,23 @@ extension GroupedNotificationFeedLoader {
         ).value
 
         return
-            _NotificationViewModel
+            NotificationRowViewModel
             .viewModelsFromGroupedNotificationResults(
                 results,
                 myAccountID: authenticationBox.userID,
-                navigateToScene: navigateToScene,
-                presentError: { [weak self] error in self?.presentError(error) }
+                navigateToScene: { [weak self] (scene, transition) in
+                    guard let self else { return }
+                    self.navigateToScene?(scene, transition)
+                },
+                presentError: { [weak self] error in
+                    guard let self else { return }
+                    self.presentError?(error)
+                }
             )
     }
 }
 
-
-extension _NotificationViewModel: Hashable {
+extension NotificationRowViewModel: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(identifier)
     }

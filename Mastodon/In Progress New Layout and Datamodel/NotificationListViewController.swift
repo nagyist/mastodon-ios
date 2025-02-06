@@ -1,49 +1,56 @@
 // Copyright © 2025 Mastodon gGmbH. All rights reserved.
 
-import SwiftUI
-import MastodonCore
-import MastodonSDK
 import Combine
+import MastodonCore
+import MastodonLocalization
+import MastodonSDK
+import SwiftUI
 
-class NotificationListViewController: UIHostingController<NotificationListView> {
-    
+class NotificationListViewController: UIHostingController<NotificationListView>
+{
+
     init() {
         let viewModel = NotificationListViewModel()
         let root = NotificationListView(viewModel: viewModel)
         super.init(rootView: root)
-        
+
         viewModel.presentError = { error in
-            let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
+            let alert = UIAlertController(
+                title: "Error", message: error.localizedDescription,
+                preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default))
-            self.sceneCoordinator?.rootViewController?.topMost?.present(alert, animated: true)
+            self.sceneCoordinator?.rootViewController?.topMost?.present(
+                alert, animated: true)
         }
-        
+
         viewModel.navigateToScene = { [weak self] scene, transition in
             guard let self else { return }
             Task { @MainActor in
-                self.sceneCoordinator?.present(scene: scene, from: self, transition: transition)
+                self.sceneCoordinator?.present(
+                    scene: scene, from: self, transition: transition)
             }
         }
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) not implemented for NotificationListViewController")
+        fatalError(
+            "init(coder:) not implemented for NotificationListViewController")
     }
 }
 
-fileprivate enum ListType {
+private enum ListType {
     case everything
     case mentions
-    
+
     var pickerLabel: String {
         switch self {
         case .everything:
-            "EVERYTHING"
+            L10n.Scene.Notification.Title.everything
         case .mentions:
-            "MENTIONS"
+            L10n.Scene.Notification.Title.mentions
         }
     }
-    
+
     var feedKind: MastodonFeedKind {
         switch self {
         case .everything:
@@ -61,11 +68,11 @@ extension ListType: Identifiable {
 
 struct NotificationListView: View {
     @ObservedObject private var viewModel: NotificationListViewModel
-    
+
     fileprivate init(viewModel: NotificationListViewModel) {
         self.viewModel = viewModel
     }
-    
+
     var body: some View {
         VStack {
             HStack {
@@ -82,7 +89,7 @@ struct NotificationListView: View {
                 .pickerStyle(.segmented)
                 Spacer()
             }
-            
+
             List {
                 ForEach(viewModel.notificationItems) { item in
                     rowView(item)
@@ -106,10 +113,12 @@ struct NotificationListView: View {
                 await viewModel.refreshFeedFromTop()
             }
         }
-        
+
     }
-    
-    @ViewBuilder func rowView(_ notificationListItem: NotificationListItem) -> some View {
+
+    @ViewBuilder func rowView(_ notificationListItem: NotificationListItem)
+        -> some View
+    {
         switch notificationListItem {
         case .bottomLoader:
             HStack {
@@ -119,36 +128,24 @@ struct NotificationListView: View {
             }
         case .filteredNotificationsInfo:
             Text("filtered notifications not yet implemented")
-        case .notification(let feedItemIdentifier):
+        case .notification:
             Text("obsolete item")
         case .groupedNotification(let viewModel):
             // TODO: implement unread using Mastodon.Entity.Marker
-            _NotificationRowView(viewModel: viewModel)
+            NotificationRowView(viewModel: viewModel)
         }
     }
-    
+
     func loadMore() {
         viewModel.loadOlder()
     }
-    
+
     func didTap(item: NotificationListItem) {
         switch item {
         case .filteredNotificationsInfo:
             return
-        case .notification(let identifier):
-            if let notificationInfo =
-                MastodonFeedItemCacheManager.shared.cachedItem(identifier) as? NotificationInfo {
-                guard let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value, let me = authBox.cachedAccount else { return }
-                switch (notificationInfo.type, notificationInfo.isGrouped) {
-                case (.follow, false):
-                    guard let notificationAuthor = notificationInfo.primaryAuthorAccount else { return }
-                    viewModel.navigateToScene(.profile(.notMe(me: me, displayAccount: notificationAuthor, relationship: MastodonFeedItemCacheManager.shared.currentRelationship(toAccount: notificationAuthor.id))), .show)
-                case (.follow, true):
-                    viewModel.navigateToScene(.follower(viewModel: FollowerListViewModel(authenticationBox: authBox, domain: me.domain, userID: me.id)), .show)
-                default:
-                    break
-                }
-            }
+        case .notification:
+            return
         case .groupedNotification(let notificationViewModel):
             notificationViewModel.defaultNavigation?()
         default:
@@ -158,33 +155,37 @@ struct NotificationListView: View {
 }
 
 @MainActor
-fileprivate class NotificationListViewModel: ObservableObject {
-    
-    
+private class NotificationListViewModel: ObservableObject {
+
     @Published var displayedNotifications: ListType = .everything {
         didSet {
             createNewFeedLoader()
         }
     }
     @Published var notificationItems: [NotificationListItem] = []
-    
+
     private var feedSubscription: AnyCancellable?
-    private var feedLoader = GroupedNotificationFeedLoader(kind: .notificationsAll, navigateToScene: { _, _ in }, presentError: { _ in })
-    
-    fileprivate var navigateToScene: ((SceneCoordinator.Scene, SceneCoordinator.Transition)->()) = { _,_ in }
+    private var feedLoader = GroupedNotificationFeedLoader(
+        kind: .notificationsAll, navigateToScene: { _, _ in },
+        presentError: { _ in })
+
+    fileprivate var navigateToScene:
+        ((SceneCoordinator.Scene, SceneCoordinator.Transition) -> Void)?
     {
         didSet {
             createNewFeedLoader()
         }
     }
-    fileprivate var presentError: ((Error)->()) = { _ in } {
+    fileprivate var presentError: ((Error) -> Void)? {
         didSet {
             createNewFeedLoader()
         }
     }
-    
+
     private func createNewFeedLoader() {
-        feedLoader = GroupedNotificationFeedLoader(kind: displayedNotifications.feedKind, navigateToScene: navigateToScene, presentError: presentError)
+        feedLoader = GroupedNotificationFeedLoader(
+            kind: displayedNotifications.feedKind,
+            navigateToScene: navigateToScene, presentError: presentError)
         feedSubscription = feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in
@@ -199,25 +200,14 @@ fileprivate class NotificationListViewModel: ObservableObject {
             }
         feedLoader.loadMore(olderThan: nil, newerThan: nil)
     }
-    
+
     public func refreshFeedFromTop() async {
         let newestKnown = feedLoader.records.allRecords.first?.newestID
         await feedLoader.asyncLoadMore(olderThan: nil, newerThan: newestKnown)
     }
-    
+
     public func loadOlder() {
         let oldestKnown = feedLoader.records.allRecords.last?.oldestID
         feedLoader.loadMore(olderThan: oldestKnown, newerThan: nil)
-    }
-}
-
-extension NotificationListItem {
-    static func fromMastodonFeedItemIdentifier(_ feedItem: MastodonFeedItemIdentifier) -> NotificationListItem? {
-        switch feedItem {
-        case .notification, .notificationGroup:
-            return .notification(feedItem)
-        case .status:
-            return nil
-        }
     }
 }

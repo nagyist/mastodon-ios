@@ -1277,6 +1277,7 @@
 			membershipExceptions = (
 				GroupedNotificationFeedLoader.swift,
 				InlinePostPreview.swift,
+				NotificationInfo.swift,
 				NotificationListViewController.swift,
 				NotificationRowView.swift,
 				NotificationRowViewModel.swift,

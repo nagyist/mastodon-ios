@@ -6,12 +6,12 @@
 //  Created by Sam on 2024-05-08.
 //
 
-import SwiftUI
 import MastodonSDK
+import SwiftUI
 
 struct InlinePostPreview: View {
     let viewModel: Mastodon.Entity.Status.ViewModel
-    
+
     var body: some View {
         VStack(alignment: .leading) {
             header()
@@ -22,16 +22,16 @@ struct InlinePostPreview: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity)
-        .background() {
+        .background {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.clear)
                 .stroke(.separator)
         }
     }
-    
+
     private let tinyAvatarSize: CGFloat = 16
     private let avatarShape = RoundedRectangle(cornerRadius: 4)
-    
+
     @ViewBuilder func header() -> some View {
         HStack(spacing: 4) {
             if viewModel.needsUserAttribution {
@@ -45,7 +45,8 @@ struct InlinePostPreview: View {
                         },
                         placeholder: {
                             avatarShape
-                                .foregroundStyle(Color(UIColor.secondarySystemFill))
+                                .foregroundStyle(
+                                    Color(UIColor.secondarySystemFill))
                         }
                     )
                     .frame(width: tinyAvatarSize, height: tinyAvatarSize)
@@ -56,7 +57,7 @@ struct InlinePostPreview: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             } else if viewModel.isPinned {
-                //                    This *should* be a Label but it acts funky when this is in a List (i.e. in UserList)
+                //  This *should* be a Label but it acts funky when this is in a List
                 Group {
                     Image(systemName: "pin.fill")
                     Text("Pinned")
@@ -70,12 +71,3 @@ struct InlinePostPreview: View {
         .font(.subheadline)
     }
 }
-
-
-//#Preview {
-//    VStack {
-//        InlinePostPreview(post: SampleData.samplePost)
-//        InlinePostPreview(post: SampleData.samplePost, needsUserAttribution: false, isPinned: true)
-//    }
-//    .padding()
-//}
