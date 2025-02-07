@@ -224,6 +224,15 @@ private class NotificationListViewModel: ObservableObject {
             createNewFeedLoader()
         }
     }
+    
+    init() {
+        NotificationCenter.default.addObserver(self, selector: #selector(notificationFilteringPolicyDidChange), name: .notificationFilteringChanged, object: nil)
+    }
+    
+    @objc func notificationFilteringPolicyDidChange(_ notification: Notification) {
+        fetchFilteredNotificationsPolicy()
+        feedLoader.loadMore(olderThan: nil, newerThan: nil)
+    }
 
     private func fetchFilteredNotificationsPolicy() {
         guard presentError != nil && navigateToScene != nil else { return }
