@@ -271,7 +271,7 @@ private extension MastodonFeedLoader {
     }
     
     private func loadNotifications(withAccountID accountID: String, olderThan maxID: String? = nil) async throws -> [MastodonFeedItemIdentifier] {
-        let useGroupedNotifications = UserDefaults.standard.useGroupedNotifications
+        let useGroupedNotifications = false
         if useGroupedNotifications {
             return try await _getGroupedNotifications(accountID: accountID, olderThan: maxID)
         } else {
