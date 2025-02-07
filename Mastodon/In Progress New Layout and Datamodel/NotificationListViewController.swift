@@ -76,7 +76,7 @@ struct NotificationListView: View {
     var body: some View {
         VStack {
             Spacer().frame(maxHeight: 8)
-            
+
             HStack {
                 Spacer()
                 Picker(selection: $viewModel.displayedNotifications) {
@@ -128,8 +128,12 @@ struct NotificationListView: View {
                 ProgressView().progressViewStyle(.circular)
                 Spacer()
             }
-        case .filteredNotificationsInfo:
-            Text("filtered notifications not yet implemented")
+        case .filteredNotificationsInfo(_, let viewModel):
+            if let viewModel {
+                FilteredNotificationsRowView(viewModel)
+            } else {
+                Text("Some notifications have been filtered.")
+            }
         case .notification:
             Text("obsolete item")
         case .groupedNotification(let viewModel):
@@ -144,14 +148,38 @@ struct NotificationListView: View {
 
     func didTap(item: NotificationListItem) {
         switch item {
-        case .filteredNotificationsInfo:
-            return
+        case .filteredNotificationsInfo(_, let viewModel):
+            guard let viewModel else { return }
+            Task {
+                viewModel.isPreparingToNavigate = true
+                await navigateToFilteredNotifications()
+                viewModel.isPreparingToNavigate = false
+            }
         case .notification:
             return
         case .groupedNotification(let notificationViewModel):
             notificationViewModel.defaultNavigation?()
         default:
             return
+        }
+    }
+
+    func navigateToFilteredNotifications() async {
+        guard
+            let authBox = AuthenticationServiceProvider.shared.currentActiveUser
+                .value
+        else { return }
+
+        do {
+            let notificationRequests = try await APIService.shared
+                .notificationRequests(authenticationBox: authBox).value
+            let requestsViewModel = NotificationRequestsViewModel(
+                authenticationBox: authBox, requests: notificationRequests)
+
+            viewModel.navigateToScene?(
+                .notificationRequests(viewModel: requestsViewModel), .show)  // TODO: should be .modal(animated) on large screens?
+        } catch {
+            viewModel.presentError?(error)
         }
     }
 }
@@ -165,6 +193,19 @@ private class NotificationListViewModel: ObservableObject {
         }
     }
     @Published var notificationItems: [NotificationListItem] = []
+
+    private var filteredNotificationsViewModel =
+        FilteredNotificationsRowView.ViewModel(policy: nil)
+    private var notificationPolicyBannerRow: [NotificationListItem] {
+        if filteredNotificationsViewModel.shouldShow {
+            return [
+                NotificationListItem.filteredNotificationsInfo(
+                    nil, filteredNotificationsViewModel)
+            ]
+        } else {
+            return []
+        }
+    }
 
     private var feedSubscription: AnyCancellable?
     private var feedLoader = GroupedNotificationFeedLoader(
@@ -184,21 +225,51 @@ private class NotificationListViewModel: ObservableObject {
         }
     }
 
+    private func fetchFilteredNotificationsPolicy() {
+        guard presentError != nil && navigateToScene != nil else { return }
+        guard
+            let authBox = AuthenticationServiceProvider.shared.currentActiveUser
+                .value
+        else { return }
+        Task {
+            let policy = try? await APIService.shared.notificationPolicy(
+                authenticationBox: authBox)
+            updateFilteredNotificationsPolicy(policy?.value)
+        }
+    }
+
+    private func updateFilteredNotificationsPolicy(
+        _ policy: Mastodon.Entity.NotificationPolicy?
+    ) {
+
+        filteredNotificationsViewModel.update(policy: policy)
+
+        let withoutFilteredRow = notificationItems.filter {
+            !$0.isFilteredNotificationsRow
+        }
+
+        notificationItems =
+            notificationPolicyBannerRow
+            + withoutFilteredRow
+    }
+
     private func createNewFeedLoader() {
+        fetchFilteredNotificationsPolicy()
         feedLoader = GroupedNotificationFeedLoader(
             kind: displayedNotifications.feedKind,
             navigateToScene: navigateToScene, presentError: presentError)
         feedSubscription = feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in
+                guard let self else { return }
                 var updatedItems = records.allRecords.map {
                     NotificationListItem.groupedNotification($0)
                 }
                 if records.canLoadOlder {
                     updatedItems.append(.bottomLoader)
                 }
-                // TODO: add the filtered notifications announcement if needed
-                self?.notificationItems = updatedItems
+                updatedItems = self.notificationPolicyBannerRow + updatedItems
+                self.notificationItems = updatedItems
             }
         feedLoader.loadMore(olderThan: nil, newerThan: nil)
     }

@@ -59,7 +59,8 @@ extension NotificationTimelineViewController: DataSourceProvider {
         case .groupedNotification:
             assertionFailure("grouped notifications are not supported in the legacy NotificationTimelineViewController")
             return nil
-        case .filteredNotificationsInfo(let policy):
+        case .filteredNotificationsInfo(let policy, _):
+            guard let policy else { return nil }
             return DataSourceItem.notificationBanner(policy: policy)
         case .bottomLoader:
             return nil

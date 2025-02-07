@@ -9,8 +9,10 @@ import CoreData
 import Foundation
 import MastodonSDK
 
-enum NotificationListItem: Hashable {
-    case filteredNotificationsInfo(policy: Mastodon.Entity.NotificationPolicy)
+enum NotificationListItem {
+    case filteredNotificationsInfo(
+        Mastodon.Entity.NotificationPolicy?,
+        FilteredNotificationsRowView.ViewModel?)
     case notification(MastodonFeedItemIdentifier)  // TODO: remove
     case groupedNotification(NotificationRowViewModel)
     case bottomLoader
@@ -27,9 +29,18 @@ enum NotificationListItem: Hashable {
             return nil
         }
     }
+
+    var isFilteredNotificationsRow: Bool {
+        switch self {
+        case .filteredNotificationsInfo:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
-extension NotificationListItem: Identifiable {
+extension NotificationListItem: Identifiable, Equatable, Hashable {
     typealias ID = String
 
     var id: ID {
@@ -43,5 +54,15 @@ extension NotificationListItem: Identifiable {
         case .bottomLoader:
             return "bottom_loader"
         }
+    }
+
+    static func == (lhs: NotificationListItem, rhs: NotificationListItem)
+        -> Bool
+    {
+        return lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

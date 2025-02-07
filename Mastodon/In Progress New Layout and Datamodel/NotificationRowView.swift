@@ -19,7 +19,7 @@ extension Mastodon.Entity.NotificationType {
     func iconSystemName(grouped: Bool = false) -> String? {
         switch self {
         case .favourite:
-            return "star"
+            return "star.fill"
         case .reblog:
             return "arrow.2.squarepath"
         case .follow:
@@ -223,7 +223,19 @@ func NotificationIconView(_ info: NotificationIconInfo) -> some View {
     }
     .font(.system(size: 25))
     .frame(width: 44)
-    .symbolVariant(.fill)
+    .fontWeight(.semibold)
+}
+
+@ViewBuilder
+func NotificationIconView(systemName: String) -> some View {
+    HStack {
+        Image(
+            systemName: systemName
+        )
+        .foregroundStyle(.secondary)
+    }
+    .font(.system(size: 25))
+    .frame(width: 44)
     .fontWeight(.semibold)
 }
 
@@ -327,6 +339,75 @@ struct NotificationSourceAccounts {
     }
 }
 
+struct FilteredNotificationsRowView: View {
+    class ViewModel: ObservableObject {
+        @Published var isPreparingToNavigate: Bool = false
+        @Published var componentViews: [NotificationViewComponent] = []
+        var shouldShow: Bool = false
+
+        init(policy: Mastodon.Entity.NotificationPolicy?) {
+            if let policy {
+                update(policy: policy)
+            }
+        }
+
+        func update(policy: Mastodon.Entity.NotificationPolicy?) {
+            guard let policy else {
+                shouldShow = false
+                return
+            }
+            componentViews = [
+                .weightedText(
+                    L10n.Scene.Notification.FilteredNotification.title, .bold),
+                .weightedText(
+                    L10n.Plural.FilteredNotificationBanner.subtitle(
+                        policy.summary.pendingRequestsCount), .regular),
+            ]
+            shouldShow = policy.summary.pendingRequestsCount > 0
+        }
+    }
+
+    @ObservedObject var viewModel: ViewModel
+
+    init(_ viewModel: ViewModel) {
+        self.viewModel = viewModel
+    }
+
+    var body: some View {
+        HStack {
+            // LEFT GUTTER WITH TOP-ALIGNED ICON
+            VStack {
+                Spacer()
+                NotificationIconView(systemName: "archivebox")
+                Spacer().frame(maxHeight: .infinity)
+            }
+            
+            // TEXT COMPONENTS
+            VStack {
+                ForEach(viewModel.componentViews) { component in
+                    switch component {
+                    case .weightedText(let string, let weight):
+                        textComponent(string, fontWeight: weight)
+                    default:
+                        textComponent(component.id, fontWeight: .light)
+                    }
+                }
+            }
+            
+            // DISCLOSURE INDICATOR (OR SPINNER)
+            VStack {
+                Spacer()
+                if viewModel.isPreparingToNavigate {
+                    ProgressView().progressViewStyle(.circular)
+                } else {
+                    NotificationIconView(systemName: "chevron.forward")
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
 struct NotificationRowView: View {
     @ObservedObject var viewModel: NotificationRowViewModel
 
@@ -376,6 +457,8 @@ struct NotificationRowView: View {
         case .text(let string):
             Text(string)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        case .weightedText(let string, let weight):
+            textComponent(string, fontWeight: weight)
         case .status(let viewModel):
             InlinePostPreview(viewModel: viewModel)
                 .onTapGesture {
@@ -504,9 +587,19 @@ struct NotificationRowView: View {
     }
 }
 
+@ViewBuilder
+func textComponent(_ string: String, fontWeight: SwiftUICore.Font.Weight?)
+    -> some View
+{
+    Text(string)
+        .fontWeight(fontWeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+}
+
 enum NotificationViewComponent: Identifiable {
     case avatarRow(NotificationSourceAccounts, RelationshipElement)
     case text(AttributedString)
+    case weightedText(String, SwiftUICore.Font.Weight)
     case status(Mastodon.Entity.Status.ViewModel)
     case hyperlinkButton(String, URL?)
     case _other(String)
@@ -517,6 +610,8 @@ enum NotificationViewComponent: Identifiable {
             return "avatar_row"
         case .text(let string):
             return string.description
+        case .weightedText(let string, _):
+            return string
         case .status:
             return "status"
         case .hyperlinkButton(let text, _):

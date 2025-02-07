@@ -44,7 +44,7 @@ extension NotificationTimelineViewModel {
                         var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>()
                         snapshot.appendSections([.main])
                         if self.scope == .everything, let notificationPolicy = self.notificationPolicy, notificationPolicy.summary.pendingRequestsCount > 0 {
-                            snapshot.appendItems([.filteredNotificationsInfo(policy: notificationPolicy)])
+                            snapshot.appendItems([.filteredNotificationsInfo(notificationPolicy, nil)])
                         }
                         snapshot.appendItems(newItems.removingDuplicates(), toSection: .main)
                         return snapshot

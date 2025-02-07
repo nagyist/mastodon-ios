@@ -221,7 +221,7 @@ class NotificationRowViewModel: ObservableObject {
                 default:
                     break
                 }
-            case .text, .status, .hyperlinkButton, ._other:
+            case .text, .weightedText, .status, .hyperlinkButton, ._other:
                 break
             }
         }

@@ -65,7 +65,8 @@ extension NotificationSection {
                 cell.activityIndicatorView.startAnimating()
                 return cell
 
-            case .filteredNotificationsInfo(let policy):
+            case .filteredNotificationsInfo(let policy, _):
+                guard let policy else { return nil }
                 let cell = tableView.dequeueReusableCell(withIdentifier: NotificationFilteringBannerTableViewCell.reuseIdentifier, for: indexPath) as! NotificationFilteringBannerTableViewCell
                 cell.configure(with: policy)
 
