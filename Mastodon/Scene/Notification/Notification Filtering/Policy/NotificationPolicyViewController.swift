@@ -51,12 +51,12 @@ struct NotificationFilterViewModel {
 
     let appContext: AppContext
 
-    init(appContext: AppContext, notFollowing: Bool, noFollower: Bool, newAccount: Bool, privateMentions: Bool) {
-        self.appContext = appContext
+    init(notFollowing: Bool, noFollower: Bool, newAccount: Bool, privateMentions: Bool) async {
         self.notFollowing = notFollowing
         self.noFollower = noFollower
         self.newAccount = newAccount
         self.privateMentions = privateMentions
+        self.appContext = await AppContext.shared
     }
 }
 

@@ -118,17 +118,18 @@ extension NotificationViewController {
     @objc private func showNotificationPolicySettings(_ sender: Any) {
         guard let viewModel, let policy = viewModel.notificationPolicy else { return }
 
-        let policyViewModel = NotificationFilterViewModel(
-            appContext: viewModel.context,
-            notFollowing: policy.filterNotFollowing,
-            noFollower: policy.filterNotFollowers,
-            newAccount: policy.filterNewAccounts,
-            privateMentions: policy.filterPrivateMentions
-        )
-
-        guard let policyViewController = self.sceneCoordinator?.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
-
-        policyViewController.delegate = self
+        Task {
+            let policyViewModel = await NotificationFilterViewModel(
+                notFollowing: policy.filterNotFollowing,
+                noFollower: policy.filterNotFollowers,
+                newAccount: policy.filterNewAccounts,
+                privateMentions: policy.filterPrivateMentions
+            )
+            
+            guard let policyViewController = self.sceneCoordinator?.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
+            
+            policyViewController.delegate = self
+        }
     }
 }
 

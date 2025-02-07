@@ -341,17 +341,22 @@ struct NotificationSourceAccounts {
 
 struct FilteredNotificationsRowView: View {
     class ViewModel: ObservableObject {
+        var policy: Mastodon.Entity.NotificationPolicy? = nil {
+            didSet {
+                update(policy: policy)
+            }
+        }
         @Published var isPreparingToNavigate: Bool = false
         @Published var componentViews: [NotificationViewComponent] = []
         var shouldShow: Bool = false
 
         init(policy: Mastodon.Entity.NotificationPolicy?) {
             if let policy {
-                update(policy: policy)
+                self.policy = policy
             }
         }
 
-        func update(policy: Mastodon.Entity.NotificationPolicy?) {
+        private func update(policy: Mastodon.Entity.NotificationPolicy?) {
             guard let policy else {
                 shouldShow = false
                 return

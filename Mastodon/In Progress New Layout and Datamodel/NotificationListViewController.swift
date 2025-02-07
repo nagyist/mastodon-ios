@@ -8,11 +8,14 @@ import SwiftUI
 
 class NotificationListViewController: UIHostingController<NotificationListView>
 {
+    fileprivate var viewModel: NotificationListViewModel
 
     init() {
-        let viewModel = NotificationListViewModel()
+        viewModel = NotificationListViewModel()
         let root = NotificationListView(viewModel: viewModel)
         super.init(rootView: root)
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "line.3.horizontal.decrease.circle"), style: .plain, target: self, action: #selector(showNotificationPolicySettings))
 
         viewModel.presentError = { error in
             let alert = UIAlertController(
@@ -35,6 +38,28 @@ class NotificationListViewController: UIHostingController<NotificationListView>
     required init?(coder aDecoder: NSCoder) {
         fatalError(
             "init(coder:) not implemented for NotificationListViewController")
+    }
+    
+    @objc private func showNotificationPolicySettings(_ sender: Any) {
+        guard let policy = viewModel.filteredNotificationsViewModel.policy else { return }
+        Task {
+            let policyViewModel = await NotificationFilterViewModel(
+                notFollowing: policy.filterNotFollowing,
+                noFollower: policy.filterNotFollowers,
+                newAccount: policy.filterNewAccounts,
+                privateMentions: policy.filterPrivateMentions
+            )
+            
+            guard let policyViewController = self.sceneCoordinator?.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
+            
+            policyViewController.delegate = self
+        }
+    }
+}
+
+extension NotificationListViewController: NotificationPolicyViewControllerDelegate {
+    func policyUpdated(_ viewController: NotificationPolicyViewController, newPolicy: MastodonSDK.Mastodon.Entity.NotificationPolicy) {
+        viewModel.updateFilteredNotificationsPolicy(newPolicy)
     }
 }
 
@@ -196,7 +221,7 @@ private class NotificationListViewModel: ObservableObject {
     }
     @Published var notificationItems: [NotificationListItem] = []
 
-    private var filteredNotificationsViewModel =
+    var filteredNotificationsViewModel =
         FilteredNotificationsRowView.ViewModel(policy: nil)
     private var notificationPolicyBannerRow: [NotificationListItem] {
         if filteredNotificationsViewModel.shouldShow {
@@ -233,7 +258,6 @@ private class NotificationListViewModel: ObservableObject {
     
     @objc func notificationFilteringPolicyDidChange(_ notification: Notification) {
         fetchFilteredNotificationsPolicy()
-        feedLoader.loadMore(olderThan: nil, newerThan: nil)
     }
 
     private func fetchFilteredNotificationsPolicy() {
@@ -249,11 +273,11 @@ private class NotificationListViewModel: ObservableObject {
         }
     }
 
-    private func updateFilteredNotificationsPolicy(
+    func updateFilteredNotificationsPolicy(
         _ policy: Mastodon.Entity.NotificationPolicy?
     ) {
 
-        filteredNotificationsViewModel.update(policy: policy)
+        filteredNotificationsViewModel.policy = policy
 
         let withoutFilteredRow = notificationItems.filter {
             !$0.isFilteredNotificationsRow
@@ -262,6 +286,8 @@ private class NotificationListViewModel: ObservableObject {
         notificationItems =
             notificationPolicyBannerRow
             + withoutFilteredRow
+        
+        feedLoader.loadMore(olderThan: nil, newerThan: nil)
     }
 
     private func createNewFeedLoader() {
