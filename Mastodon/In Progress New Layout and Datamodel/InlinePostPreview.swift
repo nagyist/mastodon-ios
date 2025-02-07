@@ -11,6 +11,8 @@ import SwiftUI
 
 struct InlinePostPreview: View {
     let viewModel: Mastodon.Entity.Status.ViewModel
+    
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -24,7 +26,7 @@ struct InlinePostPreview: View {
         .frame(maxWidth: .infinity)
         .background {
             RoundedRectangle(cornerRadius: 8)
-                .fill(.clear)
+                .fill(colorScheme == .dark ? AnyShapeStyle(.separator) : AnyShapeStyle(.clear))
                 .stroke(.separator)
         }
     }

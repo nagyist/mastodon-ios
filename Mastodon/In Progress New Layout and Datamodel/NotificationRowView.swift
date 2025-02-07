@@ -508,6 +508,9 @@ struct NotificationRowView: View {
                         image.resizable()
                             .aspectRatio(contentMode: .fit)
                             .clipShape(avatarShape)
+                            .overlay {
+                                avatarShape.stroke(.separator)
+                            }
                     },
                     placeholder: {
                         avatarShape
@@ -539,6 +542,7 @@ struct NotificationRowView: View {
                 viewModel.doAvatarRowButtonAction()
             }
             .buttonStyle(.borderedProminent)
+            .foregroundStyle(.background)
             .controlSize(.small)
             .bold()
         case (.requestButton, false):

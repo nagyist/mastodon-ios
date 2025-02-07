@@ -89,6 +89,8 @@ struct NotificationListView: View {
                 } label: {
                 }
                 .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .fixedSize()
                 Spacer()
             }
 
