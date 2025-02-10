@@ -36,7 +36,7 @@ class NotificationRowViewModel: ObservableObject {
     }
 
     init(
-        _ notificationInfo: NotificationInfo,
+        _ notificationInfo: GroupedNotificationInfo,
         navigateToScene: @escaping (
             SceneCoordinator.Scene, SceneCoordinator.Transition
         ) -> Void, presentError: @escaping (Error) -> Void
@@ -51,11 +51,7 @@ class NotificationRowViewModel: ObservableObject {
             isGrouped: notificationInfo.isGrouped)
         self.navigateToScene = navigateToScene
         self.presentError = presentError
-        if let notificationInfo = notificationInfo as? GroupedNotificationInfo {
-            defaultNavigation = notificationInfo.defaultNavigation
-        } else {
-            defaultNavigation = nil
-        }
+        self.defaultNavigation = notificationInfo.defaultNavigation
 
         switch notificationInfo.type {
 
@@ -88,8 +84,7 @@ class NotificationRowViewModel: ObservableObject {
             // TODO: distinguish mentions from replies
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount,
                 let statusViewModel =
-                    (notificationInfo as? GroupedNotificationInfo)?
-                    .statusViewModel
+                    notificationInfo.statusViewModel
             {
                 avatarRow = .avatarRow(
                     NotificationSourceAccounts(
@@ -111,9 +106,7 @@ class NotificationRowViewModel: ObservableObject {
             }
         case .reblog, .favourite:
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount,
-                let statusViewModel =
-                    (notificationInfo as? GroupedNotificationInfo)?
-                    .statusViewModel
+               let statusViewModel = notificationInfo.statusViewModel
             {
                 avatarRow = .avatarRow(
                     NotificationSourceAccounts(
@@ -138,8 +131,7 @@ class NotificationRowViewModel: ObservableObject {
         case .poll, .update:
             if let author = notificationInfo.authorName,
                 let statusViewModel =
-                    (notificationInfo as? GroupedNotificationInfo)?
-                    .statusViewModel
+                    notificationInfo.statusViewModel
             {
                 headerTextComponents = [
                     .text(
@@ -484,6 +476,67 @@ extension NotificationRowViewModel {
                 }
             )
 
+            return NotificationRowViewModel(
+                info, navigateToScene: navigateToScene,
+                presentError: presentError)
+        }
+    }
+    
+    static func viewModelsFromUngroupedNotifications(
+        _ notifications: [Mastodon.Entity.Notification],
+        myAccountID: String,
+        navigateToScene: @escaping (
+            SceneCoordinator.Scene, SceneCoordinator.Transition
+        ) -> Void, presentError: @escaping (Error) -> Void
+    ) -> [NotificationRowViewModel] {
+        
+        return notifications.map { notification in
+            let info = GroupedNotificationInfo(
+                id: notification.id,
+                oldestNotificationID: notification.id,
+                newestNotificationID: notification.id,
+                type: notification.type,
+                authorsCount: notification.authorsCount,
+                notificationsCount: 1,
+                primaryAuthorAccount: notification.account,
+                authorName: notification.authorName,
+                authorAvatarUrls: notification.authorAvatarUrls,
+                statusViewModel: notification.status?.viewModel(
+                    navigateToStatus: {
+                        Task {
+                            guard
+                                let authBox =
+                                    await AuthenticationServiceProvider.shared
+                                    .currentActiveUser.value, let status = notification.status
+                            else { return }
+                            await navigateToScene(
+                                .thread(
+                                    viewModel: ThreadViewModel(
+                                        authenticationBox: authBox,
+                                        optionalRoot: .root(
+                                            context: .init(
+                                                status: MastodonStatus(
+                                                    entity: status,
+                                                    showDespiteContentWarning:
+                                                        false))))), .show)
+                        }
+                    }),
+                ruleViolationReport: notification.ruleViolationReport,
+                relationshipSeveranceEvent: notification.relationshipSeveranceEvent,
+                defaultNavigation: {
+                    guard
+                        let navigation = defaultNavigation(
+                            notification.type, isGrouped: false,
+                            primaryAccount: notification.primaryAuthorAccount)
+                    else { return }
+                    Task {
+                        guard let scene = await navigation.destinationScene()
+                        else { return }
+                        navigateToScene(scene, .show)
+                    }
+                }
+            )
+            
             return NotificationRowViewModel(
                 info, navigateToScene: navigateToScene,
                 presentError: presentError)

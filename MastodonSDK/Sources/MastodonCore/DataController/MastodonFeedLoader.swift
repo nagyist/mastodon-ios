@@ -306,7 +306,7 @@ private extension MastodonFeedLoader {
         
         guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { throw APIService.APIError.implicit(.authenticationMissing) }
         
-        let results = try await APIService.shared.groupedNotifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
+        let results = try await APIService.shared.groupedNotifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox)
         
         for account in results.accounts {
             MastodonFeedItemCacheManager.shared.addToCache(account)
@@ -335,7 +335,7 @@ private extension MastodonFeedLoader {
         
         guard let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value else { throw APIService.APIError.implicit(.authenticationMissing) }
         
-        let results = try await APIService.shared.groupedNotifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
+        let results = try await APIService.shared.groupedNotifications(olderThan: maxID, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox)
         
         return results
     }

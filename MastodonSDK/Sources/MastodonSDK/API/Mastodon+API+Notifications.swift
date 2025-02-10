@@ -40,18 +40,15 @@ extension Mastodon.API.Notifications {
         domain: String,
         query: Mastodon.API.Notifications.GroupedQuery,
         authorization: Mastodon.API.OAuth.Authorization
-    ) -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.GroupedNotificationsResults>, Error> {
+    ) async throws -> Mastodon.Entity.GroupedNotificationsResults {
         let request = Mastodon.API.get(
             url: notificationsEndpointURL(domain: domain, grouped: true),
             query: query,
             authorization: authorization
         )
-        return session.dataTaskPublisher(for: request)
-            .tryMap { data, response in
-                let value = try Mastodon.API.decode(type: Mastodon.Entity.GroupedNotificationsResults.self, from: data, response: response)
-                return Mastodon.Response.Content(value: value, response: response)
-            }
-            .eraseToAnyPublisher()
+        let (data, response) = try await session.data(for: request)
+        let value = try Mastodon.API.decode(type: Mastodon.Entity.GroupedNotificationsResults.self, from: data, response: response)
+        return value
     }
     
     /// Get all notifications

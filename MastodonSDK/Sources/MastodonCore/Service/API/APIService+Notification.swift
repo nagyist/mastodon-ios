@@ -63,7 +63,7 @@ extension APIService {
         fromAccount accountID: String? = nil,
         scope: MastodonNotificationScope?,
         authenticationBox: MastodonAuthenticationBox
-    ) async throws -> Mastodon.Response.Content<Mastodon.Entity.GroupedNotificationsResults> {
+    ) async throws -> Mastodon.Entity.GroupedNotificationsResults {
         let authorization = authenticationBox.userAuthorization
         
         let types: [Mastodon.Entity.NotificationType]?
@@ -92,8 +92,7 @@ extension APIService {
             session: session,
             domain: authenticationBox.domain,
             query: query,
-            authorization: authorization
-        ).singleOutput()
+            authorization: authorization)
         
         return response
     }

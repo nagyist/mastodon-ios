@@ -191,8 +191,12 @@ extension GroupedNotificationFeedLoader {
         withScope scope: APIService.MastodonNotificationScope,
         olderThan maxID: String? = nil
     ) async throws -> [NotificationRowViewModel] {
-        return try await getGroupedNotifications(
-            withScope: scope, olderThan: maxID)
+        do {
+            return try await getGroupedNotifications(
+                withScope: scope, olderThan: maxID)
+        } catch {
+            return try await getUngroupedNotifications(withScope: scope, olderThan: maxID)
+        }
     }
 
     private func loadNotifications(
@@ -217,22 +221,40 @@ extension GroupedNotificationFeedLoader {
         let results = try await APIService.shared.groupedNotifications(
             olderThan: maxID, fromAccount: accountID, scope: scope,
             authenticationBox: authenticationBox
-        ).value
+        )
 
         return
             NotificationRowViewModel
             .viewModelsFromGroupedNotificationResults(
                 results,
                 myAccountID: authenticationBox.userID,
-                navigateToScene: { [weak self] (scene, transition) in
-                    guard let self else { return }
-                    self.navigateToScene?(scene, transition)
-                },
-                presentError: { [weak self] error in
-                    guard let self else { return }
-                    self.presentError?(error)
-                }
+                navigateToScene: navigateToScene ?? {_,_ in},
+                presentError: presentError ?? {_ in}
             )
+    }
+
+    private func getUngroupedNotifications(
+        withScope scope: APIService.MastodonNotificationScope? = nil,
+        accountID: String? = nil, olderThan maxID: String? = nil
+    ) async throws -> [NotificationRowViewModel] {
+
+        assert(scope != nil || accountID != nil, "need a scope or an accountID")
+
+        guard
+            let authenticationBox = AuthenticationServiceProvider.shared
+                .currentActiveUser.value
+        else { throw APIService.APIError.implicit(.authenticationMissing) }
+
+        let ungrouped = try await APIService.shared.notifications(
+            olderThan: maxID, fromAccount: accountID, scope: scope,
+            authenticationBox: authenticationBox
+        ).value
+
+        return NotificationRowViewModel.viewModelsFromUngroupedNotifications(
+            ungrouped, myAccountID: authenticationBox.userID,
+            navigateToScene: navigateToScene ?? {_,_ in},
+            presentError: presentError ?? {_ in}
+        )
     }
 }
 
