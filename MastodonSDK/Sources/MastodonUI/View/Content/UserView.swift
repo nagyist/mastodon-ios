@@ -111,7 +111,8 @@ public final class UserView: UIView {
         button.setContentHuggingPriority(.required, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: 96),
+            button.widthAnchor.constraint(equalToConstant: 96).priority(.defaultHigh),
+            button.widthAnchor.constraint(lessThanOrEqualToConstant: 110).priority(.required),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
         
@@ -344,7 +345,6 @@ public extension UserView {
         }
 
         followButton.addTarget(self, action: #selector(didTapFollowButton), for: .touchUpInside)
-        followButton.titleLabel?.font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(for: .boldSystemFont(ofSize: 15))
     }
 }
 
