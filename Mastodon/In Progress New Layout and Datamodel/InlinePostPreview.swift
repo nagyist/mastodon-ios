@@ -19,6 +19,7 @@ struct InlinePostPreview: View {
             header()
             if let content = viewModel.content {
                 Text(content)
+                    .font(.subheadline)
                     .lineLimit(3)
             }
         }
