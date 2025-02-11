@@ -22,6 +22,18 @@ struct InlinePostPreview: View {
                     .font(.subheadline)
                     .lineLimit(3)
             }
+            if let attachmentInfo = viewModel.attachmentInfo {
+                HStack {
+                    Image(systemName: attachmentInfo.iconName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: tinyAvatarSize)
+                    Text(attachmentInfo.labelText)
+                }
+                .foregroundStyle(.secondary)
+                .font(.subheadline)
+                .lineLimit(1)
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity)

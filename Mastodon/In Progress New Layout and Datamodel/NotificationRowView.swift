@@ -666,6 +666,114 @@ func attributedString(
 }
 
 extension Mastodon.Entity.Status {
+    public enum AttachmentSummaryInfo {
+        case image(Int)
+        case gifv(Int)
+        case video(Int)
+        case audio(Int)
+        case generic(Int)
+        case poll
+        
+        var count: Int {
+            switch self {
+            case .image(let count), .gifv(let count), .video(let count), .audio(let count), .generic(let count):
+                return count
+            case .poll:
+                return 1
+            }
+        }
+        
+        var iconName: String {
+            switch self {
+            case .image(1):
+                return "photo"
+            case .image(2):
+                return "photo.on.rectangle"
+            case .image:
+                return "photo.stack"
+            case .gifv, .video:
+                return "play.tv"
+            case .audio:
+                return "speaker.wave.2"
+            case .generic(1):
+                return "rectangle"
+            case .generic(2):
+                return "rectangle.on.rectangle"
+            case .generic:
+                return "rectangle.stack"
+            case .poll:
+                return "chart.bar.yaxis"
+            }
+        }
+        
+        var labelText: String {
+            switch self {
+            case .image(let count):
+                return L10n.Plural.Count.image(count)
+            case .gifv(let count):
+                return L10n.Plural.Count.gif(count)
+            case .video(let count):
+                return L10n.Plural.Count.video(count)
+            case .audio(let count):
+                return L10n.Plural.Count.audio(count)
+            case .generic(let count):
+                return L10n.Plural.Count.attachment(count)
+            case .poll:
+                return L10n.Plural.Count.poll(1)
+            }
+        }
+        
+        private func withUpdatedCount(_ newCount: Int) -> AttachmentSummaryInfo {
+            switch self {
+            case .image:
+                return .image(newCount)
+            case .gifv:
+                return .gifv(newCount)
+            case .video:
+                return .video(newCount)
+            case .audio:
+                return .audio(newCount)
+            case .generic:
+                return .generic(newCount)
+            case .poll:
+                return .poll
+            }
+        }
+        
+        private func _adding(_ otherAttachmentInfo: AttachmentSummaryInfo) -> AttachmentSummaryInfo {
+            switch (self, otherAttachmentInfo) {
+            case (.poll, _), (_, .poll):
+                assertionFailure("did not expect poll to co-occur with another attachment type")
+                return .poll
+            case (.gifv, .gifv), (.image, .image), (.video, .video), (.audio, .audio):
+                return withUpdatedCount(count + otherAttachmentInfo.count)
+            default:
+                return .generic(count + otherAttachmentInfo.count)
+            }
+        }
+        
+        func adding(attachment: Mastodon.Entity.Attachment) -> AttachmentSummaryInfo {
+            return _adding(AttachmentSummaryInfo(attachment))
+        }
+        
+        init(_ attachment: Mastodon.Entity.Attachment) {
+            switch attachment.type {
+            case .image:
+                self = .image(1)
+            case .gifv:
+                self = .gifv(1)
+            case .video:
+                self = .video(1)
+            case .audio:
+                self = .audio(1)
+            case .unknown, ._other:
+                self = .generic(1)
+            }
+        }
+    }
+}
+
+extension Mastodon.Entity.Status {
     public struct ViewModel {
         public let content: AttributedString?
         public let isPinned: Bool
@@ -675,6 +783,7 @@ extension Mastodon.Entity.Status {
         public var needsUserAttribution: Bool {
             return accountDisplayName != nil || accountFullName != nil
         }
+        public let attachmentInfo: AttachmentSummaryInfo?
         public let navigateToStatus: () -> Void
     }
 
@@ -687,11 +796,22 @@ extension Mastodon.Entity.Status {
             displayableContent = AttributedString()
         }
         let accountFullName = account.domain == myDomain ? account.acct : account.acctWithDomain
+        let attachmentInfo = mediaAttachments?.reduce(nil, { (partialResult: AttachmentSummaryInfo?, attachment: Mastodon.Entity.Attachment) in
+            if let partialResult = partialResult {
+                return partialResult.adding(attachment: attachment)
+            } else {
+                return AttachmentSummaryInfo(attachment)
+            }
+        })
+        
+        let pollInfo: AttachmentSummaryInfo? = poll != nil ? .poll : nil
+
         return ViewModel(
             content: displayableContent, isPinned: false,
             accountDisplayName: account.displayName,
             accountFullName: accountFullName,
             accountAvatarUrl: account.avatarImageURL(),
+            attachmentInfo: attachmentInfo ?? pollInfo,
             navigateToStatus: navigateToStatus)
     }
 }
