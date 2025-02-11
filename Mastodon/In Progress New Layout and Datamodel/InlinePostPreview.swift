@@ -18,7 +18,7 @@ struct InlinePostPreview: View {
         VStack(alignment: .leading) {
             header()
             if let content = viewModel.content {
-                Text(content)
+                Text(String(content.characters[...]))
                     .font(.subheadline)
                     .lineLimit(3)
             }
