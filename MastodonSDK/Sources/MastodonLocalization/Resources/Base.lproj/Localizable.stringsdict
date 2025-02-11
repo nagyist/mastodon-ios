@@ -165,6 +165,138 @@
 			<string>%ld media</string>
 		</dict>
 	</dict>
+	<key>plural.count.image</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@image_count@</string>
+		<key>image_count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>zero</key>
+			<string>0 image</string>
+			<key>one</key>
+			<string>1 image</string>
+			<key>few</key>
+			<string>%ld image</string>
+			<key>many</key>
+			<string>%ld image</string>
+			<key>other</key>
+			<string>%ld image</string>
+		</dict>
+	</dict>
+	<key>plural.count.gif</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@gif_count@</string>
+		<key>gif_count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>zero</key>
+			<string>0 gif</string>
+			<key>one</key>
+			<string>1 gif</string>
+			<key>few</key>
+			<string>%ld gif</string>
+			<key>many</key>
+			<string>%ld gif</string>
+			<key>other</key>
+			<string>%ld gif</string>
+		</dict>
+	</dict>
+    <key>plural.count.video</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@video_count@</string>
+        <key>video_count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>ld</string>
+            <key>zero</key>
+            <string>0 video</string>
+            <key>one</key>
+            <string>1 video</string>
+            <key>few</key>
+            <string>%ld video</string>
+            <key>many</key>
+            <string>%ld video</string>
+            <key>other</key>
+            <string>%ld video</string>
+        </dict>
+    </dict>
+    <key>plural.count.audio</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@audio_count@</string>
+        <key>audio_count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>ld</string>
+            <key>zero</key>
+            <string>0 audio</string>
+            <key>one</key>
+            <string>1 audio</string>
+            <key>few</key>
+            <string>%ld audio</string>
+            <key>many</key>
+            <string>%ld audio</string>
+            <key>other</key>
+            <string>%ld audio</string>
+        </dict>
+    </dict>
+    <key>plural.count.attachment</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@attachment_count@</string>
+        <key>attachment_count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>ld</string>
+            <key>zero</key>
+            <string>0 attachment</string>
+            <key>one</key>
+            <string>1 attachment</string>
+            <key>few</key>
+            <string>%ld attachment</string>
+            <key>many</key>
+            <string>%ld attachment</string>
+            <key>other</key>
+            <string>%ld attachment</string>
+        </dict>
+    </dict>
+    <key>plural.count.poll</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@poll_count@</string>
+        <key>poll_count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>ld</string>
+            <key>zero</key>
+            <string>0 poll</string>
+            <key>one</key>
+            <string>1 poll</string>
+            <key>few</key>
+            <string>%ld poll</string>
+            <key>many</key>
+            <string>%ld poll</string>
+            <key>other</key>
+            <string>%ld poll</string>
+        </dict>
+    </dict>
 	<key>plural.count.post</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>

@@ -1977,6 +1977,14 @@ public enum L10n {
       return L10n.tr("Localizable", "plural.people_talking", p1, fallback: "Plural format key: \"%#@count_people_talking@\"")
     }
     public enum Count {
+      /// Plural format key: "%#@attachment_count@"
+      public static func attachment(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "plural.count.attachment", p1, fallback: "Plural format key: \"%#@attachment_count@\"")
+      }
+      /// Plural format key: "%#@audio_count@"
+      public static func audio(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "plural.count.audio", p1, fallback: "Plural format key: \"%#@audio_count@\"")
+      }
       /// Plural format key: "%#@favorite_count@"
       public static func favorite(_ p1: Int) -> String {
         return L10n.tr("Localizable", "plural.count.favorite", p1, fallback: "Plural format key: \"%#@favorite_count@\"")
@@ -1993,9 +2001,21 @@ public enum L10n {
       public static func following(_ p1: Int) -> String {
         return L10n.tr("Localizable", "plural.count.following", p1, fallback: "Plural format key: \"%#@count_following@\"")
       }
+      /// Plural format key: "%#@gif_count@"
+      public static func gif(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "plural.count.gif", p1, fallback: "Plural format key: \"%#@gif_count@\"")
+      }
+      /// Plural format key: "%#@image_count@"
+      public static func image(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "plural.count.image", p1, fallback: "Plural format key: \"%#@image_count@\"")
+      }
       /// Plural format key: "%#@media_count@"
       public static func media(_ p1: Int) -> String {
         return L10n.tr("Localizable", "plural.count.media", p1, fallback: "Plural format key: \"%#@media_count@\"")
+      }
+      /// Plural format key: "%#@poll_count@"
+      public static func poll(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "plural.count.poll", p1, fallback: "Plural format key: \"%#@poll_count@\"")
       }
       /// Plural format key: "%#@post_count@"
       public static func post(_ p1: Int) -> String {
@@ -2012,6 +2032,10 @@ public enum L10n {
       /// Plural format key: "%#@reply_count@"
       public static func reply(_ p1: Int) -> String {
         return L10n.tr("Localizable", "plural.count.reply", p1, fallback: "Plural format key: \"%#@reply_count@\"")
+      }
+      /// Plural format key: "%#@video_count@"
+      public static func video(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "plural.count.video", p1, fallback: "Plural format key: \"%#@video_count@\"")
       }
       /// Plural format key: "%#@vote_count@"
       public static func vote(_ p1: Int) -> String {
