@@ -27,7 +27,7 @@ struct InlinePostPreview: View {
         .frame(maxWidth: .infinity)
         .background {
             RoundedRectangle(cornerRadius: 8)
-                .fill(colorScheme == .dark ? AnyShapeStyle(.separator) : AnyShapeStyle(.clear))
+                .fill(colorScheme == .dark ? AnyShapeStyle(Color(UIColor.secondarySystemBackground)) : AnyShapeStyle(.clear))
                 .stroke(.separator)
         }
     }
