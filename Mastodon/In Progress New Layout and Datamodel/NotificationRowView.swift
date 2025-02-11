@@ -678,7 +678,7 @@ extension Mastodon.Entity.Status {
         public let navigateToStatus: () -> Void
     }
 
-    public func viewModel(navigateToStatus: @escaping () -> Void) -> ViewModel {
+    public func viewModel(myDomain: String, navigateToStatus: @escaping () -> Void) -> ViewModel {
         let displayableContent: AttributedString
         if let content {
             displayableContent = attributedString(
@@ -686,10 +686,11 @@ extension Mastodon.Entity.Status {
         } else {
             displayableContent = AttributedString()
         }
+        let accountFullName = account.domain == myDomain ? account.acct : account.acctWithDomain
         return ViewModel(
             content: displayableContent, isPinned: false,
             accountDisplayName: account.displayName,
-            accountFullName: account.acctWithDomain,
+            accountFullName: accountFullName,
             accountAvatarUrl: account.avatarImageURL(),
             navigateToStatus: navigateToStatus)
     }

@@ -384,6 +384,7 @@ extension NotificationRowViewModel {
     static func viewModelsFromGroupedNotificationResults(
         _ results: Mastodon.Entity.GroupedNotificationsResults,
         myAccountID: String,
+        myAccountDomain: String,
         navigateToScene: @escaping (
             SceneCoordinator.Scene, SceneCoordinator.Transition
         ) -> Void, presentError: @escaping (Error) -> Void
@@ -441,6 +442,7 @@ extension NotificationRowViewModel {
                 authorName: authorName,
                 authorAvatarUrls: avatarUrls,
                 statusViewModel: status?.viewModel(
+                    myDomain: myAccountDomain,
                     navigateToStatus: {
                         Task {
                             guard
@@ -485,6 +487,7 @@ extension NotificationRowViewModel {
     static func viewModelsFromUngroupedNotifications(
         _ notifications: [Mastodon.Entity.Notification],
         myAccountID: String,
+        myAccountDomain: String,
         navigateToScene: @escaping (
             SceneCoordinator.Scene, SceneCoordinator.Transition
         ) -> Void, presentError: @escaping (Error) -> Void
@@ -502,6 +505,7 @@ extension NotificationRowViewModel {
                 authorName: notification.authorName,
                 authorAvatarUrls: notification.authorAvatarUrls,
                 statusViewModel: notification.status?.viewModel(
+                    myDomain: myAccountDomain,
                     navigateToStatus: {
                         Task {
                             guard

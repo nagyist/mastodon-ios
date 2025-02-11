@@ -228,8 +228,9 @@ extension GroupedNotificationFeedLoader {
             .viewModelsFromGroupedNotificationResults(
                 results,
                 myAccountID: authenticationBox.userID,
-                navigateToScene: navigateToScene ?? {_,_ in},
-                presentError: presentError ?? {_ in}
+                myAccountDomain: authenticationBox.domain,
+                navigateToScene: navigateToScene ?? { _, _ in },
+                presentError: presentError ?? { _ in }
             )
     }
 
@@ -252,8 +253,9 @@ extension GroupedNotificationFeedLoader {
 
         return NotificationRowViewModel.viewModelsFromUngroupedNotifications(
             ungrouped, myAccountID: authenticationBox.userID,
-            navigateToScene: navigateToScene ?? {_,_ in},
-            presentError: presentError ?? {_ in}
+            myAccountDomain: authenticationBox.domain,
+            navigateToScene: navigateToScene ?? { _, _ in },
+            presentError: presentError ?? { _ in }
         )
     }
 }
