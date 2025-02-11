@@ -12,11 +12,15 @@ import SwiftUI
 
 extension Mastodon.Entity.NotificationType {
 
-    func shouldShowIcon(grouped: Bool) -> Bool {
-        return iconSystemName(grouped: grouped) != nil
+    func shouldShowIcon(
+        grouped: Bool, visibility: Mastodon.Entity.Status.Visibility?
+    ) -> Bool {
+        return iconSystemName(grouped: grouped, visibility: visibility) != nil
     }
 
-    func iconSystemName(grouped: Bool = false) -> String? {
+    func iconSystemName(
+        grouped: Bool = false, visibility: Mastodon.Entity.Status.Visibility?
+    ) -> String? {
         switch self {
         case .favourite:
             return "star.fill"
@@ -40,7 +44,12 @@ extension Mastodon.Entity.NotificationType {
             return "questionmark.square.dashed"
         case .mention:
             // TODO: make this nil when full status view is available
-            return "quote.bubble.fill"
+            switch visibility {
+            case .direct:
+                return "at.circle.fill"
+            default:
+                return "at"
+            }
         case .status:
             // TODO: make this nil when full status view is available
             return "bell.fill"
@@ -217,7 +226,8 @@ func NotificationIconView(_ info: NotificationIconInfo) -> some View {
     HStack {
         Image(
             systemName: info.notificationType.iconSystemName(
-                grouped: info.isGrouped) ?? "questionmark.square.dashed"
+                grouped: info.isGrouped, visibility: info.visibility)
+                ?? "questionmark.square.dashed"
         )
         .foregroundStyle(info.notificationType.iconColor)
     }
@@ -319,6 +329,7 @@ extension Mastodon.Entity.Relationship {
 struct NotificationIconInfo {
     let notificationType: Mastodon.Entity.NotificationType
     let isGrouped: Bool
+    let visibility: Mastodon.Entity.Status.Visibility?
 }
 
 struct NotificationSourceAccounts {
@@ -386,7 +397,7 @@ struct FilteredNotificationsRowView: View {
                 NotificationIconView(systemName: "archivebox")
                 Spacer().frame(maxHeight: .infinity)
             }
-            
+
             // TEXT COMPONENTS
             VStack {
                 ForEach(viewModel.componentViews) { component in
@@ -398,7 +409,7 @@ struct FilteredNotificationsRowView: View {
                     }
                 }
             }
-            
+
             // DISCLOSURE INDICATOR (OR SPINNER)
             VStack {
                 Spacer()
@@ -428,10 +439,15 @@ struct NotificationRowView: View {
             }
 
             // VSTACK OF HEADER AND CONTENT COMPONENT VIEWS
-            VStack {
+            VStack(spacing: 2) {
                 ForEach(viewModel.headerComponents) {
                     componentView($0)
                 }
+
+                if !viewModel.contentComponents.isEmpty {
+                    Spacer().frame(height: 4)
+                }
+
                 ForEach(viewModel.contentComponents) {
                     componentView($0)
                 }
@@ -480,15 +496,11 @@ struct NotificationRowView: View {
         }
     }
 
-    func displayableAvatarCount(totalAvatarCount: Int, totalActorCount: Int)
-        -> Int
-    {
-        // Make space for the "+ more" label
-        // Unfortunately, using GeometryReader to avoid using a default max count resulted in weird layout side-effects.
-        var maxAvatarCount = 8
-        if maxAvatarCount < totalActorCount {
-            maxAvatarCount = maxAvatarCount - 2
-        }
+    func displayableAvatarCount(
+        fittingWidth: CGFloat, totalAvatarCount: Int, totalActorCount: Int
+    ) -> Int {
+        let maxAvatarCount = Int(
+            floor(fittingWidth / (smallAvatarSize + avatarSpacing)))
         return maxAvatarCount
     }
 
@@ -501,38 +513,39 @@ struct NotificationRowView: View {
         accountInfo: NotificationSourceAccounts,
         trailingElement: RelationshipElement
     ) -> some View {
-        let maxAvatarCount = displayableAvatarCount(
-            totalAvatarCount: accountInfo.avatarUrls.count,
-            totalActorCount: accountInfo.totalActorCount)
-        let needsMoreLabel = accountInfo.totalActorCount > maxAvatarCount
-        HStack(alignment: .center) {
-            ForEach(accountInfo.avatarUrls.prefix(maxAvatarCount), id: \.self) {
-                AsyncImage(
-                    url: $0,
-                    content: { image in
-                        image.resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .clipShape(avatarShape)
-                            .overlay {
-                                avatarShape.stroke(.separator)
-                            }
-                    },
-                    placeholder: {
-                        avatarShape
-                            .foregroundStyle(Color(UIColor.secondarySystemFill))
-                    }
-                )
-                .frame(width: smallAvatarSize, height: smallAvatarSize)
+        GeometryReader { geom in
+            let maxAvatarCount = displayableAvatarCount(
+                fittingWidth: geom.size.width,
+                totalAvatarCount: accountInfo.avatarUrls.count,
+                totalActorCount: accountInfo.totalActorCount)
+            HStack(alignment: .center) {
+                ForEach(
+                    accountInfo.avatarUrls.prefix(maxAvatarCount), id: \.self
+                ) {
+                    AsyncImage(
+                        url: $0,
+                        content: { image in
+                            image.resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .clipShape(avatarShape)
+                                .overlay {
+                                    avatarShape.stroke(.separator)
+                                }
+                        },
+                        placeholder: {
+                            avatarShape
+                                .foregroundStyle(
+                                    Color(UIColor.secondarySystemFill))
+                        }
+                    )
+                    .frame(width: smallAvatarSize, height: smallAvatarSize)
+                }
+                Spacer().frame(minWidth: 0, maxWidth: .infinity)
+                avatarRowTrailingElement(
+                    trailingElement, grouped: accountInfo.totalActorCount > 1)
             }
-            if needsMoreLabel {
-                Text("+ more")
-                    .fixedSize()
-                    .lineLimit(1)
-            }
-            Spacer().frame(minWidth: 0, maxWidth: .infinity)
-            avatarRowTrailingElement(
-                trailingElement, grouped: accountInfo.totalActorCount > 1)
         }
+        .frame(height: smallAvatarSize) // this keeps GeometryReader from causing inconsistent visual spacing in the VStack
     }
 
     @ViewBuilder
@@ -673,16 +686,17 @@ extension Mastodon.Entity.Status {
         case audio(Int)
         case generic(Int)
         case poll
-        
+
         var count: Int {
             switch self {
-            case .image(let count), .gifv(let count), .video(let count), .audio(let count), .generic(let count):
+            case .image(let count), .gifv(let count), .video(let count),
+                .audio(let count), .generic(let count):
                 return count
             case .poll:
                 return 1
             }
         }
-        
+
         var iconName: String {
             switch self {
             case .image(1):
@@ -705,7 +719,7 @@ extension Mastodon.Entity.Status {
                 return "chart.bar.yaxis"
             }
         }
-        
+
         var labelText: String {
             switch self {
             case .image(let count):
@@ -722,8 +736,9 @@ extension Mastodon.Entity.Status {
                 return L10n.Plural.Count.poll(1)
             }
         }
-        
-        private func withUpdatedCount(_ newCount: Int) -> AttachmentSummaryInfo {
+
+        private func withUpdatedCount(_ newCount: Int) -> AttachmentSummaryInfo
+        {
             switch self {
             case .image:
                 return .image(newCount)
@@ -739,23 +754,30 @@ extension Mastodon.Entity.Status {
                 return .poll
             }
         }
-        
-        private func _adding(_ otherAttachmentInfo: AttachmentSummaryInfo) -> AttachmentSummaryInfo {
+
+        private func _adding(_ otherAttachmentInfo: AttachmentSummaryInfo)
+            -> AttachmentSummaryInfo
+        {
             switch (self, otherAttachmentInfo) {
             case (.poll, _), (_, .poll):
-                assertionFailure("did not expect poll to co-occur with another attachment type")
+                assertionFailure(
+                    "did not expect poll to co-occur with another attachment type"
+                )
                 return .poll
-            case (.gifv, .gifv), (.image, .image), (.video, .video), (.audio, .audio):
+            case (.gifv, .gifv), (.image, .image), (.video, .video),
+                (.audio, .audio):
                 return withUpdatedCount(count + otherAttachmentInfo.count)
             default:
                 return .generic(count + otherAttachmentInfo.count)
             }
         }
-        
-        func adding(attachment: Mastodon.Entity.Attachment) -> AttachmentSummaryInfo {
+
+        func adding(attachment: Mastodon.Entity.Attachment)
+            -> AttachmentSummaryInfo
+        {
             return _adding(AttachmentSummaryInfo(attachment))
         }
-        
+
         init(_ attachment: Mastodon.Entity.Attachment) {
             switch attachment.type {
             case .image:
@@ -776,6 +798,7 @@ extension Mastodon.Entity.Status {
 extension Mastodon.Entity.Status {
     public struct ViewModel {
         public let content: AttributedString?
+        public let visibility: Mastodon.Entity.Status.Visibility?
         public let isPinned: Bool
         public let accountDisplayName: String?
         public let accountFullName: String?
@@ -787,7 +810,9 @@ extension Mastodon.Entity.Status {
         public let navigateToStatus: () -> Void
     }
 
-    public func viewModel(myDomain: String, navigateToStatus: @escaping () -> Void) -> ViewModel {
+    public func viewModel(
+        myDomain: String, navigateToStatus: @escaping () -> Void
+    ) -> ViewModel {
         let displayableContent: AttributedString
         if let content {
             displayableContent = attributedString(
@@ -795,19 +820,27 @@ extension Mastodon.Entity.Status {
         } else {
             displayableContent = AttributedString()
         }
-        let accountFullName = account.domain == myDomain ? account.acct : account.acctWithDomain
-        let attachmentInfo = mediaAttachments?.reduce(nil, { (partialResult: AttachmentSummaryInfo?, attachment: Mastodon.Entity.Attachment) in
-            if let partialResult = partialResult {
-                return partialResult.adding(attachment: attachment)
-            } else {
-                return AttachmentSummaryInfo(attachment)
-            }
-        })
-        
+        let accountFullName =
+            account.domain == myDomain ? account.acct : account.acctWithDomain
+        let attachmentInfo = mediaAttachments?.reduce(
+            nil,
+            {
+                (
+                    partialResult: AttachmentSummaryInfo?,
+                    attachment: Mastodon.Entity.Attachment
+                ) in
+                if let partialResult = partialResult {
+                    return partialResult.adding(attachment: attachment)
+                } else {
+                    return AttachmentSummaryInfo(attachment)
+                }
+            })
+
         let pollInfo: AttachmentSummaryInfo? = poll != nil ? .poll : nil
 
         return ViewModel(
-            content: displayableContent, isPinned: false,
+            content: displayableContent, visibility: visibility,
+            isPinned: false,
             accountDisplayName: account.displayName,
             accountFullName: accountFullName,
             accountAvatarUrl: account.avatarImageURL(),

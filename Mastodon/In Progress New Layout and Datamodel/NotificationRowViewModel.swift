@@ -48,7 +48,8 @@ class NotificationRowViewModel: ObservableObject {
         self.type = notificationInfo.type
         self.iconInfo = NotificationIconInfo(
             notificationType: notificationInfo.type,
-            isGrouped: notificationInfo.isGrouped)
+            isGrouped: notificationInfo.isGrouped,
+            visibility: notificationInfo.statusViewModel?.visibility)
         self.navigateToScene = navigateToScene
         self.presentError = presentError
         self.defaultNavigation = notificationInfo.defaultNavigation
@@ -106,7 +107,7 @@ class NotificationRowViewModel: ObservableObject {
             }
         case .reblog, .favourite:
             if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount,
-               let statusViewModel = notificationInfo.statusViewModel
+                let statusViewModel = notificationInfo.statusViewModel
             {
                 avatarRow = .avatarRow(
                     NotificationSourceAccounts(
@@ -483,7 +484,7 @@ extension NotificationRowViewModel {
                 presentError: presentError)
         }
     }
-    
+
     static func viewModelsFromUngroupedNotifications(
         _ notifications: [Mastodon.Entity.Notification],
         myAccountID: String,
@@ -492,7 +493,7 @@ extension NotificationRowViewModel {
             SceneCoordinator.Scene, SceneCoordinator.Transition
         ) -> Void, presentError: @escaping (Error) -> Void
     ) -> [NotificationRowViewModel] {
-        
+
         return notifications.map { notification in
             let info = GroupedNotificationInfo(
                 id: notification.id,
@@ -511,7 +512,8 @@ extension NotificationRowViewModel {
                             guard
                                 let authBox =
                                     await AuthenticationServiceProvider.shared
-                                    .currentActiveUser.value, let status = notification.status
+                                    .currentActiveUser.value,
+                                let status = notification.status
                             else { return }
                             await navigateToScene(
                                 .thread(
@@ -540,7 +542,7 @@ extension NotificationRowViewModel {
                     }
                 }
             )
-            
+
             return NotificationRowViewModel(
                 info, navigateToScene: navigateToScene,
                 presentError: presentError)
