@@ -637,7 +637,12 @@ func boldedNameStringComponent(_ name: String) -> AttributedString {
     return nameComponent
 }
 
-let metaTextForHtmlToAttributedStringConversion = MetaText()
+let metaTextForHtmlToAttributedStringConversion = {
+    let meta = MetaText()
+    meta.textAttributes = [:]
+    meta.linkAttributes = [:]
+    return meta
+}()
 func attributedString(
     fromHtml html: String, emojis: [MastodonContent.Shortcode: String]
 ) -> AttributedString {
