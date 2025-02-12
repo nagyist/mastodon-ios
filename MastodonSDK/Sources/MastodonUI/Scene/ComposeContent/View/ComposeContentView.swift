@@ -93,7 +93,6 @@ public struct ComposeContentView: View {
                                 attributes: attributes
                             )
                         }()
-                        metaText.textView.keyboardType = .twitter
                         metaText.textView.tag = ComposeContentViewModel.MetaTextViewKind.content.rawValue
                         metaText.textView.delegate = viewModel
                         metaText.delegate = viewModel
