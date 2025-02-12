@@ -12,6 +12,17 @@ File an issue about the bug or feature request. Make sure you are installing the
 
 The translation will update regularly. Please request the language if it is not listed via an issue.
 
+To add new localized strings:
+Basic:
+- Edit `Localization/app.json` to add new strings in an appropriate section of the JSON.
+- Edit `MastodonSDK/Sources/MastodonLocalizations/Resources/Base.lproj/Localizable.strings` to add the same strings as in `app.json`. Take care to follow to formatting pattern of existing examples.
+- Run `swiftgen` inside the project directory to generate the typed string resources.
+- Use the new typed strings by importing `MastodonLocalization` and using the `L10n` struct.
+Plurals:
+- Add appropriate entry to `MastodonSDK/Sources/MastodonLocalizations/Resources/Base.lproj/Localizable.stringsdict` (feel free to copy a similar example and then edit it).
+- Run `swiftgen` inside the project directory to generate the typed string resources.
+- Use the new plural format strings by importing `MastodonLocalization` and using the `L10n` struct.
+
 ## Pull Request
 
 You can create a pull request directly with small block code changes for bugfix or feature implementations. Before making a pull request with hundred lines of changes to this repository, please first discuss the change you wish to make via an issue. 
