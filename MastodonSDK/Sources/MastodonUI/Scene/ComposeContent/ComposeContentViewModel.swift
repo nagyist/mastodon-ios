@@ -156,7 +156,11 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
                 guard let author = authenticationBox.cachedAccount else {
                     return .public
                 }
-                return author.locked ? .private : .public
+                if let defaultPrivacy = author.source?.privacy, let statusPrivacy = Mastodon.Entity.Status.Visibility(rawValue: defaultPrivacy.rawValue) {
+                    return statusPrivacy
+                } else {
+                    return author.locked ? .private : .public
+                }
             }()
             // set visibility for reply post
             if case .reply(let record) = destination {

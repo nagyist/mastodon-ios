@@ -362,6 +362,7 @@ extension ComposeContentViewController {
         viewModel.$recentLanguages.assign(to: &composeContentToolbarViewModel.$recentLanguages)
         
         // bind back to source due to visibility not update via delegate
+        composeContentToolbarViewModel.visibility = viewModel.visibility
         composeContentToolbarViewModel.$visibility
             .dropFirst()
             .receive(on: DispatchQueue.main)

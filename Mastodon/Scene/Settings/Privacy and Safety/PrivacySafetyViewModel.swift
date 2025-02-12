@@ -25,13 +25,13 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
         var title: String {
             switch self {
             case .public:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.public
+                return L10n.Scene.Compose.Visibility.public
             case .unlisted:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.unlisted
+                return L10n.Scene.Compose.Visibility.unlisted
             case .followersOnly:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.followersOnly
+                return L10n.Scene.Compose.Visibility.private
             case .onlyPeopleMentioned:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.onlyPeopleMentioned
+                return L10n.Scene.Compose.Visibility.direct
             }
         }
         

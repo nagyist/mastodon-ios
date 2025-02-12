@@ -14,12 +14,7 @@ import MastodonSDK
 extension APIService {
     public func accountInfo(_ authenticationBox: MastodonAuthenticationBox
     ) async throws -> Mastodon.Entity.Account {
-        let account = try await Mastodon.API.Account.accountInfo(
-            session: session,
-            domain: authenticationBox.domain,
-            userID: authenticationBox.userID,
-            authorization: authenticationBox.userAuthorization
-        ).singleOutput().value
+        let account = try await Mastodon.API.Account.verifyCredentials(session: session, domain: authenticationBox.domain, authorization: authenticationBox.userAuthorization)
         
         PersistenceManager.shared.cacheAccount(account, forUserID: authenticationBox.authentication.userIdentifier())
         

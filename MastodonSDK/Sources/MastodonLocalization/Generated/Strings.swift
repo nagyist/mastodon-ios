@@ -1717,12 +1717,6 @@ public enum L10n {
         /// Privacy & Safety
         public static let title = L10n.tr("Localizable", "Scene.Settings.PrivacySafety.Title", fallback: "Privacy & Safety")
         public enum DefaultPostVisibility {
-          /// Followers Only
-          public static let followersOnly = L10n.tr("Localizable", "Scene.Settings.PrivacySafety.DefaultPostVisibility.FollowersOnly", fallback: "Followers Only")
-          /// Only People Mentioned
-          public static let onlyPeopleMentioned = L10n.tr("Localizable", "Scene.Settings.PrivacySafety.DefaultPostVisibility.OnlyPeopleMentioned", fallback: "Only People Mentioned")
-          /// Public
-          public static let `public` = L10n.tr("Localizable", "Scene.Settings.PrivacySafety.DefaultPostVisibility.Public", fallback: "Public")
           /// Default Post Visibility
           public static let title = L10n.tr("Localizable", "Scene.Settings.PrivacySafety.DefaultPostVisibility.Title", fallback: "Default Post Visibility")
         }
