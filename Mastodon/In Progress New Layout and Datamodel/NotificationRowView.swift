@@ -416,10 +416,14 @@ struct FilteredNotificationsRowView: View {
                 if viewModel.isPreparingToNavigate {
                     ProgressView().progressViewStyle(.circular)
                 } else {
-                    NotificationIconView(systemName: "chevron.forward")
+                    Image(systemName: "chevron.forward")
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 20))
+                        .fontWeight(.light)
                 }
-                Spacer()
+                Spacer().frame(maxHeight: .infinity)
             }
+            .frame(width: 44)
         }
     }
 }
