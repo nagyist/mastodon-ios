@@ -20,12 +20,14 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
     }
     
     enum Visibility: CaseIterable {
-        case `public`, followersOnly, onlyPeopleMentioned
+        case `public`, unlisted, followersOnly, onlyPeopleMentioned
         
         var title: String {
             switch self {
             case .public:
                 return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.public
+            case .unlisted:
+                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.unlisted
             case .followersOnly:
                 return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.followersOnly
             case .onlyPeopleMentioned:
@@ -33,13 +35,15 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
             }
         }
         
-        static func from(_ privacy: Mastodon.Entity.Source.Privacy) -> Self {
+        static func fromPrivacy(_ privacy: Mastodon.Entity.Source.Privacy) -> Self {
             switch privacy {
             case .public:
                 return .public
             case .unlisted:
+                return .unlisted
+            case .private:
                 return .followersOnly
-            case .private, .direct:
+            case .direct:
                 return .onlyPeopleMentioned
             case ._other(_):
                 return .public
@@ -50,10 +54,12 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
             switch self {
             case .public:
                 return .public
-            case .followersOnly:
+            case .unlisted:
                 return .unlisted
-            case .onlyPeopleMentioned:
+            case .followersOnly:
                 return .private
+            case .onlyPeopleMentioned:
+                return .direct
             }
         }
     }
@@ -153,7 +159,7 @@ extension PrivacySafetyViewModel {
             )
             
             if let privacy = account.source?.privacy {
-                visibility = .from(privacy)
+                visibility = .fromPrivacy(privacy)
             }
             
             manuallyApproveFollowRequests = account.locked == true
