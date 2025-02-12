@@ -238,7 +238,7 @@ class NotificationRowViewModel: ObservableObject {
 
                         switch (type, relationship.following) {
                         case (.follow, true):
-                            element = .mutualLabel
+                            element = .mutualButton
                         case (.follow, false):
                             element = .followButton
                         case (.followRequest, _):
@@ -312,8 +312,8 @@ extension NotificationRowViewModel {
             switch avatarRow {
             case .avatarRow(let accountInfo, let relationshipElement):
                 switch relationshipElement {
-                case .followButton, .requestButton:
-                    await doFollow(accountInfo)
+                case .followButton, .requestButton, .mutualButton, .followingButton, .pendingRequestButton:
+                    await doFollowAction(relationshipElement.followAction, notificationSourceAccounts: accountInfo)
                 case .acceptRejectButtons:
                     await doAcceptFollowRequest(accountInfo, accept: accept)
                 default:
@@ -326,25 +326,33 @@ extension NotificationRowViewModel {
     }
 
     @MainActor
-    private func doFollow(_ accountInfo: NotificationSourceAccounts) async {
-        guard let accountID = accountInfo.firstAccountID,
+    private func doFollowAction(_ action: RelationshipElement.FollowAction, notificationSourceAccounts: NotificationSourceAccounts) async {
+        guard let accountID = notificationSourceAccounts.firstAccountID,
             let authBox = AuthenticationServiceProvider.shared.currentActiveUser
                 .value
         else { return }
         let startingAvatarRow = avatarRow
-        avatarRow = .avatarRow(accountInfo, .fetching)
+        avatarRow = .avatarRow(notificationSourceAccounts, .fetching)
         do {
             let updatedElement: RelationshipElement
-            let response = try await APIService.shared.follow(
-                accountID, authenticationBox: authBox)
-            if response.following {
-                updatedElement = .followingLabel
-            } else if response.requested {
-                updatedElement = .pendingRequestLabel
-            } else {
-                updatedElement = .error(nil)
+            let response: Mastodon.Entity.Relationship
+            switch action {
+            case .follow:
+                response = try await APIService.shared.follow(
+                    accountID, authenticationBox: authBox)
+            case .unfollow:
+                response = try await APIService.shared.unfollow(accountID, authenticationBox: authBox)
+            case .noAction:
+                throw AppError.unexpected("action attempted for relationship element that has no action")
             }
-            avatarRow = .avatarRow(accountInfo, updatedElement)
+            if response.following {
+                updatedElement = .followingButton
+            } else if response.requested {
+                updatedElement = .pendingRequestButton
+            } else {
+                updatedElement = .followButton
+            }
+            avatarRow = .avatarRow(notificationSourceAccounts, updatedElement)
         } catch {
             presentError(error)
             avatarRow = startingAvatarRow

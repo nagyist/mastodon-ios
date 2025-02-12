@@ -259,9 +259,15 @@ enum RelationshipElement: Equatable {
     case acceptRejectButtons(isFollowing: Bool)
     case acceptedLabel
     case rejectedLabel
-    case mutualLabel
-    case followingLabel
-    case pendingRequestLabel
+    case mutualButton
+    case followingButton
+    case pendingRequestButton
+    
+    enum FollowAction {
+        case follow
+        case unfollow
+        case noAction
+    }
 
     var description: String {
         switch self {
@@ -283,11 +289,11 @@ enum RelationshipElement: Equatable {
             return "accepted"
         case .rejectedLabel:
             return "rejected"
-        case .mutualLabel:
+        case .mutualButton:
             return "mutual"
-        case .followingLabel:
+        case .followingButton:
             return "following"
-        case .pendingRequestLabel:
+        case .pendingRequestButton:
             return "pending"
         }
     }
@@ -296,7 +302,34 @@ enum RelationshipElement: Equatable {
     {
         return lhs.description == rhs.description
     }
+    
+    var followAction: FollowAction {
+        switch self {
+        case .followButton, .requestButton:
+            return .follow
+        case .followingButton, .mutualButton, .pendingRequestButton:
+            return .unfollow
+        default:
+            return .noAction
+        }
+    }
 
+    var buttonText: String? {
+        switch self {
+        case .followButton:
+            return L10n.Common.Controls.Friendship.follow
+        case .requestButton:
+            return L10n.Common.Controls.Friendship.request
+        case .mutualButton:
+            return L10n.Common.Controls.Friendship.mutual
+        case .followingButton:
+            return L10n.Common.Controls.Friendship.following
+        case .pendingRequestButton:
+            return L10n.Common.Controls.Friendship.pending
+        default:
+            return nil
+        }
+    }
 }
 
 extension Mastodon.Entity.Relationship {
@@ -304,9 +337,9 @@ extension Mastodon.Entity.Relationship {
     var relationshipElement: RelationshipElement? {
         switch (following, followedBy) {
         case (true, true):
-            return .mutualLabel
+            return .mutualButton
         case (true, false):
-            return .followingLabel
+            return .followingButton
         case (false, true):
             if let account: NotificationAuthor = MastodonFeedItemCacheManager
                 .shared.fullAccount(id)
@@ -314,7 +347,7 @@ extension Mastodon.Entity.Relationship {
                 account.locked
             {
                 if requested {
-                    return .pendingRequestLabel
+                    return .pendingRequestButton
                 } else {
                     return .requestButton
                 }
@@ -549,7 +582,7 @@ struct NotificationRowView: View {
                     trailingElement, grouped: accountInfo.totalActorCount > 1)
             }
         }
-        .frame(height: smallAvatarSize) // this keeps GeometryReader from causing inconsistent visual spacing in the VStack
+        .frame(height: smallAvatarSize)  // this keeps GeometryReader from causing inconsistent visual spacing in the VStack
     }
 
     @ViewBuilder
@@ -559,21 +592,14 @@ struct NotificationRowView: View {
         switch (elementType, grouped) {
         case (.fetching, false):
             ProgressView().progressViewStyle(.circular)
-        case (.followButton, false):
-            Button(L10n.Common.Controls.Friendship.follow) {
-                viewModel.doAvatarRowButtonAction()
+        case (.followButton, false), (.mutualButton, false),
+            (.followingButton, false), (.pendingRequestButton, false):
+            if let buttonText = elementType.buttonText {
+                Button(buttonText) {
+                    viewModel.doAvatarRowButtonAction()
+                }
+                .buttonStyle(FollowButton(elementType))
             }
-            .buttonStyle(.borderedProminent)
-            .foregroundStyle(.background)
-            .controlSize(.small)
-            .bold()
-        case (.requestButton, false):
-            Button(L10n.Common.Controls.Friendship.request) {
-                viewModel.doAvatarRowButtonAction()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .bold()
         case (.acceptRejectButtons(let isFollowing), false):
             HStack {
 
@@ -599,12 +625,6 @@ struct NotificationRowView: View {
             Text(L10n.Scene.Notification.FollowRequest.accepted)
         case (.rejectedLabel, false):
             Text(L10n.Scene.Notification.FollowRequest.rejected)
-        case (.mutualLabel, false):
-            Text(L10n.Common.Controls.Friendship.mutual)
-        case (.followingLabel, false):
-            Text(L10n.Common.Controls.Friendship.following)
-        case (.pendingRequestLabel, false):
-            Text(L10n.Common.Controls.Friendship.pending)
         case (.error(_), _):
             Image(systemName: "exclamationmark.triangle").foregroundStyle(.gray)
         default:
@@ -850,5 +870,60 @@ extension Mastodon.Entity.Status {
             accountAvatarUrl: account.avatarImageURL(),
             attachmentInfo: attachmentInfo ?? pollInfo,
             navigateToStatus: navigateToStatus)
+    }
+}
+
+struct FollowButton: ButtonStyle {
+    private let followAction: RelationshipElement.FollowAction
+    
+    init(_ relationshipElement: RelationshipElement) {
+        followAction = relationshipElement.followAction
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding([.horizontal], 12)
+            .padding([.vertical], 8)
+            .background(backgroundColor)
+            .foregroundStyle(textColor)
+            .controlSize(.small)
+            .fontWeight(fontWeight)
+            .clipShape(Capsule())
+    }
+    
+    private var backgroundColor: Color {
+        switch followAction {
+        case .follow:
+            return Color(uiColor: Asset.Colors.Button.userFollow.color)
+        case .unfollow:
+            return Color(uiColor: Asset.Colors.Button.userFollowing.color)
+        case .noAction:
+            assertionFailure()
+            return .clear
+        }
+    }
+    
+    private var textColor: Color {
+        switch followAction {
+        case .follow:
+            return .white
+        case .unfollow:
+            return Color(uiColor: Asset.Colors.Button.userFollowingTitle.color)
+        case .noAction:
+            assertionFailure()
+            return .clear
+        }
+    }
+    
+    private var fontWeight: SwiftUICore.Font.Weight {
+        switch followAction {
+        case .follow:
+            return .bold
+        case .unfollow:
+            return .light
+        case .noAction:
+            assertionFailure()
+            return .regular
+        }
     }
 }
