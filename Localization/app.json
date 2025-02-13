@@ -736,7 +736,8 @@
                 "reblogged_your_post": "boosted your post",
                 "mentioned_you": "mentioned you",
                 "request_to_follow_you": "request to follow you",
-                "poll_has_ended": "poll has ended"
+                "poll_has_ended": "poll has ended",
+                "relationship_severance": "An admin from %@ has blocked %@, including %@."
             },
             "keyobard": {
                 "show_everything": "Show Everything",
@@ -758,6 +759,7 @@
                 "suspend": "Your account has been suspended.",
                 "learn_more": "Learn More"
             },
+            "learn_more_about_server_blocks" : "Learn more about server blocks",
             "filtered_notification": {
                 "title": "Filtered Notifications",
                 "accept": "Accept",
