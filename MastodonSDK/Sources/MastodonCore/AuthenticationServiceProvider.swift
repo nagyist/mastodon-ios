@@ -261,7 +261,7 @@ public extension AuthenticationServiceProvider {
         lastFetchOfAllAccounts = Date.now
         
         for authentication in authentications {
-            guard let account = try? await APIService.shared.accountInfo(MastodonAuthenticationBox(authentication: authentication)) else { continue }
+            guard let _ = try? await APIService.shared.accountInfo(MastodonAuthenticationBox(authentication: authentication)) else { continue }
         }
 
         NotificationCenter.default.post(name: .userFetched, object: nil)
