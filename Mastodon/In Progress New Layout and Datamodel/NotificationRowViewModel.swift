@@ -3,13 +3,14 @@
 import Combine
 import Foundation
 import MastodonCore
+import MastodonLocalization
 import MastodonSDK
 
 class NotificationRowViewModel: ObservableObject {
     let identifier: MastodonFeedItemIdentifier
     let oldestID: String?
     let newestID: String?
-    let type: Mastodon.Entity.NotificationType
+    let type: GroupedNotificationType
     let navigateToScene:
         (SceneCoordinator.Scene, SceneCoordinator.Transition) -> Void
     let presentError: (Error) -> Void
@@ -37,6 +38,7 @@ class NotificationRowViewModel: ObservableObject {
 
     init(
         _ notificationInfo: GroupedNotificationInfo,
+        myAccountDomain: String,
         navigateToScene: @escaping (
             SceneCoordinator.Scene, SceneCoordinator.Transition
         ) -> Void, presentError: @escaping (Error) -> Void
@@ -45,83 +47,70 @@ class NotificationRowViewModel: ObservableObject {
         self.identifier = .notificationGroup(id: notificationInfo.id)
         self.oldestID = notificationInfo.oldestNotificationID
         self.newestID = notificationInfo.newestNotificationID
-        self.type = notificationInfo.type
+        self.type = notificationInfo.groupedNotificationType
         self.iconInfo = NotificationIconInfo(
-            notificationType: notificationInfo.type,
-            isGrouped: notificationInfo.isGrouped,
+            notificationType: notificationInfo.groupedNotificationType,
+            isGrouped: notificationInfo.sourceAccounts.totalActorCount > 1,
             visibility: notificationInfo.statusViewModel?.visibility)
         self.navigateToScene = navigateToScene
         self.presentError = presentError
         self.defaultNavigation = notificationInfo.defaultNavigation
 
-        switch notificationInfo.type {
+        switch notificationInfo.groupedNotificationType {
 
         case .follow, .followRequest:
             let avatarRowAdditionalElement: RelationshipElement
-            if let account = notificationInfo.primaryAuthorAccount {
+            if let account = notificationInfo.sourceAccounts
+                .primaryAuthorAccount
+            {
                 avatarRowAdditionalElement = .unfetched(
-                    notificationInfo.type, accountID: account.id)
+                    notificationInfo.groupedNotificationType)
             } else {
                 avatarRowAdditionalElement = .error(nil)
             }
             avatarRow = .avatarRow(
-                NotificationSourceAccounts(
-                    primaryAuthorAccount: notificationInfo.primaryAuthorAccount,
-                    avatarUrls: notificationInfo.authorAvatarUrls,
-                    totalActorCount: notificationInfo.authorsCount),
+                notificationInfo.sourceAccounts,
                 avatarRowAdditionalElement)
-            if let accountName = notificationInfo.primaryAuthorAccount?
+            if let accountName = notificationInfo.sourceAccounts
+                .primaryAuthorAccount?
                 .displayNameWithFallback
             {
                 headerTextComponents = [
                     .text(
-                        notificationInfo.type.actionSummaryLabel(
-                            firstAuthor: .other(named: accountName),
-                            totalAuthorCount: notificationInfo.authorsCount))
+                        notificationInfo.groupedNotificationType
+                            .actionSummaryLabel(notificationInfo.sourceAccounts)
+                            ?? "")
                 ]
             }
         case .mention, .status:
             // TODO: eventually make this full status style, not inline
             // TODO: distinguish mentions from replies
-            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount,
-                let statusViewModel =
-                    notificationInfo.statusViewModel
+            if let statusViewModel =
+                notificationInfo.statusViewModel
             {
                 avatarRow = .avatarRow(
-                    NotificationSourceAccounts(
-                        primaryAuthorAccount: primaryAuthorAccount,
-                        avatarUrls: notificationInfo.authorAvatarUrls,
-                        totalActorCount: notificationInfo.authorsCount),
+                    notificationInfo.sourceAccounts,
                     .noneNeeded)
                 headerTextComponents = [
                     .text(
-                        notificationInfo.type.actionSummaryLabel(
-                            firstAuthor: .other(
-                                named: primaryAuthorAccount
-                                    .displayNameWithFallback),
-                            totalAuthorCount: notificationInfo.authorsCount))
+                        notificationInfo.groupedNotificationType
+                            .actionSummaryLabel(notificationInfo.sourceAccounts)
+                            ?? "")
                 ]
                 contentComponents = [.status(statusViewModel)]
             } else {
                 headerTextComponents = [._other("POST BY UNKNOWN ACCOUNT")]
             }
         case .reblog, .favourite:
-            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount,
-                let statusViewModel = notificationInfo.statusViewModel
-            {
+            if let statusViewModel = notificationInfo.statusViewModel {
                 avatarRow = .avatarRow(
-                    NotificationSourceAccounts(
-                        primaryAuthorAccount: primaryAuthorAccount,
-                        avatarUrls: notificationInfo.authorAvatarUrls,
-                        totalActorCount: notificationInfo.authorsCount),
+                    notificationInfo.sourceAccounts,
                     .noneNeeded)
                 headerTextComponents = [
                     .text(
-                        notificationInfo.type.actionSummaryLabel(
-                            firstAuthor: .other(
-                                named: primaryAuthorAccount
-                                    .displayNameWithFallback),
-                            totalAuthorCount: notificationInfo.authorsCount))
+                        notificationInfo.groupedNotificationType
+                            .actionSummaryLabel(notificationInfo.sourceAccounts)
+                            ?? "")
                 ]
                 contentComponents = [.status(statusViewModel)]
             } else {
@@ -130,15 +119,14 @@ class NotificationRowViewModel: ObservableObject {
                 ]
             }
         case .poll, .update:
-            if let author = notificationInfo.authorName,
-                let statusViewModel =
-                    notificationInfo.statusViewModel
+            if let statusViewModel =
+                notificationInfo.statusViewModel
             {
                 headerTextComponents = [
                     .text(
-                        notificationInfo.type.actionSummaryLabel(
-                            firstAuthor: author,
-                            totalAuthorCount: notificationInfo.authorsCount))
+                        notificationInfo.groupedNotificationType
+                            .actionSummaryLabel(notificationInfo.sourceAccounts)
+                            ?? "")
                 ]
                 contentComponents = [.status(statusViewModel)]
             } else {
@@ -147,36 +135,25 @@ class NotificationRowViewModel: ObservableObject {
                 ]
             }
         case .adminSignUp:
-            if let primaryAuthorAccount = notificationInfo.primaryAuthorAccount,
-                let authorName = notificationInfo.authorName
-            {
-                avatarRow = .avatarRow(
-                    NotificationSourceAccounts(
-                        primaryAuthorAccount: primaryAuthorAccount,
-                        avatarUrls: notificationInfo.authorAvatarUrls,
-                        totalActorCount: notificationInfo.authorsCount),
-                    .noneNeeded)
-                headerTextComponents = [
-                    .text(
-                        notificationInfo.type.actionSummaryLabel(
-                            firstAuthor: authorName,
-                            totalAuthorCount: notificationInfo.authorsCount))
-                ]
-            } else {
-                headerTextComponents = [._other("ADMIN_SIGNUP NOTIFICATION")]
-            }
-        case .adminReport:
-            if let summary = notificationInfo.ruleViolationReport?.summary {
+            avatarRow = .avatarRow(
+                notificationInfo.sourceAccounts,
+                .noneNeeded)
+            headerTextComponents = [
+                .text(
+                    notificationInfo.groupedNotificationType.actionSummaryLabel(
+                        notificationInfo.sourceAccounts) ?? "")
+            ]
+        case .adminReport(let report):
+            if let summary = report?.summary {
                 headerTextComponents = [.text(summary)]
             }
-            if let comment = notificationInfo.ruleViolationReport?
+            if let comment = report?
                 .displayableComment
             {
                 contentComponents = [.text(comment)]
             }
-        case .severedRelationships:
-            if let summary = notificationInfo.relationshipSeveranceEvent?
-                .summary
+        case .severedRelationships(let severanceEvent):
+            if let summary = severanceEvent?.summary(myDomain: myAccountDomain)
             {
                 headerTextComponents = [.text(summary)]
             } else {
@@ -187,15 +164,36 @@ class NotificationRowViewModel: ObservableObject {
                 ]
             }
             contentComponents = [
-                .hyperlinkButton("Learn more about server blocks", nil)
-            ]  // TODO: localization and go somewhere
-        case .moderationWarning:
+                .hyperlinkButton(
+                    L10n.Scene.Notification.learnMoreAboutServerBlocks,
+                    notificationInfo.groupedNotificationType.learnMoreUrl(
+                        forDomain: myAccountDomain,
+                        notificationID: notificationInfo.newestNotificationID))
+            ]
+        case .moderationWarning(let accountWarning):
             headerTextComponents = [
-                .text(
-                    AttributedString(
-                        "Your account has received a moderation warning."))
-            ]  // TODO: localization
-            contentComponents = [.hyperlinkButton("Learn more", nil)]  // TODO: localization and go somewhere
+                .weightedText(
+                    (accountWarning?.action ?? .none).actionDescription,
+                    .regular)
+            ]
+
+            let learnMoreButton = NotificationViewComponent.hyperlinkButton(
+                L10n.Scene.Notification.Warning.learnMore,
+                notificationInfo.groupedNotificationType.learnMoreUrl(
+                    forDomain: myAccountDomain,
+                    notificationID: accountWarning?.id ?? notificationInfo.newestNotificationID))
+
+            if let accountWarningText = accountWarning?.text {
+                contentComponents = [
+                    .weightedText(accountWarningText, .regular),
+                    learnMoreButton,
+                ]
+            } else {
+                contentComponents = [
+                    learnMoreButton
+                ]
+            }
+
         case ._other(let text):
             headerTextComponents = [
                 ._other("UNEXPECTED NOTIFICATION TYPE: \(text)")
@@ -226,7 +224,10 @@ class NotificationRowViewModel: ObservableObject {
     ) {
         switch type {
         case .follow, .followRequest:
-            guard let accountID = sourceAccounts.firstAccountID, let accountIsLocked = sourceAccounts.primaryAuthorAccount?.locked else { return }
+            guard let accountID = sourceAccounts.firstAccountID,
+                let accountIsLocked = sourceAccounts.primaryAuthorAccount?
+                    .locked
+            else { return }
             avatarRow = .avatarRow(sourceAccounts, .fetching)
 
             Task { @MainActor in
@@ -240,9 +241,11 @@ class NotificationRowViewModel: ObservableObject {
                         case (.follow, true):
                             element = .iFollowThem(theyFollowMe: true)
                         case (.follow, false):
-                            element = .iDoNotFollowThem(theirAccountIsLocked: accountIsLocked)
+                            element = .iDoNotFollowThem(
+                                theirAccountIsLocked: accountIsLocked)
                         case (.followRequest, _):
-                            element = .theyHaveRequestedToFollowMe(iFollowThem: relationship.following)
+                            element = .theyHaveRequestedToFollowMe(
+                                iFollowThem: relationship.following)
                         default:
                             element = .noneNeeded
                         }
@@ -311,8 +314,11 @@ extension NotificationRowViewModel {
             switch avatarRow {
             case .avatarRow(let accountInfo, let relationshipElement):
                 switch relationshipElement {
-                case .iDoNotFollowThem, .iFollowThem, .iHaveRequestedToFollowThem:
-                    await doFollowAction(relationshipElement.followAction, notificationSourceAccounts: accountInfo)
+                case .iDoNotFollowThem, .iFollowThem,
+                    .iHaveRequestedToFollowThem:
+                    await doFollowAction(
+                        relationshipElement.followAction,
+                        notificationSourceAccounts: accountInfo)
                 case .theyHaveRequestedToFollowMe:
                     await doAnswerFollowRequest(accountInfo, accept: accept)
                 default:
@@ -325,8 +331,13 @@ extension NotificationRowViewModel {
     }
 
     @MainActor
-    private func doFollowAction(_ action: RelationshipElement.FollowAction, notificationSourceAccounts: NotificationSourceAccounts) async {
-        guard let accountID = notificationSourceAccounts.firstAccountID, let theirAccountIsLocked = notificationSourceAccounts.primaryAuthorAccount?.locked,
+    private func doFollowAction(
+        _ action: RelationshipElement.FollowAction,
+        notificationSourceAccounts: NotificationSourceAccounts
+    ) async {
+        guard let accountID = notificationSourceAccounts.firstAccountID,
+            let theirAccountIsLocked = notificationSourceAccounts
+                .primaryAuthorAccount?.locked,
             let authBox = AuthenticationServiceProvider.shared.currentActiveUser
                 .value
         else { return }
@@ -340,16 +351,20 @@ extension NotificationRowViewModel {
                 response = try await APIService.shared.follow(
                     accountID, authenticationBox: authBox)
             case .unfollow:
-                response = try await APIService.shared.unfollow(accountID, authenticationBox: authBox)
+                response = try await APIService.shared.unfollow(
+                    accountID, authenticationBox: authBox)
             case .noAction:
-                throw AppError.unexpected("action attempted for relationship element that has no action")
+                throw AppError.unexpected(
+                    "action attempted for relationship element that has no action"
+                )
             }
             if response.following {
                 updatedElement = .iFollowThem(theyFollowMe: response.followedBy)
             } else if response.requested {
                 updatedElement = .iHaveRequestedToFollowThem
             } else {
-                updatedElement = .iDoNotFollowThem(theirAccountIsLocked: theirAccountIsLocked)
+                updatedElement = .iDoNotFollowThem(
+                    theirAccountIsLocked: theirAccountIsLocked)
             }
             avatarRow = .avatarRow(notificationSourceAccounts, updatedElement)
         } catch {
@@ -380,7 +395,8 @@ extension NotificationRowViewModel {
                 return
             }
             self.avatarRow = .avatarRow(
-                accountInfo, .iHaveAnsweredTheirRequestToFollowMe(didAccept: accept))
+                accountInfo,
+                .iHaveAnsweredTheirRequestToFollowMe(didAccept: accept))
         } catch {
             presentError(error)
             self.avatarRow = startingAvatarRow
@@ -428,27 +444,22 @@ extension NotificationRowViewModel {
                     ?? partialAccounts?[accountID]?.avatarURL
             }
 
-            let authorName: Mastodon.Entity.NotificationType.AuthorName?
-            if primaryAccount?.id == myAccountID {
-                authorName = .me
-            } else if let name = primaryAccount?.displayNameWithFallback {
-                authorName = .other(named: name)
-            } else {
-                authorName = nil
-            }
+            let sourceAccounts = NotificationSourceAccounts(
+                myAccountID: myAccountID, primaryAuthorAccount: primaryAccount,
+                avatarUrls: avatarUrls,
+                totalActorCount: group.notificationsCount)
 
             let status = group.statusID == nil ? nil : statuses[group.statusID!]
 
+            let type = GroupedNotificationType(
+                group, sourceAccounts: sourceAccounts, status: status)
+
             let info = GroupedNotificationInfo(
                 id: group.id,
-                oldestNotificationID: group.oldestNotificationID,
-                newestNotificationID: group.newestNotificationID,
-                type: group.type,
-                authorsCount: group.authorsCount,
-                notificationsCount: group.notificationsCount,
-                primaryAuthorAccount: primaryAccount,
-                authorName: authorName,
-                authorAvatarUrls: avatarUrls,
+                oldestNotificationID: group.pageNewestID ?? "",
+                newestNotificationID: group.pageOldestID ?? "",
+                groupedNotificationType: type,
+                sourceAccounts: sourceAccounts,
                 statusViewModel: status?.viewModel(
                     myDomain: myAccountDomain,
                     navigateToStatus: {
@@ -470,12 +481,10 @@ extension NotificationRowViewModel {
                                                         false))))), .show)
                         }
                     }),
-                ruleViolationReport: group.ruleViolationReport,
-                relationshipSeveranceEvent: group.relationshipSeveranceEvent,
                 defaultNavigation: {
                     guard
                         let navigation = defaultNavigation(
-                            group.type, isGrouped: group.isGrouped,
+                            group.type, isGrouped: group.notificationsCount > 1,
                             primaryAccount: primaryAccount)
                     else { return }
                     Task {
@@ -487,7 +496,8 @@ extension NotificationRowViewModel {
             )
 
             return NotificationRowViewModel(
-                info, navigateToScene: navigateToScene,
+                info, myAccountDomain: myAccountDomain,
+                navigateToScene: navigateToScene,
                 presentError: presentError)
         }
     }
@@ -502,40 +512,42 @@ extension NotificationRowViewModel {
     ) -> [NotificationRowViewModel] {
 
         return notifications.map { notification in
+            let sourceAccounts = NotificationSourceAccounts(
+                myAccountID: myAccountID,
+                primaryAuthorAccount: notification.account,
+                avatarUrls: notification.authorAvatarUrls, totalActorCount: 1)
+            
+            let statusViewModel = notification.status?.viewModel(
+                myDomain: myAccountDomain,
+                navigateToStatus: {
+                    Task {
+                        guard
+                            let authBox =
+                                await AuthenticationServiceProvider.shared
+                                .currentActiveUser.value,
+                            let status = notification.status
+                        else { return }
+                        await navigateToScene(
+                            .thread(
+                                viewModel: ThreadViewModel(
+                                    authenticationBox: authBox,
+                                    optionalRoot: .root(
+                                        context: .init(
+                                            status: MastodonStatus(
+                                                entity: status,
+                                                showDespiteContentWarning:
+                                                    false))))), .show)
+                    }
+                })
+            
             let info = GroupedNotificationInfo(
                 id: notification.id,
                 oldestNotificationID: notification.id,
                 newestNotificationID: notification.id,
-                type: notification.type,
-                authorsCount: notification.authorsCount,
-                notificationsCount: 1,
-                primaryAuthorAccount: notification.account,
-                authorName: notification.authorName,
-                authorAvatarUrls: notification.authorAvatarUrls,
-                statusViewModel: notification.status?.viewModel(
-                    myDomain: myAccountDomain,
-                    navigateToStatus: {
-                        Task {
-                            guard
-                                let authBox =
-                                    await AuthenticationServiceProvider.shared
-                                    .currentActiveUser.value,
-                                let status = notification.status
-                            else { return }
-                            await navigateToScene(
-                                .thread(
-                                    viewModel: ThreadViewModel(
-                                        authenticationBox: authBox,
-                                        optionalRoot: .root(
-                                            context: .init(
-                                                status: MastodonStatus(
-                                                    entity: status,
-                                                    showDespiteContentWarning:
-                                                        false))))), .show)
-                        }
-                    }),
-                ruleViolationReport: notification.ruleViolationReport,
-                relationshipSeveranceEvent: notification.relationshipSeveranceEvent,
+                groupedNotificationType: GroupedNotificationType(
+                    notification, sourceAccounts: sourceAccounts),
+                sourceAccounts: sourceAccounts,
+                statusViewModel: statusViewModel,
                 defaultNavigation: {
                     guard
                         let navigation = defaultNavigation(
@@ -551,7 +563,8 @@ extension NotificationRowViewModel {
             )
 
             return NotificationRowViewModel(
-                info, navigateToScene: navigateToScene,
+                info, myAccountDomain: myAccountDomain,
+                navigateToScene: navigateToScene,
                 presentError: presentError)
         }
     }
@@ -613,5 +626,146 @@ extension NotificationRowViewModel {
             break
         }
         return nil
+    }
+}
+
+extension GroupedNotificationType {
+    init(
+        _ notification: Mastodon.Entity.Notification,
+        sourceAccounts: NotificationSourceAccounts
+    ) {
+        switch notification.typeFromServer {
+        case .follow:
+            self = .follow(from: sourceAccounts)
+        case .followRequest:
+            if let account = sourceAccounts.primaryAuthorAccount {
+                self = .followRequest(from: account)
+            } else {
+                self = ._other("Follow request from unknown account")
+            }
+        case .mention:
+            self = .mention(notification.status)
+        case .reblog:
+            self = .mention(notification.status)
+        case .favourite:
+            self = .favourite(notification.status)
+        case .poll:
+            self = .poll(notification.status)
+        case .status:
+            self = .status(notification.status)
+        case .update:
+            self = .update(notification.status)
+        case .adminSignUp:
+            self = .adminSignUp
+        case .adminReport:
+            self = .adminReport(notification.ruleViolationReport)
+        case .severedRelationships:
+            self = .severedRelationships(
+                notification.relationshipSeveranceEvent)
+        case .moderationWarning:
+            self = .moderationWarning(notification.accountWarning)
+        case ._other(let string):
+            self = ._other(string)
+        }
+    }
+
+    init(
+        _ notificationGroup: Mastodon.Entity.NotificationGroup,
+        sourceAccounts: NotificationSourceAccounts,
+        status: Mastodon.Entity.Status?
+    ) {
+        switch notificationGroup.type {
+        case .follow:
+            self = .follow(from: sourceAccounts)
+        case .followRequest:
+            if let account = sourceAccounts.primaryAuthorAccount {
+                self = .followRequest(from: account)
+            } else {
+                self = ._other("Follow request from unknown account")
+            }
+        case .mention:
+            self = .mention(status)
+        case .reblog:
+            self = .mention(status)
+        case .favourite:
+            self = .favourite(status)
+        case .poll:
+            self = .poll(status)
+        case .status:
+            self = .status(status)
+        case .update:
+            self = .update(status)
+        case .adminSignUp:
+            self = .adminSignUp
+        case .adminReport:
+            self = .adminReport(notificationGroup.ruleViolationReport)
+        case .severedRelationships:
+            self = .severedRelationships(
+                notificationGroup.relationshipSeveranceEvent)
+        case .moderationWarning:
+            self = .moderationWarning(notificationGroup.accountWarning)
+        case ._other(let string):
+            self = ._other(string)
+        }
+    }
+}
+
+extension NotificationSourceAccounts {
+    var authorsDescription: String? {
+        switch authorName {
+        case .me, .none:
+            return nil
+        case .other(let name):
+            if totalActorCount > 1 {
+                return "\(name) and \(totalActorCount - 1) others"
+            } else {
+                return name
+            }
+        }
+    }
+}
+
+extension GroupedNotificationType {
+    func learnMoreUrl(forDomain domain: String, notificationID: String) -> URL?
+    {
+        let trailingPathComponents: [String]
+        switch self {
+        case .severedRelationships:
+            trailingPathComponents = ["severed_relationships"]
+        case .moderationWarning:
+            trailingPathComponents = [
+                "disputes",
+                "strikes",
+                notificationID,
+            ]
+        default:
+            return nil
+        }
+        var url = URL(string: "https://" + domain)
+        for component in trailingPathComponents {
+            url?.append(component: component)
+        }
+        return url
+    }
+}
+
+extension Mastodon.Entity.AccountWarning.Action {
+    var actionDescription: String {
+        switch self {
+        case .none:
+            return L10n.Scene.Notification.Warning.none
+        case .disable:
+            return L10n.Scene.Notification.Warning.disable
+        case .markStatusesAsSensitive:
+            return L10n.Scene.Notification.Warning.markStatusesAsSensitive
+        case .deleteStatuses:
+            return L10n.Scene.Notification.Warning.deleteStatuses
+        case .sensitive:
+            return L10n.Scene.Notification.Warning.sensitive
+        case .silence:
+            return L10n.Scene.Notification.Warning.silence
+        case .suspend:
+            return L10n.Scene.Notification.Warning.suspend
+        }
     }
 }

@@ -78,19 +78,6 @@ extension Mastodon.Entity.NotificationType {
         }
     }
 
-    enum AuthorName {
-        case me
-        case other(named: String)
-
-        var string: String {
-            switch self {
-            case .me:
-                return "You"
-            case .other(let name):
-                return name
-            }
-        }
-    }
     func actionSummaryLabel(firstAuthor: AuthorName, totalAuthorCount: Int)
         -> AttributedString
     {
@@ -99,6 +86,167 @@ extension Mastodon.Entity.NotificationType {
         case .me:
             assert(totalAuthorCount == 1)
             assert(self == .poll)
+            return "Your poll has ended"
+        case .other(let firstAuthorName):
+            let nameComponent = boldedNameStringComponent(firstAuthorName)
+            var composedString: AttributedString
+            if totalAuthorCount == 1 {
+                switch self {
+                case .favourite:
+                    composedString =
+                        nameComponent + AttributedString(" favorited:")
+                case .follow:
+                    composedString =
+                        nameComponent + AttributedString(" followed you")
+                case .followRequest:
+                    composedString =
+                        nameComponent
+                        + AttributedString(" requested to follow you")
+                case .reblog:
+                    composedString =
+                        nameComponent + AttributedString(" boosted:")
+                case .mention:
+                    composedString =
+                        nameComponent + AttributedString(" mentioned you:")
+                case .poll:
+                    composedString =
+                        nameComponent
+                        + AttributedString(" ran a poll that you voted in")  // TODO: add count of how many others voted
+                case .status:
+                    composedString =
+                        nameComponent + AttributedString(" posted:")
+                case .adminSignUp:
+                    composedString =
+                        nameComponent + AttributedString(" signed up")
+                default:
+                    composedString =
+                        nameComponent + AttributedString("did something?")
+                }
+            } else {
+                switch self {
+                case .favourite:
+                    composedString =
+                        nameComponent
+                        + AttributedString(
+                            " and \(totalAuthorCount - 1) others favorited:")
+                case .follow:
+                    composedString =
+                        nameComponent
+                        + AttributedString(
+                            " and \(totalAuthorCount - 1) others followed you")
+                case .reblog:
+                    composedString =
+                        nameComponent
+                        + AttributedString(
+                            " and \(totalAuthorCount - 1) others boosted:")
+                default:
+                    composedString =
+                        nameComponent
+                        + AttributedString(
+                            " and \(totalAuthorCount - 1) others did something")
+                }
+            }
+            let nameStyling = AttributeContainer.font(
+                .system(.body, weight: .bold))
+            let nameContainer = AttributeContainer.personNameComponent(
+                .givenName)
+            composedString.replaceAttributes(nameContainer, with: nameStyling)
+            return composedString
+        }
+    }
+}
+
+enum AuthorName {
+    case me
+    case other(named: String)
+
+    var string: String {
+        switch self {
+        case .me:
+            return "You"
+        case .other(let name):
+            return name
+        }
+    }
+}
+
+extension GroupedNotificationType {
+    func shouldShowIcon(
+        grouped: Bool, visibility: Mastodon.Entity.Status.Visibility?
+    ) -> Bool {
+        return iconSystemName(grouped: grouped, visibility: visibility) != nil
+    }
+
+    func iconSystemName(
+        grouped: Bool = false, visibility: Mastodon.Entity.Status.Visibility?
+    ) -> String? {
+        switch self {
+        case .favourite:
+            return "star.fill"
+        case .reblog:
+            return "arrow.2.squarepath"
+        case .follow:
+            if grouped {
+                return "person.2.badge.plus.fill"
+            } else {
+                return "person.fill.badge.plus"
+            }
+        case .poll:
+            return "chart.bar.yaxis"
+        case .adminReport:
+            return "info.circle"
+        case .severedRelationships:
+            return "person.badge.minus"
+        case .moderationWarning:
+            return "exclamationmark.shield.fill"
+        case ._other:
+            return "questionmark.square.dashed"
+        case .mention:
+            // TODO: make this nil when full status view is available
+            switch visibility {
+            case .direct:
+                return "at.circle.fill"
+            default:
+                return "at"
+            }
+        case .status:
+            // TODO: make this nil when full status view is available
+            return "bell.fill"
+        case .followRequest:
+            return "person.fill.badge.plus"
+        case .update:
+            return "pencil"
+        case .adminSignUp:
+            return nil
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .favourite:
+            return .orange
+        case .reblog:
+            return .green
+        case .follow, .followRequest, .status, .mention, .update:
+            return Color(asset: Asset.Colors.accent)
+        case .poll, .severedRelationships, .moderationWarning, .adminReport,
+            .adminSignUp:
+            return .secondary
+        case ._other:
+            return .gray
+        }
+    }
+
+    func actionSummaryLabel(_ sourceAccounts: NotificationSourceAccounts)
+        -> AttributedString?
+    {
+        guard let authorName = sourceAccounts.authorName else { return nil }
+        let totalAuthorCount = sourceAccounts.totalActorCount
+        // TODO: L10n strings
+        switch authorName {
+        case .me:
+            assert(totalAuthorCount == 1)
+            //assert(self == .poll)
             return "Your poll has ended"
         case .other(let firstAuthorName):
             let nameComponent = boldedNameStringComponent(firstAuthorName)
@@ -199,16 +347,16 @@ extension Mastodon.Entity.Report {
 var listFormatter = ListFormatter()
 
 extension Mastodon.Entity.RelationshipSeveranceEvent {
-    // TODO: details and localization
-    // Ideal example: "An admin from a.b has blocked c.d, including x of your followers and y accounts you follow."
-    // For now: "An admin action has blocked x of your followers and y accounts that you follow"
-    var summary: AttributedString? {
-        let baseString = "Your admins have blocked "
+    // "An admin from <your.domain> has blocked <some other domain>, including x of your followers and y accounts you follow."
+
+    func summary(myDomain: String) -> AttributedString? {
         let lostFollowersString =
-            followersCount > 0 ? "\(followersCount) of your followers" : nil
+            followersCount > 0
+            ? L10n.Plural.Count.ofYourFollowers(followersCount) : nil
         let lostFollowingString =
             followingCount > 0
-            ? "\(followingCount) accounts that you follow" : nil
+            ? L10n.Plural.Count.accountsThatYouFollow(followingCount) : nil
+
         guard
             let followersAndFollowingString = listFormatter.string(
                 from: [lostFollowersString, lostFollowingString].compactMap {
@@ -217,7 +365,14 @@ extension Mastodon.Entity.RelationshipSeveranceEvent {
         else {
             return nil
         }
-        return AttributedString(baseString + followersAndFollowingString + ".")
+
+        let string = L10n.Scene.Notification.NotificationDescription
+            .relationshipSeveranceEvent(
+                myDomain, targetName, followersAndFollowingString)
+
+        var attributed = AttributedString(string)
+        attributed.bold([myDomain, targetName])
+        return attributed
     }
 }
 
@@ -251,7 +406,7 @@ func NotificationIconView(systemName: String) -> some View {
 
 enum RelationshipElement: Equatable {
     case noneNeeded
-    case unfetched(Mastodon.Entity.NotificationType, accountID: String)
+    case unfetched(GroupedNotificationType)
     case fetching
     case error(Error?)
     case iDoNotFollowThem(theirAccountIsLocked: Bool)
@@ -259,7 +414,7 @@ enum RelationshipElement: Equatable {
     case iHaveRequestedToFollowThem
     case theyHaveRequestedToFollowMe(iFollowThem: Bool)
     case iHaveAnsweredTheirRequestToFollowMe(didAccept: Bool)
-    
+
     enum FollowAction {
         case follow
         case unfollow
@@ -309,7 +464,7 @@ enum RelationshipElement: Equatable {
     {
         return lhs.description == rhs.description
     }
-    
+
     var followAction: FollowAction {
         switch self {
         case .iDoNotFollowThem:
@@ -369,13 +524,14 @@ extension Mastodon.Entity.Relationship {
 }
 
 struct NotificationIconInfo {
-    let notificationType: Mastodon.Entity.NotificationType
+    let notificationType: GroupedNotificationType
     let isGrouped: Bool
     let visibility: Mastodon.Entity.Status.Visibility?
 }
 
 struct NotificationSourceAccounts {
     let primaryAuthorAccount: Mastodon.Entity.Account?
+    let authorName: AuthorName?
     var firstAccountID: String? {
         return primaryAuthorAccount?.id
     }
@@ -383,13 +539,24 @@ struct NotificationSourceAccounts {
     let totalActorCount: Int
 
     init(
+        myAccountID: String,
         primaryAuthorAccount: Mastodon.Entity.Account?, avatarUrls: [URL],
         totalActorCount: Int
     ) {
         self.primaryAuthorAccount = primaryAuthorAccount
         self.avatarUrls = avatarUrls.removingDuplicates()
         self.totalActorCount = totalActorCount
+        let authorName: AuthorName?
+        if primaryAuthorAccount?.id == myAccountID {
+            authorName = .me
+        } else if let name = primaryAuthorAccount?.displayNameWithFallback {
+            authorName = .other(named: name)
+        } else {
+            authorName = nil
+        }
+        self.authorName = authorName
     }
+
 }
 
 struct FilteredNotificationsRowView: View {
@@ -533,7 +700,9 @@ struct NotificationRowView: View {
                 }
         case .hyperlinkButton(let label, let url):
             Button(label) {
-                // TODO: open url
+                if let url {
+                    UIApplication.shared.open(url)
+                }
             }
             .bold()
             .tint(Color(asset: Asset.Colors.accent))
@@ -601,7 +770,8 @@ struct NotificationRowView: View {
         switch (elementType, grouped) {
         case (.fetching, false):
             ProgressView().progressViewStyle(.circular)
-        case (.iDoNotFollowThem, false), (.iFollowThem, false), (.iHaveRequestedToFollowThem, false):
+        case (.iDoNotFollowThem, false), (.iFollowThem, false),
+            (.iHaveRequestedToFollowThem, false):
             if let buttonText = elementType.buttonText {
                 Button(buttonText) {
                     viewModel.doAvatarRowButtonAction()
@@ -612,11 +782,12 @@ struct NotificationRowView: View {
             HStack {
 
                 if iFollowThem {
-                    Button(L10n.Common.Controls.Friendship.following)
-                    {
+                    Button(L10n.Common.Controls.Friendship.following) {
                         // TODO: allow unfollow here?
                     }
-                    .buttonStyle(FollowButton(.iFollowThem(theyFollowMe: false)))
+                    .buttonStyle(
+                        FollowButton(.iFollowThem(theyFollowMe: false))
+                    )
                     .fixedSize()
                 }
 
@@ -625,14 +796,19 @@ struct NotificationRowView: View {
                 }) {
                     lightwieghtImageView("xmark.circle", size: smallAvatarSize)
                 }
-                .buttonStyle(ImageButton(foregroundColor: .secondary, backgroundColor: .clear))
+                .buttonStyle(
+                    ImageButton(
+                        foregroundColor: .secondary, backgroundColor: .clear))
 
                 Button(action: {
                     viewModel.doAvatarRowButtonAction(true)
                 }) {
-                    lightwieghtImageView("checkmark.circle", size: smallAvatarSize)
+                    lightwieghtImageView(
+                        "checkmark.circle", size: smallAvatarSize)
                 }
-                .buttonStyle(ImageButton(foregroundColor: .secondary, backgroundColor: .clear))
+                .buttonStyle(
+                    ImageButton(
+                        foregroundColor: .secondary, backgroundColor: .clear))
             }
         case (.iHaveAnsweredTheirRequestToFollowMe(let didAccept), false):
             if didAccept {
@@ -641,7 +817,8 @@ struct NotificationRowView: View {
                 lightwieghtImageView("xmark", size: smallAvatarSize)
             }
         case (.error(_), _):
-            lightwieghtImageView("exclamationmark.triangle", size: smallAvatarSize)
+            lightwieghtImageView(
+                "exclamationmark.triangle", size: smallAvatarSize)
         default:
             Spacer().frame(width: 0)
         }
@@ -890,11 +1067,11 @@ extension Mastodon.Entity.Status {
 
 struct FollowButton: ButtonStyle {
     private let followAction: RelationshipElement.FollowAction
-    
+
     init(_ relationshipElement: RelationshipElement) {
         followAction = relationshipElement.followAction
     }
-    
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding([.horizontal], 12)
@@ -905,7 +1082,7 @@ struct FollowButton: ButtonStyle {
             .fontWeight(fontWeight)
             .clipShape(Capsule())
     }
-    
+
     private var backgroundColor: Color {
         switch followAction {
         case .follow:
@@ -917,7 +1094,7 @@ struct FollowButton: ButtonStyle {
             return .clear
         }
     }
-    
+
     private var textColor: Color {
         switch followAction {
         case .follow:
@@ -929,7 +1106,7 @@ struct FollowButton: ButtonStyle {
             return .clear
         }
     }
-    
+
     private var fontWeight: SwiftUICore.Font.Weight {
         switch followAction {
         case .follow:
@@ -944,10 +1121,10 @@ struct FollowButton: ButtonStyle {
 }
 
 struct ImageButton: ButtonStyle {
-    
+
     let foregroundColor: Color
     let backgroundColor: Color
-    
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(foregroundColor)
@@ -956,10 +1133,23 @@ struct ImageButton: ButtonStyle {
     }
 }
 
-@ViewBuilder func lightwieghtImageView(_ systemName: String, size: CGFloat) -> some View {
+@ViewBuilder func lightwieghtImageView(_ systemName: String, size: CGFloat)
+    -> some View
+{
     Image(systemName: systemName)
         .resizable()
         .aspectRatio(contentMode: .fit)
         .fontWeight(.light)
         .frame(width: size, height: size)
+}
+
+extension AttributedString {
+    mutating func bold(_ substrings: [String]) {
+        let boldedRanges = substrings.map {
+            self.range(of: $0)
+        }.compactMap { $0 }
+        for range in boldedRanges {
+            self[range].font = .system(.body).bold()
+        }
+    }
 }

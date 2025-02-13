@@ -8,12 +8,11 @@ protocol NotificationInfo {
     var id: String { get }
     var newestNotificationID: String { get }
     var oldestNotificationID: String { get }
-    var type: Mastodon.Entity.NotificationType { get }
+    var typeFromServer: Mastodon.Entity.NotificationType { get }
     var isGrouped: Bool { get }
     var notificationsCount: Int { get }
     var authorsCount: Int { get }
     var primaryAuthorAccount: Mastodon.Entity.Account? { get }
-    var authorName: Mastodon.Entity.NotificationType.AuthorName? { get }
     var authorAvatarUrls: [URL] { get }
     func availableRelationshipElement() async -> RelationshipElement?
     func fetchRelationshipElement() async -> RelationshipElement
@@ -21,28 +20,26 @@ protocol NotificationInfo {
     var relationshipSeveranceEvent: Mastodon.Entity.RelationshipSeveranceEvent?
     { get }
 }
-extension NotificationInfo {
-    var authorsDescription: String? {
-        switch authorName {
-        case .me, .none:
-            return nil
-        case .other(let name):
-            if authorsCount > 1 {
-                return "\(name) and \(authorsCount - 1) others"
-            } else {
-                return name
-            }
-        }
-    }
-    var avatarCount: Int {
-        min(authorsCount, 8)
-    }
-    var isGrouped: Bool {
-        return authorsCount > 1
-    }
+
+enum GroupedNotificationType {
+    // TODO: update to use StatusViewModel rather than Status
+    case follow(from: NotificationSourceAccounts)  // Someone followed you
+    case followRequest(from: Mastodon.Entity.Account)  // Someone requested to follow you
+    case mention(Mastodon.Entity.Status?)  // Someone mentioned you in their status
+    case reblog(Mastodon.Entity.Status?)  // Someone boosted one of your statuses
+    case favourite(Mastodon.Entity.Status?)  // Someone favourited one of your statuses
+    case poll(Mastodon.Entity.Status?)  // A poll you have voted in or created has ended
+    case status(Mastodon.Entity.Status?)  // Someone you enabled notifications for has posted a status
+    case update(Mastodon.Entity.Status?)  // A status you interacted with has been edited
+    case adminSignUp  // Someone signed up (optionally sent to admins)
+    case adminReport(Mastodon.Entity.Report?)  // A new report has been filed
+    case severedRelationships(Mastodon.Entity.RelationshipSeveranceEvent?)  // Some of your follow relationships have been severed as a result of a moderation or block event
+    case moderationWarning(Mastodon.Entity.AccountWarning?)  //  A moderator has taken action against your account or has sent you a warning
+
+    case _other(String)
 }
 
-struct GroupedNotificationInfo: NotificationInfo {
+struct GroupedNotificationInfo {
     func availableRelationshipElement() async -> RelationshipElement? {
         return relationshipElement
     }
@@ -55,23 +52,21 @@ struct GroupedNotificationInfo: NotificationInfo {
     let oldestNotificationID: String
     let newestNotificationID: String
 
-    let type: MastodonSDK.Mastodon.Entity.NotificationType
+    let groupedNotificationType: GroupedNotificationType
 
-    let authorsCount: Int
-
-    let notificationsCount: Int
-
-    let primaryAuthorAccount: MastodonSDK.Mastodon.Entity.Account?
-
-    let authorName: Mastodon.Entity.NotificationType.AuthorName?
-
-    let authorAvatarUrls: [URL]
+    let sourceAccounts: NotificationSourceAccounts
 
     var relationshipElement: RelationshipElement {
-        switch type {
-        case .follow, .followRequest:
-            if let primaryAuthorAccount {
-                return .unfetched(type, accountID: primaryAuthorAccount.id)
+        switch groupedNotificationType {
+        case .follow(let accountsInfo):
+            if let primaryAuthorAccount = accountsInfo.primaryAuthorAccount {
+                return .unfetched(groupedNotificationType)
+            } else {
+                return .error(nil)
+            }
+        case .followRequest(let account):
+            if sourceAccounts.totalActorCount == 1 {
+                return .unfetched(groupedNotificationType)
             } else {
                 return .error(nil)
             }
@@ -81,13 +76,14 @@ struct GroupedNotificationInfo: NotificationInfo {
     }
 
     let statusViewModel: Mastodon.Entity.Status.ViewModel?
-    let ruleViolationReport: Mastodon.Entity.Report?
-    let relationshipSeveranceEvent: Mastodon.Entity.RelationshipSeveranceEvent?
 
     let defaultNavigation: (() -> Void)?
 }
 
 extension Mastodon.Entity.Notification: NotificationInfo {
+    var isGrouped: Bool {
+        return false
+    }
 
     var oldestNotificationID: String {
         return id
@@ -96,12 +92,14 @@ extension Mastodon.Entity.Notification: NotificationInfo {
         return id
     }
 
+    var typeFromServer: Mastodon.Entity.NotificationType {
+        return type
+    }
+
     var authorsCount: Int { 1 }
     var notificationsCount: Int { 1 }
     var primaryAuthorAccount: Mastodon.Entity.Account? { account }
-    var authorName: Mastodon.Entity.NotificationType.AuthorName? {
-        .other(named: account.displayNameWithFallback)
-    }
+
     var authorAvatarUrls: [URL] {
         if let domain = account.domain {
             return [account.avatarImageURLWithFallback(domain: domain)]
@@ -146,101 +144,3 @@ extension Mastodon.Entity.Notification: NotificationInfo {
     }
 }
 
-extension Mastodon.Entity.NotificationGroup: NotificationInfo {
-
-    var newestNotificationID: String {
-        return pageNewestID ?? "\(mostRecentNotificationID)"
-    }
-    var oldestNotificationID: String {
-        return pageOldestID ?? "\(mostRecentNotificationID)"
-    }
-
-    @MainActor
-    var primaryAuthorAccount: Mastodon.Entity.Account? {
-        guard let firstAccountID = sampleAccountIDs.first else { return nil }
-        return MastodonFeedItemCacheManager.shared.fullAccount(firstAccountID)
-    }
-
-    var authorsCount: Int { notificationsCount }
-
-    @MainActor
-    var authorName: Mastodon.Entity.NotificationType.AuthorName? {
-        guard let firstAccountID = sampleAccountIDs.first,
-            let firstAccount = MastodonFeedItemCacheManager.shared.fullAccount(
-                firstAccountID)
-        else { return .none }
-        return .other(named: firstAccount.displayNameWithFallback)
-    }
-
-    @MainActor
-    var authorAvatarUrls: [URL] {
-        return
-            sampleAccountIDs
-            .prefix(avatarCount)
-            .compactMap { accountID in
-                let account: NotificationAuthor? =
-                    MastodonFeedItemCacheManager.shared.fullAccount(accountID)
-                    ?? MastodonFeedItemCacheManager.shared.partialAccount(
-                        accountID)
-                return account?.avatarURL
-            }
-    }
-
-    @MainActor
-    var firstAccount: NotificationAuthor? {
-        guard let firstAccountID = sampleAccountIDs.first else { return nil }
-        let firstAccount: NotificationAuthor? =
-            MastodonFeedItemCacheManager.shared.fullAccount(firstAccountID)
-            ?? MastodonFeedItemCacheManager.shared.partialAccount(
-                firstAccountID)
-        return firstAccount
-    }
-
-    @MainActor
-    func availableRelationshipElement() -> RelationshipElement? {
-        guard authorsCount == 1 && type == .follow else { return .noneNeeded }
-        guard let firstAccountID = sampleAccountIDs.first else {
-            return .noneNeeded
-        }
-        if let relationship = MastodonFeedItemCacheManager.shared
-            .currentRelationship(toAccount: firstAccountID)
-        {
-            return relationship.relationshipElement
-        }
-        return nil
-    }
-
-    @MainActor
-    func fetchRelationshipElement() async -> RelationshipElement {
-        do {
-            try await fetchRelationship()
-            if let available = availableRelationshipElement() {
-                return available
-            } else {
-                return .noneNeeded
-            }
-        } catch {
-            return .error(error)
-        }
-    }
-
-    func fetchRelationship() async throws {
-        assert(
-            notificationsCount == 1,
-            "one relationship cannot be assumed representative of \(notificationsCount) notifications"
-        )
-        guard let firstAccountId = sampleAccountIDs.first,
-            let authBox = await AuthenticationServiceProvider.shared
-                .currentActiveUser.value
-        else { return }
-        if let relationship = try await APIService.shared.relationship(
-            forAccountIds: [firstAccountId], authenticationBox: authBox
-        ).value.first {
-            await MastodonFeedItemCacheManager.shared.addToCache(relationship)
-        }
-    }
-
-    var statusViewModel: MastodonSDK.Mastodon.Entity.Status.ViewModel? {
-        return nil
-    }
-}

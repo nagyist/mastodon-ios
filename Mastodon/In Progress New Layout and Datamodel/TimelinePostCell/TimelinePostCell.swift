@@ -24,8 +24,8 @@ class TimelinePostViewModel {
     init(feedItemIdentifier: MastodonFeedItemIdentifier, includePadding: Bool) {
         self.includePadding = includePadding
         self.feedItemIdentifier = feedItemIdentifier
-        if let notification = MastodonFeedItemCacheManager.shared.cachedItem(feedItemIdentifier) as? NotificationInfo {
-            boostingAccountName = notification.type == .reblog ? notification.authorName?.string : nil
+        if let notification = MastodonFeedItemCacheManager.shared.cachedItem(feedItemIdentifier) as? Mastodon.Entity.Notification {
+            boostingAccountName = notification.type == .reblog ? notification.primaryAuthorAccount?.displayNameWithFallback : nil
         } else {
             boostingAccountName = nil
         }
