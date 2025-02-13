@@ -485,13 +485,13 @@ struct NotificationRowView: View {
             }
 
             // VSTACK OF HEADER AND CONTENT COMPONENT VIEWS
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 ForEach(viewModel.headerComponents) {
                     componentView($0)
                 }
 
                 if !viewModel.contentComponents.isEmpty {
-                    Spacer().frame(height: 4)
+                    Spacer().frame(height: 2)
                 }
 
                 ForEach(viewModel.contentComponents) {
