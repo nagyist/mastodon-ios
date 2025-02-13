@@ -226,7 +226,7 @@ class NotificationRowViewModel: ObservableObject {
     ) {
         switch type {
         case .follow, .followRequest:
-            guard let accountID = sourceAccounts.firstAccountID else { return }
+            guard let accountID = sourceAccounts.firstAccountID, let accountIsLocked = sourceAccounts.primaryAuthorAccount?.locked else { return }
             avatarRow = .avatarRow(sourceAccounts, .fetching)
 
             Task { @MainActor in
@@ -238,12 +238,11 @@ class NotificationRowViewModel: ObservableObject {
 
                         switch (type, relationship.following) {
                         case (.follow, true):
-                            element = .mutualButton
+                            element = .iFollowThem(theyFollowMe: true)
                         case (.follow, false):
-                            element = .followButton
+                            element = .iDoNotFollowThem(theirAccountIsLocked: accountIsLocked)
                         case (.followRequest, _):
-                            element = .acceptRejectButtons(
-                                isFollowing: relationship.following)
+                            element = .theyHaveRequestedToFollowMe(iFollowThem: relationship.following)
                         default:
                             element = .noneNeeded
                         }
@@ -312,10 +311,10 @@ extension NotificationRowViewModel {
             switch avatarRow {
             case .avatarRow(let accountInfo, let relationshipElement):
                 switch relationshipElement {
-                case .followButton, .requestButton, .mutualButton, .followingButton, .pendingRequestButton:
+                case .iDoNotFollowThem, .iFollowThem, .iHaveRequestedToFollowThem:
                     await doFollowAction(relationshipElement.followAction, notificationSourceAccounts: accountInfo)
-                case .acceptRejectButtons:
-                    await doAcceptFollowRequest(accountInfo, accept: accept)
+                case .theyHaveRequestedToFollowMe:
+                    await doAnswerFollowRequest(accountInfo, accept: accept)
                 default:
                     return
                 }
@@ -327,7 +326,7 @@ extension NotificationRowViewModel {
 
     @MainActor
     private func doFollowAction(_ action: RelationshipElement.FollowAction, notificationSourceAccounts: NotificationSourceAccounts) async {
-        guard let accountID = notificationSourceAccounts.firstAccountID,
+        guard let accountID = notificationSourceAccounts.firstAccountID, let theirAccountIsLocked = notificationSourceAccounts.primaryAuthorAccount?.locked,
             let authBox = AuthenticationServiceProvider.shared.currentActiveUser
                 .value
         else { return }
@@ -346,11 +345,11 @@ extension NotificationRowViewModel {
                 throw AppError.unexpected("action attempted for relationship element that has no action")
             }
             if response.following {
-                updatedElement = .followingButton
+                updatedElement = .iFollowThem(theyFollowMe: response.followedBy)
             } else if response.requested {
-                updatedElement = .pendingRequestButton
+                updatedElement = .iHaveRequestedToFollowThem
             } else {
-                updatedElement = .followButton
+                updatedElement = .iDoNotFollowThem(theirAccountIsLocked: theirAccountIsLocked)
             }
             avatarRow = .avatarRow(notificationSourceAccounts, updatedElement)
         } catch {
@@ -360,7 +359,7 @@ extension NotificationRowViewModel {
     }
 
     @MainActor
-    private func doAcceptFollowRequest(
+    private func doAnswerFollowRequest(
         _ accountInfo: NotificationSourceAccounts, accept: Bool
     ) async {
         guard let accountID = accountInfo.firstAccountID,
@@ -381,7 +380,7 @@ extension NotificationRowViewModel {
                 return
             }
             self.avatarRow = .avatarRow(
-                accountInfo, accept ? .acceptedLabel : .rejectedLabel)
+                accountInfo, .iHaveAnsweredTheirRequestToFollowMe(didAccept: accept))
         } catch {
             presentError(error)
             self.avatarRow = startingAvatarRow
