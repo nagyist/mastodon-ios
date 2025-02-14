@@ -129,7 +129,12 @@ extension MastodonStatus: Hashable {
         lhs.reblog?.poll == rhs.reblog?.poll &&
         lhs.reblog?.entity.poll == rhs.reblog?.entity.poll &&
         lhs.showDespiteContentWarning == rhs.showDespiteContentWarning &&
-        lhs.reblog?.showDespiteContentWarning == rhs.reblog?.showDespiteContentWarning
+        lhs.reblog?.showDespiteContentWarning == rhs.reblog?.showDespiteContentWarning &&
+        lhs.entity.reblogged == rhs.entity.reblogged &&
+        lhs.entity.repliesCount == rhs.entity.repliesCount &&
+        lhs.entity.favourited == rhs.entity.favourited &&
+        lhs.entity.reblogsCount == rhs.entity.reblogsCount &&
+        lhs.entity.favouritesCount == rhs.entity.favouritesCount
     }
     
     public func hash(into hasher: inout Hasher) {
