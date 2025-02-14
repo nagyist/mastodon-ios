@@ -1061,7 +1061,7 @@ struct FollowButton: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding([.horizontal], 12)
-            .padding([.vertical], 8)
+            .padding([.vertical], 4)
             .background(backgroundColor)
             .foregroundStyle(textColor)
             .controlSize(.small)
@@ -1096,7 +1096,7 @@ struct FollowButton: ButtonStyle {
     private var fontWeight: SwiftUICore.Font.Weight {
         switch followAction {
         case .follow:
-            return .bold
+            return .regular
         case .unfollow:
             return .light
         case .noAction:
