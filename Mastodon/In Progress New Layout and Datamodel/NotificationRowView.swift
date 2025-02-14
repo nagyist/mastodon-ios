@@ -505,7 +505,7 @@ extension Mastodon.Entity.Relationship {
         case (true, _):
             return .iFollowThem(theyFollowMe: followedBy)
         case (false, true):
-            if let account: NotificationAuthor = MastodonFeedItemCacheManager
+            if let account: AccountInfo = MastodonFeedItemCacheManager
                 .shared.fullAccount(id)
                 ?? MastodonFeedItemCacheManager.shared.partialAccount(id),
                 account.locked
@@ -530,33 +530,29 @@ struct NotificationIconInfo {
 }
 
 struct NotificationSourceAccounts {
-    let primaryAuthorAccount: Mastodon.Entity.Account?
+    let accounts: [AccountInfo]
+    let totalActorCount: Int
     let authorName: AuthorName?
+    
+    var primaryAuthorAccount: Mastodon.Entity.Account? {
+        return accounts.first?.fullAccount
+    }
     var firstAccountID: String? {
         return primaryAuthorAccount?.id
     }
-    let avatarUrls: [URL]
-    let totalActorCount: Int
+    var avatarUrls: [URL] {
+        return accounts.compactMap({ $0.avatarURL }).removingDuplicates()
+    }
 
     init(
         myAccountID: String,
-        primaryAuthorAccount: Mastodon.Entity.Account?, avatarUrls: [URL],
+        accounts: [AccountInfo],
         totalActorCount: Int
     ) {
-        self.primaryAuthorAccount = primaryAuthorAccount
-        self.avatarUrls = avatarUrls.removingDuplicates()
+        self.accounts = accounts
         self.totalActorCount = totalActorCount
-        let authorName: AuthorName?
-        if primaryAuthorAccount?.id == myAccountID {
-            authorName = .me
-        } else if let name = primaryAuthorAccount?.displayNameWithFallback {
-            authorName = .other(named: name)
-        } else {
-            authorName = nil
-        }
-        self.authorName = authorName
+        self.authorName = accounts.first?.displayName(whenViewedBy: myAccountID)
     }
-
 }
 
 struct FilteredNotificationsRowView: View {

@@ -177,7 +177,7 @@ extension NotificationView {
     }
     
     private func configureAuthors(notificationGroup: Mastodon.Entity.NotificationGroup) {
-        let sampleAuthors: [NotificationAuthor] = notificationGroup.sampleAccountIDs.compactMap { MastodonFeedItemCacheManager.shared.fullAccount($0) ?? MastodonFeedItemCacheManager.shared.partialAccount($0) }
+        let sampleAuthors: [AccountInfo] = notificationGroup.sampleAccountIDs.compactMap { MastodonFeedItemCacheManager.shared.fullAccount($0) ?? MastodonFeedItemCacheManager.shared.partialAccount($0) }
         configureAuthors(sampleAuthors, notificationID: notificationGroup.id, notificationType: notificationGroup.type, notificationDate: notificationGroup.latestPageNotificationAt)
     }
     
@@ -186,7 +186,7 @@ extension NotificationView {
         configureAuthors([author], notificationID: notification.id, notificationType: notification.type, notificationDate: notification.createdAt)
     }
 
-    private func configureAuthors(_ authors: [NotificationAuthor], notificationID: String, notificationType: Mastodon.Entity.NotificationType, notificationDate: Date?) {
+    private func configureAuthors(_ authors: [AccountInfo], notificationID: String, notificationType: Mastodon.Entity.NotificationType, notificationDate: Date?) {
         guard let author = authors.first as? Mastodon.Entity.Account else { return }
         let authorsCount = authors.count
         
@@ -628,15 +628,30 @@ extension MastodonFollowRequestState.State {
     }
 }
 
-protocol NotificationAuthor {
+protocol AccountInfo {
     var avatarURL: URL? { get }
     var locked: Bool { get }
+    var id: String { get }
+    var fullAccount: Mastodon.Entity.Account? { get }
 }
 
-extension Mastodon.Entity.Account: NotificationAuthor {
+extension AccountInfo {
+    func displayName(whenViewedBy myAccountID: String) -> AuthorName? {
+        if myAccountID == id {
+            return .me
+        } else {
+            guard let fullAccount else { return nil }
+            return .other(named: fullAccount.displayNameWithFallback)
+        }
+    }
+}
+
+extension Mastodon.Entity.Account: AccountInfo {
     var avatarURL: URL? { avatarImageURL() }
+    var fullAccount: Mastodon.Entity.Account? { return self }
 }
 
-extension Mastodon.Entity.PartialAccountWithAvatar: NotificationAuthor {
+extension Mastodon.Entity.PartialAccountWithAvatar: AccountInfo {
     var avatarURL: URL? { URL(string: avatar) }
+    var fullAccount: Mastodon.Entity.Account? { return nil }
 }

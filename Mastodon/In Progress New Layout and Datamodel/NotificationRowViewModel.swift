@@ -262,6 +262,11 @@ class NotificationRowViewModel: ObservableObject {
             avatarRow = .avatarRow(sourceAccounts, .noneNeeded)
         }
     }
+    
+    private func fetchAccount(_ accountID: String) async throws -> Mastodon.Entity.Account? {
+        guard let authBox = await AuthenticationServiceProvider.shared.currentActiveUser.value else { return nil }
+        return try await APIService.shared.accountInfo(domain: authBox.domain, userID: accountID, authorization: authBox.userAuthorization)
+    }
 
     private func fetchRelationship(to accountID: String) async throws
         -> Mastodon.Entity.Relationship?
@@ -278,16 +283,21 @@ class NotificationRowViewModel: ObservableObject {
             return nil
         }
     }
-
-    func navigateToProfile(_ account: Mastodon.Entity.Account) async throws {
+    
+    func navigateToProfile(_ info: AccountInfo) async throws {
         guard
             let me = await AuthenticationServiceProvider.shared
                 .currentActiveUser.value?.cachedAccount
         else { return }
-        if me.id == account.id {
+        if me.id == info.id {
             navigateToScene(.profile(.me(me)), .show)
         } else {
-            let relationship = try await fetchRelationship(to: account.id)
+            var account = info.fullAccount
+            if account == nil {
+                account = try await fetchAccount(info.id)
+            }
+            guard let account else { return }
+            let relationship = try await fetchRelationship(to: info.id)
             navigateToScene(
                 .profile(
                     .notMe(
@@ -431,26 +441,16 @@ extension NotificationRowViewModel {
             })
 
         return results.notificationGroups.map { group in
-            var primaryAccount: Mastodon.Entity.Account? = nil
-            for accountID in group.sampleAccountIDs {
-                if let fullAccount = fullAccounts[accountID] {
-                    primaryAccount = fullAccount
-                    break
-                }
+            let accounts: [AccountInfo] = group.sampleAccountIDs.compactMap { accountID in
+                return fullAccounts[accountID] ?? partialAccounts?[accountID]
             }
-
-            let avatarUrls = group.sampleAccountIDs.compactMap { accountID in
-                return fullAccounts[accountID]?.avatarURL
-                    ?? partialAccounts?[accountID]?.avatarURL
-            }
-
+            
             let sourceAccounts = NotificationSourceAccounts(
-                myAccountID: myAccountID, primaryAuthorAccount: primaryAccount,
-                avatarUrls: avatarUrls,
+                myAccountID: myAccountID, accounts: accounts,
                 totalActorCount: group.notificationsCount)
 
             let status = group.statusID == nil ? nil : statuses[group.statusID!]
-
+            
             let type = GroupedNotificationType(
                 group, sourceAccounts: sourceAccounts, status: status)
 
@@ -485,7 +485,7 @@ extension NotificationRowViewModel {
                     guard
                         let navigation = defaultNavigation(
                             group.type, isGrouped: group.notificationsCount > 1,
-                            primaryAccount: primaryAccount)
+                            primaryAccount: sourceAccounts.primaryAuthorAccount)
                     else { return }
                     Task {
                         guard let scene = await navigation.destinationScene()
@@ -514,8 +514,7 @@ extension NotificationRowViewModel {
         return notifications.map { notification in
             let sourceAccounts = NotificationSourceAccounts(
                 myAccountID: myAccountID,
-                primaryAuthorAccount: notification.account,
-                avatarUrls: notification.authorAvatarUrls, totalActorCount: 1)
+                accounts: [notification.account], totalActorCount: 1)
             
             let statusViewModel = notification.status?.viewModel(
                 myDomain: myAccountDomain,
