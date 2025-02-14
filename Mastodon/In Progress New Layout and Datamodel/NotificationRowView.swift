@@ -669,21 +669,6 @@ struct NotificationRowView: View {
         switch component {
         case .avatarRow(let accountInfo, let addition):
             avatarRow(accountInfo: accountInfo, trailingElement: addition)
-                .onTapGesture {
-                    if accountInfo.totalActorCount == 1,
-                        let primaryAuthorAccount = accountInfo
-                            .primaryAuthorAccount
-                    {
-                        Task {
-                            do {
-                                try await viewModel.navigateToProfile(
-                                    primaryAuthorAccount)
-                            } catch {
-                                viewModel.presentError(error)
-                            }
-                        }
-                    }
-                }
         case .text(let string):
             Text(string)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -731,10 +716,10 @@ struct NotificationRowView: View {
                 totalActorCount: accountInfo.totalActorCount)
             HStack(alignment: .center) {
                 ForEach(
-                    accountInfo.avatarUrls.prefix(maxAvatarCount), id: \.self
-                ) {
+                    accountInfo.accounts.prefix(maxAvatarCount), id: \.self.id
+                ) { account in
                     AsyncImage(
-                        url: $0,
+                        url: account.avatarURL,
                         content: { image in
                             image.resizable()
                                 .aspectRatio(contentMode: .fit)
@@ -750,6 +735,11 @@ struct NotificationRowView: View {
                         }
                     )
                     .frame(width: smallAvatarSize, height: smallAvatarSize)
+                    .onTapGesture {
+                        Task {
+                            try await viewModel.navigateToProfile(account)
+                        }
+                    }
                 }
                 Spacer().frame(minWidth: 0, maxWidth: .infinity)
                 avatarRowTrailingElement(
