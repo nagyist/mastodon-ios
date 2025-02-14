@@ -11,22 +11,19 @@ import CoreDataStack
 import MastodonCore
 import MastodonSDK
 
-typealias Provider = UIViewController & NeedsDependency & AuthContextProvider
-
 extension DataSourceFacade {
     enum TranslationFailure: Error {
         case emptyOrInvalidResponse
     }
     
     public static func translateStatus(
-        provider: Provider,
+        provider: AuthContextProvider,
         status: MastodonStatus
     ) async throws -> Mastodon.Entity.Translation {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
         do {
-            let value = try await provider.context
-                .apiService
+            let value = try await APIService.shared
                 .translateStatus(
                     statusID: status.id,
                     authenticationBox: provider.authenticationBox

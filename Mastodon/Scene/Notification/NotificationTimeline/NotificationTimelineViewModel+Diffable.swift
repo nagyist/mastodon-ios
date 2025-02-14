@@ -8,6 +8,7 @@
 import UIKit
 import CoreData
 import MastodonSDK
+import MastodonCore
 
 extension NotificationTimelineViewModel {
     
@@ -17,20 +18,18 @@ extension NotificationTimelineViewModel {
     ) {
         diffableDataSource = NotificationSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             configuration: NotificationSection.Configuration(
                 authenticationBox: authenticationBox,
                 notificationTableViewCellDelegate: notificationTableViewCellDelegate,
-                filterContext: .notifications,
-                activeFilters: context.statusFilterService.$activeFilters
+                filterContext: .notifications
             )
         )
 
-        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>()
+        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>()
         snapshot.appendSections([.main])
         diffableDataSource?.apply(snapshot)
         
-        dataController.$records
+        feedLoader.$records
             .receive(on: DispatchQueue.main)
             .sink { [weak self] records in
                 guard let self else { return }
@@ -38,31 +37,18 @@ extension NotificationTimelineViewModel {
 
                 Task {
                     let oldSnapshot = diffableDataSource.snapshot()
-                    var newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem> = {
+                    let newSnapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem> = {
                         let newItems = records.map { record in
-                            NotificationItem.feed(record: record)
+                            NotificationListItem.notification(record)
                         }
-                        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>()
+                        var snapshot = NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>()
                         snapshot.appendSections([.main])
                         if self.scope == .everything, let notificationPolicy = self.notificationPolicy, notificationPolicy.summary.pendingRequestsCount > 0 {
-                            snapshot.appendItems([.filteredNotifications(policy: notificationPolicy)])
+                            snapshot.appendItems([.filteredNotificationsInfo(notificationPolicy, nil)])
                         }
                         snapshot.appendItems(newItems.removingDuplicates(), toSection: .main)
                         return snapshot
                     }()
-
-                    let anchors: [MastodonFeed] = records.filter { $0.hasMore == true }
-                    let itemIdentifiers = newSnapshot.itemIdentifiers
-                    for (index, item) in itemIdentifiers.enumerated() {
-                        guard case let .feed(record) = item else { continue }
-                        guard anchors.contains(where: { feed in feed.id == record.id }) else { continue }
-                        let isLast = index + 1 == itemIdentifiers.count
-                        if isLast {
-                            newSnapshot.insertItems([.bottomLoader], afterItem: item)
-                        } else {
-                            newSnapshot.insertItems([.feedLoader(record: record)], afterItem: item)
-                        }
-                    }
 
                     let hasChanges = newSnapshot.itemIdentifiers != oldSnapshot.itemIdentifiers
                     if !hasChanges {
@@ -81,7 +67,7 @@ extension NotificationTimelineViewModel {
 
 extension NotificationTimelineViewModel {
     @MainActor func updateSnapshotUsingReloadData(
-        snapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationItem>
+        snapshot: NSDiffableDataSourceSnapshot<NotificationSection, NotificationListItem>
     ) async {
         await self.diffableDataSource?.applySnapshotUsingReloadData(snapshot)
     }

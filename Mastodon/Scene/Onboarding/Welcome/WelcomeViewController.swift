@@ -12,24 +12,29 @@ import MastodonCore
 import MastodonLocalization
 import MastodonSDK
 
-final class WelcomeViewController: UIViewController, NeedsDependency {
+final class WelcomeViewController: UIViewController {
     
     private enum Constants {
         static let topAnchorInset: CGFloat = 20
     }
     
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+    init() {
+        super.init(nibName: nil, bundle: nil)
+        authenticationStateTask = Task { [weak self] in
+            guard let stateStream = self?.authenticationViewModel.stateStream else { return }
+            for await authenticationState in stateStream {
+                self?.didEnter(authenticationState)
+            }
+        }
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    private(set) lazy var authenticationViewModel = AuthenticationViewModel(
-        context: context,
-        coordinator: coordinator,
-        isAuthenticationExist: false
-    )
-
+    private let authenticationViewModel = AuthenticationViewModel()
+    private var authenticationStateTask: Task<(), Never>?
+    
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
-    private(set) lazy var viewModel = WelcomeViewModel(context: context)
+    private(set) lazy var viewModel = WelcomeViewModel()
     
     let welcomeIllustrationView = WelcomeIllustrationView()
     let separatorView = WelcomeSeparatorView(frame: .zero)
@@ -64,7 +69,7 @@ final class WelcomeViewController: UIViewController, NeedsDependency {
         return button
     }()
 
-    private(set) lazy var signUpButton: UIButton = {
+    private(set) lazy var pickOtherServerButton: UIButton = {
 
         var buttonConfiguration = UIButton.Configuration.borderedTinted()
         buttonConfiguration.attributedTitle = AttributedString(
@@ -125,6 +130,55 @@ final class WelcomeViewController: UIViewController, NeedsDependency {
 }
 
 extension WelcomeViewController {
+    private func displayError(_ error: Error) {
+        let alertController = UIAlertController(for: error, title: "Error", preferredStyle: .alert)
+        let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
+        alertController.addAction(okAction)
+        _ = self.sceneCoordinator?.present(
+            scene: .alertController(alertController: alertController),
+            from: nil,
+            transition: .alertController(animated: true, completion: nil)
+        )
+    }
+    
+    private func didEnter(_ state: AuthenticationViewModel.State) {
+        switch state {
+        case .initial:
+            break
+        case .error(let error):
+            displayError(error)
+        case .logInToExistingAccountRequested:
+            _ = self.sceneCoordinator?.present(scene: .mastodonLogin(authenticationViewModel: authenticationViewModel, suggestedDomain: viewModel.randomDefaultServer?.domain), from: self, transition: .show)
+        case .joiningServer:
+            break
+        case .showingRules(let viewModel):
+            if let viewModel {
+                _ = self.sceneCoordinator?.present(scene: .mastodonServerRules(viewModel: viewModel), from: self, transition: .show)
+            } else {
+                popBack()
+            }
+        case .registering(let viewModel):
+            _ = self.sceneCoordinator?.present(scene: .mastodonRegister(viewModel: viewModel), from: self, transition: .show)
+        case .showingPrivacyPolicy(let viewModel):
+            _ = self.sceneCoordinator?.present(scene: .mastodonPrivacyPolicies(viewModel: viewModel), from: self, transition: .show)
+        case .pickingServer:
+            _ = self.sceneCoordinator?.present(scene: .mastodonPickServer(viewMode: MastodonPickServerViewModel(joinServer: { [weak self] server in try await self?.authenticationViewModel.joinServer(server) }, displayError: { [weak self] error in self?.displayError(error) })), from: self, transition: .show)
+        case .confirmingEmail(let viewModel):
+            _ = self.sceneCoordinator?.present(scene: .mastodonConfirmEmail(viewModel: viewModel), from: self, transition: .show)
+        case .authenticatedUser(let authBox):
+            self.sceneCoordinator?.setup()
+            break
+        case .authenticatingUser:
+            break
+        }
+    }
+    
+    private func popBack() {
+        navigationController?.popViewController(animated: true)
+    }
+}
+
+extension WelcomeViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -169,10 +223,10 @@ extension WelcomeViewController {
             joinDefaultServerButton.heightAnchor.constraint(greaterThanOrEqualToConstant: WelcomeViewController.actionButtonHeight)
         ])
         
-        signUpButton.translatesAutoresizingMaskIntoConstraints = false
-        buttonContainer.addArrangedSubview(signUpButton)
+        pickOtherServerButton.translatesAutoresizingMaskIntoConstraints = false
+        buttonContainer.addArrangedSubview(pickOtherServerButton)
         NSLayoutConstraint.activate([
-            signUpButton.heightAnchor.constraint(greaterThanOrEqualToConstant: WelcomeViewController.actionButtonHeight)
+            pickOtherServerButton.heightAnchor.constraint(greaterThanOrEqualToConstant: WelcomeViewController.actionButtonHeight)
         ])
 
         buttonContainer.addArrangedSubview(separatorView)
@@ -197,8 +251,8 @@ extension WelcomeViewController {
             separatorView.centerYAnchor.constraint(equalTo: welcomeIllustrationView.bottomAnchor)
         ])
 
-        joinDefaultServerButton.addTarget(self, action: #selector(joinDefaultServer(_:)), for: .touchUpInside)
-        signUpButton.addTarget(self, action: #selector(signUp(_:)), for: .touchUpInside)
+        joinDefaultServerButton.addTarget(self, action: #selector(joinDefaultServerTapped(_:)), for: .touchUpInside)
+        pickOtherServerButton.addTarget(self, action: #selector(pickOtherServerTapped(_:)), for: .touchUpInside)
         signInButton.addTarget(self, action: #selector(signIn(_:)), for: .touchUpInside)
         learnMoreButton.addTarget(self, action: #selector(learnMore(_:)), for: .touchUpInside)
 
@@ -214,20 +268,13 @@ extension WelcomeViewController {
 
         setupIllustrationLayout()
 
-        joinDefaultServerButton.configuration?.showsActivityIndicator = true
-        joinDefaultServerButton.isEnabled = false
-        joinDefaultServerButton.configuration?.title = nil
+        configureJoinDefaultServerButton(nil, isLoading: true)
 
         viewModel.downloadDefaultServer { [weak self] in
             guard let selectedDefaultServer = self?.viewModel.randomDefaultServer else { return }
 
             DispatchQueue.main.async {
-                self?.joinDefaultServerButton.configuration?.showsActivityIndicator = false
-                self?.joinDefaultServerButton.isEnabled = true
-                self?.joinDefaultServerButton.configuration?.attributedTitle = AttributedString(
-                    L10n.Scene.Welcome.joinDefaultServer(selectedDefaultServer.domain),
-                    attributes: .init([.font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 17, weight: .semibold))])
-                )
+                self?.configureJoinDefaultServerButton(selectedDefaultServer.domain, isLoading: false)
             }
         }
     }
@@ -271,123 +318,72 @@ extension WelcomeViewController {
 }
 
 extension WelcomeViewController {
+    
+    private func joinServer(_ server: Mastodon.Entity.Server) {
+        Task {
+            do {
+                try await authenticationViewModel.joinServer(server)
+            } catch let error {
+                displayError(error)
+            }
+        }
+    }
 
     //MARK: - Actions
     @objc
-    private func joinDefaultServer(_ sender: UIButton) {
+    private func joinDefaultServerTapped(_ sender: UIButton) {
 
         guard let server = viewModel.randomDefaultServer else { return }
-        sender.configuration?.title = nil
-        sender.isEnabled = false
-        sender.configuration?.showsActivityIndicator = true
-
-        authenticationViewModel.isAuthenticating.send(true)
-
-        context.apiService.instance(domain: server.domain, authenticationBox: nil)
-            .compactMap { [weak self] response -> AnyPublisher<MastodonPickServerViewModel.SignUpResponseFirst, Error>? in
-                guard let self = self else { return nil }
-                guard response.value.registrations != false else {
-                    return Fail(error: AuthenticationViewModel.AuthenticationError.registrationClosed).eraseToAnyPublisher()
+       
+        configureJoinDefaultServerButton(server.domain, isLoading: true)
+        
+        Task {
+            do {
+                try await authenticationViewModel.joinServer(server)
+                // reset the button after successful completion (which is not completion of the full sign in process, only the first step of reaching the server and getting the rules)
+                configureJoinDefaultServerButton(server.domain, isLoading: false)
+            } catch {
+                // reset to try again with a potentially different random default server
+                guard let randomServer = self.viewModel.pickRandomDefaultServer() else {
+                    configureJoinDefaultServerButton(nil, isLoading: true)
+                    return
                 }
-                return self.context.apiService.createApplication(domain: server.domain)
-                    .map { MastodonPickServerViewModel.SignUpResponseFirst(instance: response, application: $0) }
-                    .eraseToAnyPublisher()
+                self.viewModel.randomDefaultServer = randomServer
+                configureJoinDefaultServerButton(randomServer.domain, isLoading: false)
             }
-            .switchToLatest()
-            .tryMap { response -> MastodonPickServerViewModel.SignUpResponseSecond in
-                let application = response.application.value
-                guard let authenticateInfo = AuthenticationViewModel.AuthenticateInfo(
-                        domain: server.domain,
-                        application: application
-                ) else {
-                    throw APIService.APIError.explicit(.badResponse)
-                }
-                return MastodonPickServerViewModel.SignUpResponseSecond(
-                    instance: response.instance,
-                    authenticateInfo: authenticateInfo
-                )
-            }
-            .compactMap { [weak self] response -> AnyPublisher<MastodonPickServerViewModel.SignUpResponseThird, Error>? in
-                guard let self = self else { return nil }
-                let instance = response.instance
-                let authenticateInfo = response.authenticateInfo
-                return self.context.apiService.applicationAccessToken(
-                    domain: server.domain,
-                    clientID: authenticateInfo.clientID,
-                    clientSecret: authenticateInfo.clientSecret,
-                    redirectURI: authenticateInfo.redirectURI
-                )
-                .map {
-                    MastodonPickServerViewModel.SignUpResponseThird(
-                        instance: instance,
-                        authenticateInfo: authenticateInfo,
-                        applicationToken: $0
-                    )
-                }
-                .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                guard let self = self else { return }
-                self.authenticationViewModel.isAuthenticating.send(false)
-
-                switch completion {
-                case .failure(_):
-                    guard let randomServer = self.viewModel.pickRandomDefaultServer() else { return }
-
-                    self.viewModel.randomDefaultServer = randomServer
-
-                    sender.isEnabled = true
-                    sender.configuration?.showsActivityIndicator = false
-                    sender.configuration?.attributedTitle = AttributedString(
-                        L10n.Scene.Welcome.joinDefaultServer(randomServer.domain),
-                        attributes: .init([.font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 17, weight: .semibold))])
-                    )
-                case .finished:
-                    sender.isEnabled = true
-                    sender.configuration?.showsActivityIndicator = false
-                    sender.configuration?.attributedTitle = AttributedString(
-                        L10n.Scene.Welcome.joinDefaultServer(server.domain),
-                        attributes: .init([.font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 17, weight: .semibold))])
-                    )
-                }
-
-            } receiveValue: { [weak self] response in
-                guard let self = self else { return }
-                if let rules = response.instance.value.rules, !rules.isEmpty {
-                    // show server rules before register
-                    let mastodonServerRulesViewModel = MastodonServerRulesViewModel(
-                        domain: server.domain,
-                        authenticateInfo: response.authenticateInfo,
-                        rules: rules,
-                        instance: response.instance.value,
-                        applicationToken: response.applicationToken.value
-                    )
-                    _ = self.coordinator.present(scene: .mastodonServerRules(viewModel: mastodonServerRulesViewModel), from: self, transition: .show)
-                } else {
-                    let mastodonRegisterViewModel = MastodonRegisterViewModel(
-                        context: self.context,
-                        domain: server.domain,
-                        authenticateInfo: response.authenticateInfo,
-                        instance: response.instance.value,
-                        applicationToken: response.applicationToken.value
-                    )
-                    _ = self.coordinator.present(scene: .mastodonRegister(viewModel: mastodonRegisterViewModel), from: nil, transition: .show)
-                }
-            }
-            .store(in: &disposeBag)
-
+        }
+    }
+    
+    private func configureJoinDefaultServerButton(_ domain: String?, isLoading: Bool) {
+        guard let domain else {
+            joinDefaultServerButton.configuration?.showsActivityIndicator = isLoading
+            joinDefaultServerButton.isEnabled = false
+            joinDefaultServerButton.configuration?.title = nil
+            return
+        }
+        
+        if isLoading {
+            joinDefaultServerButton.configuration?.title = nil
+            joinDefaultServerButton.isEnabled = false
+            joinDefaultServerButton.configuration?.showsActivityIndicator = true
+        } else {
+            joinDefaultServerButton.isEnabled = true
+            joinDefaultServerButton.configuration?.showsActivityIndicator = false
+            joinDefaultServerButton.configuration?.attributedTitle = AttributedString(
+                L10n.Scene.Welcome.joinDefaultServer(domain),
+                attributes: .init([.font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 17, weight: .semibold))])
+            )
+        }
     }
 
     @objc
-    private func signUp(_ sender: UIButton) {
-        _ = coordinator.present(scene: .mastodonPickServer(viewMode: MastodonPickServerViewModel(context: context)), from: self, transition: .show)
+    private func pickOtherServerTapped(_ sender: UIButton) {
+        authenticationViewModel.pickServer()
     }
     
     @objc
     private func signIn(_ sender: UIButton) {
-        _ = coordinator.present(scene: .mastodonLogin, from: self, transition: .show)
+        authenticationViewModel.logInRequested()
     }
 
     @objc

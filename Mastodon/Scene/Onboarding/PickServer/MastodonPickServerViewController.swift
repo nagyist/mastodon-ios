@@ -14,21 +14,25 @@ import MastodonLocalization
 import MastodonUI
 import MastodonSDK
 
-final class MastodonPickServerViewController: UIViewController, NeedsDependency {
+final class MastodonPickServerViewController: UIViewController {
+    
+    var coordinator: SceneCoordinator!
+    
+    init(coordinator: SceneCoordinator, viewModel: MastodonPickServerViewModel) {
+        self.coordinator = coordinator
+        self.viewModel = viewModel
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    @MainActor required dynamic init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     
     private var disposeBag = Set<AnyCancellable>()
     private var observations = Set<NSKeyValueObservation>()
     private var tableViewObservation: NSKeyValueObservation?
     
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
-    
-    var viewModel: MastodonPickServerViewModel!
-    private(set) lazy var authenticationViewModel = AuthenticationViewModel(
-        context: context,
-        coordinator: coordinator,
-        isAuthenticationExist: false
-    )
+    let viewModel: MastodonPickServerViewModel
     
     private var expandServerDomainSet = Set<String>()
     
@@ -51,8 +55,6 @@ final class MastodonPickServerViewController: UIViewController, NeedsDependency 
         onboardingNextView.backgroundColor = UIColor.secondarySystemBackground
         return onboardingNextView
     }()
-    
-    var mastodonAuthenticationController: MastodonAuthenticationController?
 
     let searchController: UISearchController = {
         let searchController = UISearchController(searchResultsController: nil)
@@ -88,9 +90,11 @@ extension MastodonPickServerViewController {
         
         onboardingNextView
             .observe(\.bounds, options: [.initial, .new]) { [weak self] _, _ in
-                guard let self = self else { return }
-                let inset = self.onboardingNextView.frame.height
-                self.viewModel.additionalTableViewInsets.bottom = inset
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    let inset = self.onboardingNextView.frame.height
+                    self.viewModel.additionalTableViewInsets.bottom = inset
+                }
             }
             .store(in: &observations)
 
@@ -120,25 +124,6 @@ extension MastodonPickServerViewController {
                 additionalSafeAreaInsets: viewModel.$additionalTableViewInsets.eraseToAnyPublisher()
             )
             .store(in: &disposeBag)
-
-        Publishers.Merge(
-            viewModel.error,
-            authenticationViewModel.error
-        )
-        .compactMap { $0 }
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] error in
-            guard let self = self else { return }
-            let alertController = UIAlertController(for: error, title: "Error", preferredStyle: .alert)
-            let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
-            alertController.addAction(okAction)
-            _ = self.coordinator.present(
-                scene: .alertController(alertController: alertController),
-                from: nil,
-                transition: .alertController(animated: true, completion: nil)
-            )
-        }
-        .store(in: &disposeBag)
         
         viewModel.scrollToTop
             .receive(on: DispatchQueue.main)
@@ -147,41 +132,7 @@ extension MastodonPickServerViewController {
             }
             .store(in: &disposeBag)
 
-        authenticationViewModel
-            .authenticated
-            .asyncMap { domain, user -> Result<Bool, Error> in
-                do {
-                    let result = try await AuthenticationServiceProvider.shared.activeMastodonUser(domain: domain, userID: user.id)
-                    return .success(result)
-                } catch {
-                    return .failure(error)
-                }
-            }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] result in
-                guard let self = self else { return }
-                switch result {
-                case .failure(let error):
-                    assertionFailure(error.localizedDescription)
-                case .success(let isActived):
-                    assert(isActived)
-                    // self.dismiss(animated: true, completion: nil)
-                    self.coordinator.setup()
-                }
-            }
-            .store(in: &disposeBag)
 
-        authenticationViewModel.isAuthenticating
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isAuthenticating in
-                guard let self = self else { return }
-                if isAuthenticating {
-                    self.onboardingNextView.showLoading()
-                } else {
-                    self.onboardingNextView.stopLoading()
-                }
-            }
-            .store(in: &disposeBag)
 
         viewModel.emptyStateViewState
             .receive(on: DispatchQueue.main)
@@ -218,7 +169,7 @@ extension MastodonPickServerViewController {
                 guard let snapshot = self?.viewModel.serverSectionHeaderView.diffableDataSource?.snapshot() else { return }
 
                 self?.viewModel.serverSectionHeaderView.diffableDataSource?.applySnapshotUsingReloadData(snapshot) {
-                    guard let self = self, let viewModel = self.viewModel else { return }
+                    guard let viewModel = self?.viewModel else { return }
                     guard let indexPath = viewModel.serverSectionHeaderView.diffableDataSource?.indexPath(for: .category(category: .init(category: Mastodon.Entity.Category.Kind.general.rawValue, serversCount: 0))) else { return }
 
                     viewModel.serverSectionHeaderView.collectionView.selectItem(at: indexPath, animated: false, scrollPosition: .right)
@@ -237,6 +188,7 @@ extension MastodonPickServerViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        onboardingNextView.stopLoading()
         viewModel.viewWillAppear.send()
     }
     
@@ -269,87 +221,20 @@ extension MastodonPickServerViewController {
             return
         }
 
-        authenticationViewModel.isAuthenticating.send(true)
+        Task {
+            await tryToJoin(server: server)
+        }
         
-        context.apiService.instance(domain: server.domain, authenticationBox: nil)
-            .compactMap { [weak self] response -> AnyPublisher<MastodonPickServerViewModel.SignUpResponseFirst, Error>? in
-                guard let self = self else { return nil }
-                guard response.value.registrations != false else {
-                    return Fail(error: AuthenticationViewModel.AuthenticationError.registrationClosed).eraseToAnyPublisher()
-                }
-                return self.context.apiService.createApplication(domain: server.domain)
-                    .map { MastodonPickServerViewModel.SignUpResponseFirst(instance: response, application: $0) }
-                    .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .tryMap { response -> MastodonPickServerViewModel.SignUpResponseSecond in
-                let application = response.application.value
-                guard let authenticateInfo = AuthenticationViewModel.AuthenticateInfo(
-                        domain: server.domain,
-                        application: application
-                ) else {
-                    throw APIService.APIError.explicit(.badResponse)
-                }
-                return MastodonPickServerViewModel.SignUpResponseSecond(
-                    instance: response.instance,
-                    authenticateInfo: authenticateInfo
-                )
-            }
-            .compactMap { [weak self] response -> AnyPublisher<MastodonPickServerViewModel.SignUpResponseThird, Error>? in
-                guard let self = self else { return nil }
-                let instance = response.instance
-                let authenticateInfo = response.authenticateInfo
-                return self.context.apiService.applicationAccessToken(
-                    domain: server.domain,
-                    clientID: authenticateInfo.clientID,
-                    clientSecret: authenticateInfo.clientSecret,
-                    redirectURI: authenticateInfo.redirectURI
-                )
-                .map {
-                    MastodonPickServerViewModel.SignUpResponseThird(
-                        instance: instance,
-                        authenticateInfo: authenticateInfo,
-                        applicationToken: $0
-                    )
-                }
-                .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                guard let self = self else { return }
-                self.authenticationViewModel.isAuthenticating.send(false)
-                
-                switch completion {
-                case .failure(let error):
-                    self.viewModel.error.send(error)
-                case .finished:
-                    break
-                }
-            } receiveValue: { [weak self] response in
-                guard let self = self else { return }
-                if let rules = response.instance.value.rules, !rules.isEmpty {
-                    // show server rules before register
-                    let mastodonServerRulesViewModel = MastodonServerRulesViewModel(
-                        domain: server.domain,
-                        authenticateInfo: response.authenticateInfo,
-                        rules: rules,
-                        instance: response.instance.value,
-                        applicationToken: response.applicationToken.value
-                    )
-                    _ = self.coordinator.present(scene: .mastodonServerRules(viewModel: mastodonServerRulesViewModel), from: self, transition: .show)
-                } else {
-                    let mastodonRegisterViewModel = MastodonRegisterViewModel(
-                        context: self.context,
-                        domain: server.domain,
-                        authenticateInfo: response.authenticateInfo,
-                        instance: response.instance.value,
-                        applicationToken: response.applicationToken.value
-                    )
-                    _ = self.coordinator.present(scene: .mastodonRegister(viewModel: mastodonRegisterViewModel), from: nil, transition: .show)
-                }
-            }
-            .store(in: &disposeBag)
+    }
+    
+    private func tryToJoin(server: Mastodon.Entity.Server) async {
+        self.onboardingNextView.showLoading()
+        do {
+            try await viewModel.joinServer(server)
+        } catch let error {
+            viewModel.displayError(error)
+        }
+        self.onboardingNextView.stopLoading()
     }
 }
 

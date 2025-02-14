@@ -18,7 +18,6 @@ final class DiscoveryNewsViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     // output
@@ -40,8 +39,7 @@ final class DiscoveryNewsViewModel {
     let didLoadLatest = PassthroughSubject<Void, Never>()
     @Published var isServerSupportEndpoint = true
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         // end init
         
@@ -55,7 +53,7 @@ final class DiscoveryNewsViewModel {
 extension DiscoveryNewsViewModel {
     func checkServerEndpoint() async {
         do {
-            _ = try await context.apiService.trendLinks(
+            _ = try await APIService.shared.trendLinks(
                 domain: authenticationBox.domain,
                 query: .init(offset: nil, limit: nil),
                 authenticationBox: authenticationBox

@@ -17,7 +17,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var appContext: AppContext { return AppContext.shared }
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        AuthenticationServiceProvider.shared.prepareForUse()
         
         AppSecret.default.register()
 
@@ -65,7 +64,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 extension AppDelegate {
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        appContext.notificationService.deviceToken.value = deviceToken
+        NotificationService.shared.deviceToken.value = deviceToken
     }
 }
 
@@ -85,16 +84,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         
         let accessToken = pushNotification.accessToken
         UserDefaults.shared.increaseNotificationCount(accessToken: accessToken)
-        appContext.notificationService.applicationIconBadgeNeedsUpdate.send()
+        NotificationService.shared.applicationIconBadgeNeedsUpdate.send()
         
-        appContext.notificationService.handle(pushNotification: pushNotification)
+        NotificationService.shared.handle(pushNotification: pushNotification)
         completionHandler([.sound])
     }
     
     
     // notification present in the background (or resume from background)
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any]) async -> UIBackgroundFetchResult {
-        let shortcutItems = try? await appContext.notificationService.unreadApplicationShortcutItems()
+        let shortcutItems = try? await NotificationService.shared.unreadApplicationShortcutItems()
         UIApplication.shared.shortcutItems = shortcutItems
         return .noData
     }
@@ -111,8 +110,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             return
         }
         
-        appContext.notificationService.handle(pushNotification: pushNotification)
-        appContext.notificationService.requestRevealNotificationPublisher.send(pushNotification)
+        NotificationService.shared.handle(pushNotification: pushNotification)
+        NotificationService.shared.requestRevealNotificationPublisher.send(pushNotification)
         completionHandler()
     }
     
@@ -125,11 +124,4 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         return mastodonPushNotification
     }
     
-}
-
-extension AppContext {
-    static var shared: AppContext {
-        let appDelegate = UIApplication.shared.delegate as! AppDelegate
-        return appDelegate.appContext
-    }
 }

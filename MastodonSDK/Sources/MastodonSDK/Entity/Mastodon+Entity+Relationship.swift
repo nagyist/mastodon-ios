@@ -60,5 +60,9 @@ extension Mastodon.Entity {
             case note
             
         }
+        
+        public func isRelationshipToAccount(_ account: Mastodon.Entity.Account) -> Bool {
+            return self.id == account.id
+        }
     }
 }

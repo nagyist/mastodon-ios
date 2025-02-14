@@ -30,6 +30,11 @@ public struct MastodonAuthenticationBox: UserIdentifier {
     public init(authentication: MastodonAuthentication) {
         self.authentication = authentication
     }
+    
+    @MainActor
+    public var cachedAccount: Mastodon.Entity.Account? {
+        return authentication.cachedAccount()
+    }
 }
 
 public class MastodonAccountInMemoryCache {

@@ -41,7 +41,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
     }()
 
     // input
-    public let api: APIService
     public let authenticationBox: MastodonAuthenticationBox
     public let input: Input
     public let sizeLimit: SizeLimit
@@ -72,7 +71,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
     @Published var remainTimeLocalizedString: String?
     
     public init(
-        api: APIService,
         authenticationBox: MastodonAuthenticationBox,
         input: Input,
         sizeLimit: SizeLimit,
@@ -80,7 +78,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
         isEditing: Bool = false,
         caption: String? = nil
     ) {
-        self.api = api
         self.authenticationBox = authenticationBox
         self.input = input
         self.sizeLimit = sizeLimit
@@ -160,10 +157,7 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
                 case .video(let fileURL, let mimeType):
                     self.output = output
                     self.update(uploadState: .compressing)
-                    guard let compressedFileURL = try await compressVideo(url: fileURL) else {
-                        assertionFailure("Unable to compress video")
-                        return
-                    }
+                    let compressedFileURL = try await compressVideo(url: fileURL)
                     output = .video(compressedFileURL, mimeType: mimeType)
                     try? FileManager.default.removeItem(at: fileURL)    // remove old file
                 }
@@ -178,9 +172,6 @@ final public class AttachmentViewModel: NSObject, ObservableObject, Identifiable
             }
         }   // end Task
         self.uploadTask = uploadTask
-        Task {
-            await uploadTask.value
-        }
     }
     
     deinit {

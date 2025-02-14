@@ -9,16 +9,11 @@ import Foundation
 import Combine
 import MastodonSDK
 
+@MainActor
 public final class EmojiService {
-    let apiService: APIService
-
+    public static let shared = { EmojiService() }()
     let workingQueue = DispatchQueue(label: "org.joinmastodon.app.EmojiService.working-queue")
     private(set) var customEmojiViewModelDict: [String: CustomEmojiViewModel] = [:]
-    
-    init(apiService: APIService) {
-        self.apiService = apiService
-    }
-    
 }
 
 extension EmojiService {

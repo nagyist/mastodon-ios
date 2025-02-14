@@ -5,6 +5,7 @@ import MastodonSDK
 import CoreDataStack
 import MastodonCore
 import MastodonLocalization
+import MastodonUI
 
 class StatusEditHistoryViewController: UIViewController {
 
@@ -43,7 +44,10 @@ class StatusEditHistoryViewController: UIViewController {
             }
 
             viewModel.prepareCell(cell, in: tableView)
-            cell.configure(status: viewModel.status, statusEdit: statusEdit, dateText: dateText)
+            let contentWarning = ContentWarning(statusEdit: statusEdit)
+            let contentDisplayModel = StatusView.ContentConcealViewModel(status: viewModel.status, filterBox: nil, filterContext: nil)
+            let displayMode = contentDisplayModel.byShowingAll().effectiveDisplayMode
+            cell.configure(status: viewModel.status, statusEdit: statusEdit, dateText: dateText, contentDisplayMode: displayMode)
 
             return cell
         }

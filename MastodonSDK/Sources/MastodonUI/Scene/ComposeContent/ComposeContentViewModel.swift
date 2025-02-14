@@ -18,6 +18,7 @@ public protocol ComposeContentViewModelDelegate: AnyObject {
     func composeContentViewModel(_ viewModel: ComposeContentViewModel, handleAutoComplete info: ComposeContentViewModel.AutoCompleteInfo) -> Bool
 }
 
+@MainActor
 public final class ComposeContentViewModel: NSObject, ObservableObject {
 
     public enum ComposeContext {
@@ -32,7 +33,6 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
     let composeContentTableViewCell = ComposeContentTableViewCell()
     
     // input
-    let context: AppContext
     let composeContext: ComposeContext
     let destination: Destination
     weak var delegate: ComposeContentViewModelDelegate?
@@ -142,31 +142,37 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
     }
 
     public init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         composeContext: ComposeContext,
         destination: Destination,
         initialContent: String
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.destination = destination
         self.composeContext = composeContext
         self.visibility = {
             // default private when user locked
             var visibility: Mastodon.Entity.Status.Visibility = {
-                guard let author = authenticationBox.authentication.account() else {
+                guard let author = authenticationBox.cachedAccount else {
                     return .public
                 }
-                return author.locked ? .private : .public
+                if let defaultPrivacy = author.source?.privacy, let statusPrivacy = Mastodon.Entity.Status.Visibility(rawValue: defaultPrivacy.rawValue) {
+                    return statusPrivacy
+                } else {
+                    return author.locked ? .private : .public
+                }
             }()
             // set visibility for reply post
             if case .reply(let record) = destination {
                 let repliedStatusVisibility = record.entity.visibility
                 switch repliedStatusVisibility {
-                case .public, .unlisted:
+                case .public:
                     // keep default
                     break
+                case .unlisted:
+                    if visibility == .public {
+                        visibility = .unlisted
+                    }
                 case .private:
                     visibility = .private
                 case .direct:
@@ -179,11 +185,11 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
             return visibility
         }()
         
-        self.customEmojiViewModel = context.emojiService.dequeueCustomEmojiViewModel(
+        self.customEmojiViewModel = EmojiService.shared.dequeueCustomEmojiViewModel(
             for: authenticationBox.domain
         )
                 
-        let recentLanguages = context.settingService.currentSetting.value?.recentLanguages ?? []
+        let recentLanguages = SettingService.shared.currentSetting.value?.recentLanguages ?? []
         self.recentLanguages = recentLanguages
         self.language = UserDefaults.shared.defaultPostLanguage
         super.init()
@@ -194,7 +200,7 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
         switch destination {
         case .reply(let record):
             let status = record.entity
-            let author = authenticationBox.authentication.account()
+            let author = authenticationBox.cachedAccount
             
             var mentionAccts: [String] = []
             if author?.id != status.account.id {
@@ -259,7 +265,6 @@ public final class ComposeContentViewModel: NSObject, ObservableObject {
                 guard let assetURL = $0.assetURL, let url = URL(string: assetURL) else { return nil }
 
                 let attachmentViewModel = AttachmentViewModel(
-                    api: context.apiService,
                     authenticationBox: authenticationBox,
                     input: .mastodonAssetUrl(url: url, attachmentId: $0.id),
                     sizeLimit: sizeLimit,
@@ -305,8 +310,9 @@ extension ComposeContentViewModel {
     private func bind() {
         // bind author
         $authenticationBox
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] authenticationBox in
-                guard let self, let account = authenticationBox.authentication.account() else { return }
+                guard let self, let account = authenticationBox.cachedAccount else { return }
 
                 self.avatarURL = account.avatarImageURL()
 
@@ -324,7 +330,7 @@ extension ComposeContentViewModel {
         
         // bind text
         $content
-            .receive(on: DispatchQueue.global(qos: .background))
+            .receive(on: DispatchQueue.main)
             .map { [weak self] input in
                 guard let self, let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
                     return input.count
@@ -502,7 +508,7 @@ extension ComposeContentViewModel {
         .assign(to: &$shouldDismiss)
         
         // languages
-        context.settingService.currentSetting
+        SettingService.shared.currentSetting
             .flatMap { settings in
                 if let settings {
                     return settings.publisher(for: \.recentLanguages, options: .initial).eraseToAnyPublisher()
@@ -575,7 +581,7 @@ extension ComposeContentViewModel {
     
     public func statusPublisher() throws -> StatusPublisher {
        
-        guard authenticationBox.authentication.account() != nil else {
+        guard authenticationBox.cachedAccount != nil else {
             throw AppError.badAuthentication
         }
         
@@ -591,7 +597,7 @@ extension ComposeContentViewModel {
         }()
         
         // save language to recent languages
-        if let settings = context.settingService.currentSetting.value {
+        if let settings = SettingService.shared.currentSetting.value {
             settings.managedObjectContext?.performAndWait {
                 settings.recentLanguages = [language] + settings.recentLanguages.filter { $0 != language }
             }
@@ -624,7 +630,7 @@ extension ComposeContentViewModel {
         guard case let .editStatus(status, _) = composeContext else { return nil }
 
         // author
-        guard let author = authenticationBox.authentication.account() else {
+        guard let author = authenticationBox.cachedAccount else {
             throw AppError.badAuthentication
         }
 
@@ -640,7 +646,7 @@ extension ComposeContentViewModel {
         }()
 
         // save language to recent languages
-        if let settings = context.settingService.currentSetting.value {
+        if let settings = SettingService.shared.currentSetting.value {
             settings.managedObjectContext?.performAndWait {
                 settings.recentLanguages = [language] + settings.recentLanguages.filter { $0 != language }
             }

@@ -7,6 +7,7 @@
 
 import UIKit
 import CoreDataStack
+import MastodonCore
 import MastodonUI
 import MastodonLocalization
 import MastodonSDK
@@ -15,16 +16,17 @@ extension DataSourceFacade {
     
     @MainActor
     static func coordinateToMediaPreviewScene(
-        dependency: NeedsDependency & MediaPreviewableViewController,
+        dependency: UIViewController & MediaPreviewableViewController,
         mediaPreviewItem: MediaPreviewViewModel.PreviewItem,
         mediaPreviewTransitionItem: MediaPreviewTransitionItem
     ) {
         let mediaPreviewViewModel = MediaPreviewViewModel(
-            context: dependency.context,
+            context: AppContext.shared,
             item: mediaPreviewItem,
             transitionItem: mediaPreviewTransitionItem
         )
-        _ = dependency.coordinator.present(
+        guard let coordinator = dependency.sceneCoordinator else { return }
+        _ = coordinator.present(
             scene: .mediaPreview(viewModel: mediaPreviewViewModel),
             from: dependency,
             transition: .custom(transitioningDelegate: dependency.mediaPreviewTransitionController)
@@ -61,7 +63,7 @@ extension DataSourceFacade {
     
     @MainActor
     static func coordinateToMediaPreviewScene(
-        dependency: NeedsDependency & MediaPreviewableViewController,
+        dependency: UIViewController & MediaPreviewableViewController,
         status: MastodonStatus,
         previewContext: AttachmentPreviewContext
     ) async throws {
@@ -90,8 +92,13 @@ extension DataSourceFacade {
             
             let mediaView = previewContext.mediaView
 
-            item.initialFrame = {
+            item.initialContainerFrame = {
                 let initialFrame = mediaView.superview!.convert(mediaView.frame, to: nil)
+                assert(initialFrame != .zero)
+                return initialFrame
+            }()
+            item.initialFrame = {
+                let initialFrame = mediaView.contentView().frame
                 assert(initialFrame != .zero)
                 return initialFrame
             }()
@@ -146,7 +153,7 @@ extension DataSourceFacade {
     
     @MainActor
     static func coordinateToMediaPreviewScene(
-        dependency: NeedsDependency & MediaPreviewableViewController,
+        dependency: MediaPreviewableViewController,
         account: Mastodon.Entity.Account,
         previewContext: ImagePreviewContext
     ) async throws {

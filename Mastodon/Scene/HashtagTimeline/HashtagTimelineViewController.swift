@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import AVKit
 import Combine
 import GameplayKit
 import CoreData
@@ -16,10 +15,7 @@ import MastodonUI
 import MastodonLocalization
 import MastodonSDK
 
-final class HashtagTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class HashtagTimelineViewController: UIViewController, MediaPreviewableViewController {
     
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
 
@@ -184,13 +180,12 @@ extension HashtagTimelineViewController {
         let hashtag = "#" + viewModel.hashtag
         UITextChecker.learnWord(hashtag)
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: viewModel.authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel,
             initialContent: hashtag
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
     }
 
 }

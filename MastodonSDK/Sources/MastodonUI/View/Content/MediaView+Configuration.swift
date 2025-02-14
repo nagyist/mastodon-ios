@@ -25,7 +25,7 @@ extension MediaView {
         public let index: Int
         public let total: Int
         
-        @Published public var isReveal = true
+        public var isReveal = true
         @Published public var previewImage: UIImage?
         @Published public var blurhashImage: UIImage?
         public var blurhashImageDisposeBag = Set<AnyCancellable>()
@@ -109,15 +109,18 @@ extension MediaView.Configuration {
         public let aspectRadio: CGSize
         public let assetURL: String?
         public let altDescription: String?
+        public let focus: CGPoint?
         
         public init(
             aspectRadio: CGSize,
             assetURL: String?,
-            altDescription: String?
+            altDescription: String?,
+            focus: CGPoint?
         ) {
             self.aspectRadio = aspectRadio
             self.assetURL = assetURL
             self.altDescription = altDescription
+            self.focus = focus
         }
     }
     
@@ -180,7 +183,11 @@ extension MediaView.Configuration {
 }
 
 extension MediaView {
-    public static func configuration(status: MastodonStatus) -> [MediaView.Configuration] {
+    public static func configuration(status: MastodonStatus, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
+        return configuration(status: status.entity, contentDisplayMode: contentDisplayMode)
+    }
+    
+    public static func configuration(status: Mastodon.Entity.Status, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func videoInfo(from attachment: MastodonAttachment) -> MediaView.Configuration.VideoInfo {
             MediaView.Configuration.VideoInfo(
                 aspectRadio: attachment.size,
@@ -191,7 +198,7 @@ extension MediaView {
             )
         }
         
-        let attachments = status.entity.mastodonAttachments
+        let attachments = status.mastodonAttachments
         let configurations = attachments.enumerated().map { (idx, attachment) -> MediaView.Configuration in
             let configuration: MediaView.Configuration = {
                 switch attachment.kind {
@@ -199,7 +206,8 @@ extension MediaView {
                     let info = MediaView.Configuration.ImageInfo(
                         aspectRadio: attachment.size,
                         assetURL: attachment.assetURL,
-                        altDescription: attachment.altDescription
+                        altDescription: attachment.altDescription,
+                        focus: attachment.focus
                     )
                     return .init(
                         info: .image(info: info),
@@ -234,8 +242,8 @@ extension MediaView {
                 }   // end switch
             }()
             
+            configuration.isReveal = !contentDisplayMode.shouldConcealMedia
             configuration.load()
-            configuration.isReveal = status.entity.sensitive == true ? status.isSensitiveToggled : true
             
             return configuration
         }
@@ -245,7 +253,7 @@ extension MediaView {
 }
 
 extension MediaView {
-    public static func configuration(status: Mastodon.Entity.StatusEdit) -> [MediaView.Configuration] {
+    public static func configuration(status: Mastodon.Entity.StatusEdit, contentDisplayMode: StatusView.ContentDisplayMode) -> [MediaView.Configuration] {
         func aspectRatio(from attachment: Mastodon.Entity.Attachment) -> CGSize? {
             if let width = attachment.meta?.original?.width, let height = attachment.meta?.original?.height {
                 return CGSize(width: width, height: height)
@@ -277,10 +285,16 @@ extension MediaView {
                 switch attachment.attachmentKind {
                 case .image:
                     guard let aspectRatio = aspectRatio(from: attachment) else { return nil }
+                    let focus: CGPoint? = if let focus = attachment.meta?.focus {
+                        CGPoint(x: focus.x, y: focus.y)
+                    } else {
+                        nil
+                    }
                     let info = MediaView.Configuration.ImageInfo(
                         aspectRadio: aspectRatio,
                         assetURL: attachment.url,
-                        altDescription: attachment.description
+                        altDescription: attachment.description,
+                        focus: focus
                     )
                     return .init(
                         info: .image(info: info),
@@ -318,7 +332,7 @@ extension MediaView {
             }()
             
             configuration?.load()
-            configuration?.isReveal = true
+            configuration?.isReveal = !contentDisplayMode.shouldConcealMedia
             
             return configuration
         }

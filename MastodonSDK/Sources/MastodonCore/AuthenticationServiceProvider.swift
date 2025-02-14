@@ -8,7 +8,11 @@ import KeychainAccess
 import MastodonCommon
 import os.log
 
+@MainActor
 public class AuthenticationServiceProvider: ObservableObject {
+    
+    private(set) var lastFetchOfAllAccounts: Date?
+    
     private let logger = Logger(subsystem: "AuthenticationServiceProvider", category: "Authentication")
 
     public static let shared = AuthenticationServiceProvider()
@@ -17,43 +21,50 @@ public class AuthenticationServiceProvider: ObservableObject {
 
     var disposeBag = Set<AnyCancellable>()
     
+    public let currentActiveUser = CurrentValueSubject<MastodonAuthenticationBox?, Never>(nil)
     @Published public var mastodonAuthenticationBoxes: [MastodonAuthenticationBox] = []
     public let updateActiveUserAccountPublisher = PassthroughSubject<Void, Never>()
     
     private init() {
+        prepareForUse()
+        
         $mastodonAuthenticationBoxes
             .throttle(for: 3, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] boxes in
+                guard let nowActive = boxes.first else { return }
                 Task { [weak self] in
-                    for authBox in boxes {
-                        do { try await self?.fetchFollowedBlockedUserIds(authBox) }
-                        catch {}
-                    }
+                    try await self?.fetchFollowedBlockedUserIds(nowActive)
                 }
             }
             .store(in: &disposeBag)
-        
-        
+
         // TODO: verify credentials for active authentication
         
-        $authentications
-            .map { authentications -> [MastodonAuthenticationBox] in
-                return authentications
-                    .sorted(by: { $0.activedAt > $1.activedAt })
-                    .compactMap { authentication -> MastodonAuthenticationBox? in
-                        return MastodonAuthenticationBox(authentication: authentication)
-                    }
-            }
-            .assign(to: &$mastodonAuthenticationBoxes)
-        
         Task {
-            await prepareForUse()
-            authentications = authenticationSortedByActivation()
+            if authenticationMigrationRequired {
+                migrateLegacyAuthentications(
+                    in: PersistenceManager.shared.mainActorManagedObjectContext
+                )
+            }
         }
     }
     
-    @Published public var authentications: [MastodonAuthentication] = [] {
+    private func authenticationBoxes(_ authentications: [MastodonAuthentication]) -> [MastodonAuthenticationBox] {
+        return authentications
+            .sorted(by: { $0.activedAt > $1.activedAt })
+            .compactMap { authentication -> MastodonAuthenticationBox? in
+                return MastodonAuthenticationBox(authentication: authentication)
+            }
+    }
+    
+    private var authentications: [MastodonAuthentication] = [] {
         didSet {
+            let boxes = authenticationBoxes(authentications)
+            let nowActive = boxes.first
+            if nowActive?.authentication != self.currentActiveUser.value?.authentication {
+                self.currentActiveUser.send(nowActive)
+            }
+            mastodonAuthenticationBoxes = boxes
             persist(authentications)
         }
     }
@@ -94,17 +105,32 @@ public class AuthenticationServiceProvider: ObservableObject {
         authentications.removeAll(where: { $0 == authentication })
     }
     
-    func activateAuthentication(in domain: String, for userID: String) {
+    public func activateExistingUser(_ userID: String, inDomain domain: String) -> Bool {
+        var found = false
         authentications = authentications.map { authentication in
             guard authentication.domain == domain, authentication.userID == userID else {
                 return authentication
             }
+            found = true
             return authentication.updating(activatedAt: Date())
         }
+        return found
     }
     
-    func getAuthentication(in domain: String, for userID: String) -> MastodonAuthentication? {
-        authentications.first(where: { $0.domain == domain && $0.userID == userID })
+    public func activateExistingUserToken(_ accessToken: String) -> MastodonAuthenticationBox? {
+        guard let match = mastodonAuthenticationBoxes.first(where: { $0.authentication.userAccessToken == accessToken }) else { return nil }
+        guard activateExistingUser(match.userID, inDomain: match.domain) else { return nil }
+        return match
+    }
+    
+    public func activateAuthentication(_ authenticationBox: MastodonAuthenticationBox) {
+        if activateExistingUser(authenticationBox.userID, inDomain: authenticationBox.domain) {
+            return
+        } else {
+            authentications.insert(authenticationBox.authentication, at: 0)
+            _ = activateExistingUser(authenticationBox.userID, inDomain: authenticationBox.domain)
+        }
+        
     }
 }
 
@@ -114,57 +140,55 @@ public extension AuthenticationServiceProvider {
         authentications.first(where: { $0.userAccessToken == userAccessToken })
     }
 
-    func authenticationSortedByActivation() -> [MastodonAuthentication] { // fixme: why do we need this?
-        return authentications.sorted(by: { $0.activedAt > $1.activedAt })
-    }
     
-    var activeAuthentication: MastodonAuthenticationBox? {
-        guard let active =  authenticationSortedByActivation().first else { return nil }
-        return MastodonAuthenticationBox(authentication: active)
-    }
     
     func fetchFollowingAndBlockedAsync() {
         /// We're dispatching this as a separate async call to not block the caller
         /// Also we'll only be updating the current active user as the state will be refreshed upon user-change anyways
         Task {
-            if let authBox = activeAuthentication {
+            if let authBox = currentActiveUser.value {
                 do { try await fetchFollowedBlockedUserIds(authBox) }
                 catch {}
             }
         }
     }
     
-    func activeMastodonUser(domain: String, userID: String) async throws -> Bool {
-        var isActive = false
-        
-        AuthenticationServiceProvider.shared.activateAuthentication(in: domain, for: userID)
-        
-        isActive = true
-        
-        return isActive
-    }
-    
     func signOutMastodonUser(authentication: MastodonAuthentication) async throws {
-        try await AuthenticationServiceProvider.shared.delete(authentication: authentication)
-        _ = try await AppContext.shared.apiService.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
+        try AuthenticationServiceProvider.shared.delete(authentication: authentication)
+        _ = try await APIService.shared.cancelSubscription(domain: authentication.domain, authorization: authentication.authorization)
     }
     
     @MainActor
-    func prepareForUse() {
+    private func prepareForUse() {
         if authentications.isEmpty {
             restoreFromKeychain()
         }
+        mastodonAuthenticationBoxes = authenticationBoxes(authentications)
+        currentActiveUser.send(mastodonAuthenticationBoxes.first)
     }
 
     @MainActor
     private func restoreFromKeychain() {
-        self.authentications = Self.keychain.allKeys().compactMap {
+        var keychainAuthentications: [MastodonAuthentication] = Self.keychain.allKeys().compactMap {
             guard
                 let encoded = Self.keychain[$0],
                 let data = Data(base64Encoded: encoded)
             else { return nil }
             return try? JSONDecoder().decode(MastodonAuthentication.self, from: data)
         }
+        .sorted(by: { $0.activedAt > $1.activedAt })
+        let cachedAccounts = keychainAuthentications.compactMap {
+            $0.cachedAccount()
+        }
+        if cachedAccounts.count == 0 {
+            // Assume this is a fresh install.
+            // Clear the keychain of any accounts remaining from previous installs.
+            for authentication in keychainAuthentications {
+                try? delete(authentication: authentication)
+            }
+            keychainAuthentications = []
+        }
+        self.authentications = keychainAuthentications
     }
     
     func updateAccountCreatedAt(_ newCreatedAt: Date, forAuthentication outdated: MastodonAuthentication) {
@@ -217,17 +241,27 @@ public extension AuthenticationServiceProvider {
         userDefaults.didMigrateAuthentications == false
     }
 
-    func fetchAccounts(apiService: APIService) async {
+    func fetchAccounts(onlyIfItHasBeenAwhile: Bool) async {
         // FIXME: This is a dirty hack to make the performance-stuff work.
         // Problem is, that we don't persist the user on disk anymore. So we have to fetch
         // it when we need it to display on the home timeline.
         // We need this (also) for the Account-list, but it might be the wrong place. App Startup might be more appropriate
+        
+        let minTimeBetweenAutomaticAccountFetches = TimeInterval( 60 * 60 * 24) // one day
+        let itHasBeenAwhile: Bool
+        
+        if let lastFetch = lastFetchOfAllAccounts {
+            itHasBeenAwhile = lastFetch.distance(to: Date.now) > minTimeBetweenAutomaticAccountFetches
+        } else {
+            itHasBeenAwhile = true
+        }
+        
+        guard itHasBeenAwhile else { return }
+        
+        lastFetchOfAllAccounts = Date.now
+        
         for authentication in authentications {
-            guard let account = try? await apiService.accountInfo(domain: authentication.domain,
-                                                                  userID: authentication.userID,
-                                                                  authorization: Mastodon.API.OAuth.Authorization(accessToken: authentication.userAccessToken)).value else { continue }
-
-            FileManager.default.store(account: account, forUserID: authentication.userIdentifier())
+            guard let _ = try? await APIService.shared.accountInfo(MastodonAuthenticationBox(authentication: authentication)) else { continue }
         }
 
         NotificationCenter.default.post(name: .userFetched, object: nil)
@@ -250,7 +284,7 @@ private extension AuthenticationServiceProvider {
         _ previousFollowingIDs: [String]? = nil,
         _ maxID: String? = nil
     ) async throws {
-        let apiService = AppContext.shared.apiService
+        let apiService = APIService.shared
         
         let followingResponse = try await fetchFollowing(maxID, apiService, authBox)
         let followingIds = (previousFollowingIDs ?? []) + followingResponse.ids

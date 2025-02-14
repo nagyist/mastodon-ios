@@ -25,7 +25,6 @@ extension SearchHistorySection {
         viewModel: SearchHistoryViewModel,
         collectionView: UICollectionView,
         authenticationBox: MastodonAuthenticationBox,
-        context: AppContext,
         configuration: Configuration
     ) -> UICollectionViewDiffableDataSource<SearchHistorySection, SearchHistoryItem> {
         

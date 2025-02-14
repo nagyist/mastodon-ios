@@ -10,10 +10,7 @@ import Combine
 import MastodonCore
 import MastodonUI
 
-final class DiscoveryHashtagsViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class DiscoveryHashtagsViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: DiscoveryHashtagsViewModel!
@@ -88,8 +85,8 @@ extension DiscoveryHashtagsViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard case let .hashtag(tag) = viewModel.diffableDataSource?.itemIdentifier(for: indexPath) else { return }
-        let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: tag.name)
-        _ = coordinator.present(
+        let hashtagTimelineViewModel = HashtagTimelineViewModel(authenticationBox: viewModel.authenticationBox, hashtag: tag.name)
+        _ = self.sceneCoordinator?.present(
             scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel),
             from: self,
             transition: .show
@@ -198,8 +195,8 @@ extension DiscoveryHashtagsViewController: TableViewControllerNavigateable {
         guard let item = diffableDataSource.itemIdentifier(for: indexPathForSelectedRow) else { return }
         
         guard case let .hashtag(tag) = item else { return }
-        let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: tag.name)
-        _ = coordinator.present(
+        let hashtagTimelineViewModel = HashtagTimelineViewModel(authenticationBox: viewModel.authenticationBox, hashtag: tag.name)
+        _ = self.sceneCoordinator?.present(
             scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel),
             from: self,
             transition: .show

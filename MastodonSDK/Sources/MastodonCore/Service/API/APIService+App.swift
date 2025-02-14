@@ -20,14 +20,14 @@ extension APIService {
     #endif
 
     private static let appWebsite = "https://app.joinmastodon.org/ios"
-
-    public func createApplication(domain: String) -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Application>, Error> {
+    
+    public func createApplication(domain: String) async throws -> Mastodon.Entity.Application {
         let query = Mastodon.API.App.CreateQuery(
             clientName: APIService.clientName,
             redirectURIs: APIService.oauthCallbackURL,
             website: APIService.appWebsite
         )
-        return Mastodon.API.App.create(
+        return try await Mastodon.API.App.create(
             session: session,
             domain: domain,
             query: query

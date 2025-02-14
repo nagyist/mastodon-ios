@@ -46,7 +46,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                     completion: { (newRelationship: Mastodon.Entity.Relationship) in
                         notification.relationship = newRelationship
                         Task { @MainActor in
-                            notificationView.configure(notification: notification, authenticationBox: self.authenticationBox)
+                            notificationView.configure(notification: notification)
                         }
                     }
                 )
@@ -120,6 +120,9 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 notificationView: notificationView,
                 query: .accept
             )
+            if let self = self as? NotificationTimelineViewController {
+                self.didActOnFollowRequest(notification, approved: true)
+            }
         }
     }
     
@@ -136,7 +139,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 return
             }
             guard case let .notification(notification) = item else {
-                assertionFailure("only works for status data provider")
+                assertionFailure("only works for notification")
                 return
             }
 
@@ -146,6 +149,9 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 notificationView: notificationView,
                 query: .reject
             )
+            if let self = self as? NotificationTimelineViewController {
+                self.didActOnFollowRequest(notification, approved: false)
+            }
         }
     }
 }
@@ -197,7 +203,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Med
                     guard let sensitive = status.entity.sensitive else {
                         return false
                     }
-                    return status.isSensitiveToggled ? !sensitive : sensitive
+                    return status.showDespiteContentWarning ? !sensitive : sensitive
                 }()
                 return NotificationMediaTransitionContext(
                     status: status,
@@ -250,7 +256,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Med
                 guard let status = record.status?.reblog ?? record.status else { return nil }
                 return NotificationMediaTransitionContext(
                     status: status,
-                    needsToggleMediaSensitive: status.entity.sensitive == true ? !status.isSensitiveToggled : false
+                    needsToggleMediaSensitive: status.entity.sensitive == true ? !status.showDespiteContentWarning : false
                 )
             }()
 
@@ -297,13 +303,13 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 assertionFailure("only works for status data provider")
                 return
             }
-            guard let status = notification.status?.reblog ?? notification.status else {
+            guard let status = await notification.entity.latestStatus ??  notification.status?.entity else {
                 assertionFailure()
                 return
             }
             try await DataSourceFacade.responseToActionToolbar(
                 provider: self,
-                status: status,
+                status: MastodonStatus.fromEntity(status),
                 action: action,
                 sender: button
             )
@@ -383,7 +389,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
         _ cell: UITableViewCell,
         notificationView: NotificationView,
         statusView: StatusView,
-        spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView
+        contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView
     ) {
         Task {
             let source = DataSourceItem.Source(tableViewCell: cell, indexPath: nil)
@@ -443,7 +449,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
         _ cell: UITableViewCell,
         notificationView: NotificationView,
         quoteStatusView: StatusView,
-        spoilerOverlayViewDidPressed overlayView: SpoilerOverlayView
+        contentConcealExplainViewDidPressed contentConcealExplainView: ContentConcealExplainView
     ) {
         Task {
             let source = DataSourceItem.Source(tableViewCell: cell, indexPath: nil)
@@ -568,7 +574,7 @@ extension NotificationTableViewCellDelegate where Self: DataSourceProvider & Aut
                 .compactMap { poll.options.firstIndex(of: $0) }
 
             do {
-                let newPoll = try await context.apiService.vote(
+                let newPoll = try await APIService.shared.vote(
                     poll: poll.entity,
                     choices: choices,
                     authenticationBox: authenticationBox

@@ -8,6 +8,7 @@
 import Foundation
 import GameplayKit
 import MastodonSDK
+import MastodonCore
 
 extension DiscoveryNewsViewModel {
     class State: GKState {
@@ -123,7 +124,7 @@ extension DiscoveryNewsViewModel.State {
             
             Task {
                 do {
-                    let response = try await viewModel.context.apiService.trendLinks(
+                    let response = try await APIService.shared.trendLinks(
                         domain: viewModel.authenticationBox.domain,
                         query: Mastodon.API.Trends.StatusQuery(
                             offset: offset,

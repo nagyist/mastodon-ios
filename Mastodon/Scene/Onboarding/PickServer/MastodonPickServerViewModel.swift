@@ -16,6 +16,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
+@MainActor
 class MastodonPickServerViewModel: NSObject {
 
     enum EmptyStateViewState {
@@ -29,8 +30,7 @@ class MastodonPickServerViewModel: NSObject {
     let serverSectionHeaderView = PickServerServerSectionTableHeaderView()
 
     // input
-    let context: AppContext
-    var categoryPickerItems: [CategoryPickerItem] = {
+    let categoryPickerItems: [CategoryPickerItem] = {
         var items: [CategoryPickerItem] = []
         items.append(.language(language: nil))
         items.append(.signupSpeed(manuallyReviewed: nil))
@@ -70,11 +70,14 @@ class MastodonPickServerViewModel: NSObject {
     let isLoadingIndexedServers = CurrentValueSubject<Bool, Never>(false)
     let loadingIndexedServersError = CurrentValueSubject<Error?, Never>(nil)
     let emptyStateViewState = CurrentValueSubject<EmptyStateViewState, Never>(.none)
+    
+    let joinServer: (Mastodon.Entity.Server) async throws ->()
+    let displayError: (Error)->()
         
-    init(context: AppContext) {
-        self.context = context
+    init(joinServer: @escaping (Mastodon.Entity.Server) async throws ->(), displayError: @escaping (Error)->()) {
+        self.joinServer = joinServer
+        self.displayError = displayError
         super.init()
-
         configure()
     }
     
@@ -85,7 +88,7 @@ extension MastodonPickServerViewModel {
     
     private func configure() {
 
-        context.apiService.languages().sink { completion in
+        APIService.shared.languages().sink { completion in
             
         } receiveValue: { response in
             self.allLanguages.value = response.value
@@ -165,9 +168,9 @@ extension MastodonPickServerViewModel {
                     return Just(Result.failure(APIService.APIError.implicit(.badRequest))).eraseToAnyPublisher()
                 }
                 self.unindexedServers.value = nil
-                return self.context.apiService.webFinger(domain: domain)
+                return APIService.shared.webFinger(domain: domain)
                     .flatMap { domain -> AnyPublisher<Result<Mastodon.Response.Content<[Mastodon.Entity.Server]>, Error>, Never> in
-                        return self.context.apiService.instance(domain: domain, authenticationBox: nil)
+                        return APIService.shared.instance(domain: domain, authenticationBox: nil)
                             .map { response -> Result<Mastodon.Response.Content<[Mastodon.Entity.Server]>, Error>in
                                 let newResponse = response.map { [Mastodon.Entity.Server(domain: domain, instance: $0)] }
                                 return Result.success(newResponse)
@@ -275,28 +278,9 @@ extension MastodonPickServerViewModel {
     }
 }
 
-// MARK: - SignUp methods & structs
-extension MastodonPickServerViewModel {
-    struct SignUpResponseFirst {
-        let instance: Mastodon.Response.Content<Mastodon.Entity.Instance>
-        let application: Mastodon.Response.Content<Mastodon.Entity.Application>
-    }
-    
-    struct SignUpResponseSecond {
-        let instance: Mastodon.Response.Content<Mastodon.Entity.Instance>
-        let authenticateInfo: AuthenticationViewModel.AuthenticateInfo
-    }
-    
-    struct SignUpResponseThird {
-        let instance: Mastodon.Response.Content<Mastodon.Entity.Instance>
-        let authenticateInfo: AuthenticationViewModel.AuthenticateInfo
-        let applicationToken: Mastodon.Response.Content<Mastodon.Entity.Token>
-    }
-}
-
 // MARK: - TMBarDataSource
 extension MastodonPickServerViewModel: TMBarDataSource {
-    func barItem(for bar: TMBar, at index: Int) -> TMBarItemable {
+    nonisolated func barItem(for bar: TMBar, at index: Int) -> TMBarItemable {
         let item = categoryPickerItems[index]
         let barItem = TMBarItem(title: item.title)
         return barItem

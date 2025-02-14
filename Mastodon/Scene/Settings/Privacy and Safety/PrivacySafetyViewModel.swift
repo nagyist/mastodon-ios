@@ -20,26 +20,30 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
     }
     
     enum Visibility: CaseIterable {
-        case `public`, followersOnly, onlyPeopleMentioned
+        case `public`, unlisted, followersOnly, onlyPeopleMentioned
         
         var title: String {
             switch self {
             case .public:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.public
+                return L10n.Scene.Compose.Visibility.public
+            case .unlisted:
+                return L10n.Scene.Compose.Visibility.unlisted
             case .followersOnly:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.followersOnly
+                return L10n.Scene.Compose.Visibility.private
             case .onlyPeopleMentioned:
-                return L10n.Scene.Settings.PrivacySafety.DefaultPostVisibility.onlyPeopleMentioned
+                return L10n.Scene.Compose.Visibility.direct
             }
         }
         
-        static func from(_ privacy: Mastodon.Entity.Source.Privacy) -> Self {
+        static func fromPrivacy(_ privacy: Mastodon.Entity.Source.Privacy) -> Self {
             switch privacy {
             case .public:
                 return .public
             case .unlisted:
+                return .unlisted
+            case .private:
                 return .followersOnly
-            case .private, .direct:
+            case .direct:
                 return .onlyPeopleMentioned
             case ._other(_):
                 return .public
@@ -50,10 +54,12 @@ class PrivacySafetyViewModel: ObservableObject, PrivacySafetySettingApplicable {
             switch self {
             case .public:
                 return .public
-            case .followersOnly:
+            case .unlisted:
                 return .unlisted
-            case .onlyPeopleMentioned:
+            case .followersOnly:
                 return .private
+            case .onlyPeopleMentioned:
+                return .direct
             }
         }
     }
@@ -145,13 +151,15 @@ extension PrivacySafetyViewModel {
             let domain = authenticationBox.domain
             let userAuthorization = authenticationBox.userAuthorization
             
-            let account = try await appContext.apiService.accountVerifyCredentials(
+            let (account, _) = try await APIService.shared.verifyAndActivateUser(
                 domain: domain,
+                clientID: authenticationBox.authentication.clientID,
+                clientSecret: authenticationBox.authentication.clientSecret,
                 authorization: userAuthorization
-            ).singleOutput().value
+            )
             
             if let privacy = account.source?.privacy {
-                visibility = .from(privacy)
+                visibility = .fromPrivacy(privacy)
             }
             
             manuallyApproveFollowRequests = account.locked == true
@@ -172,7 +180,7 @@ extension PrivacySafetyViewModel {
             let domain = authenticationBox.domain
             let userAuthorization = authenticationBox.userAuthorization
             
-            let _ = try await appContext.apiService.accountUpdateCredentials(
+            let _ = try await APIService.shared.accountUpdateCredentials(
                 domain: domain,
                 query: .init(
                     discoverable: suggestMyAccountToOthers,

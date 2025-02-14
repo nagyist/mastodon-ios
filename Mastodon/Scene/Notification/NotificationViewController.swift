@@ -14,10 +14,7 @@ import Pageboy
 import MastodonCore
 import MastodonSDK
 
-final class NotificationViewController: TabmanViewController, NeedsDependency {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class NotificationViewController: TabmanViewController {
 
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
@@ -100,14 +97,14 @@ extension NotificationViewController {
         super.viewDidAppear(animated)
 
         // reset notification count
-        context.notificationService.clearNotificationCountForActiveUser()
+        NotificationService.shared.clearNotificationCountForActiveUser()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
         // reset notification count
-        context.notificationService.clearNotificationCountForActiveUser()
+        NotificationService.shared.clearNotificationCountForActiveUser()
     }
     
     override func viewDidDisappear(_ animated: Bool) {
@@ -121,17 +118,18 @@ extension NotificationViewController {
     @objc private func showNotificationPolicySettings(_ sender: Any) {
         guard let viewModel, let policy = viewModel.notificationPolicy else { return }
 
-        let policyViewModel = NotificationFilterViewModel(
-            appContext: viewModel.context,
-            notFollowing: policy.filterNotFollowing,
-            noFollower: policy.filterNotFollowers,
-            newAccount: policy.filterNewAccounts,
-            privateMentions: policy.filterPrivateMentions
-        )
-
-        guard let policyViewController = coordinator.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
-
-        policyViewController.delegate = self
+        Task {
+            let policyViewModel = await NotificationFilterViewModel(
+                notFollowing: policy.filterNotFollowing,
+                noFollower: policy.filterNotFollowers,
+                newAccount: policy.filterNewAccounts,
+                privateMentions: policy.filterPrivateMentions
+            )
+            
+            guard let policyViewController = self.sceneCoordinator?.present(scene: .notificationPolicy(viewModel: policyViewModel), transition: .formSheet) as? NotificationPolicyViewController else { return }
+            
+            policyViewController.delegate = self
+        }
     }
 }
 
@@ -156,12 +154,9 @@ extension NotificationViewController {
 
         let viewController = NotificationTimelineViewController(
             viewModel: NotificationTimelineViewModel(
-                context: context,
                 authenticationBox: viewModel.authenticationBox,
                 scope: scope, notificationPolicy: viewModel.notificationPolicy
-            ),
-            context: context,
-            coordinator: coordinator
+            )
         )
 
         return viewController

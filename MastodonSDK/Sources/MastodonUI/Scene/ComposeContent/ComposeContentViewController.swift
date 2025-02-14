@@ -33,7 +33,7 @@ public final class ComposeContentViewController: UIViewController {
     // auto complete
     private(set) lazy var autoCompleteViewController: AutoCompleteViewController = {
         let viewController = AutoCompleteViewController()
-        viewController.viewModel = AutoCompleteViewModel(context: viewModel.context, authenticationBox: viewModel.authenticationBox)
+        viewController.viewModel = AutoCompleteViewModel(authenticationBox: viewModel.authenticationBox)
         viewController.delegate = self
         // viewController.viewModel.customEmojiViewModel.value = viewModel.customEmojiViewModel
         return viewController
@@ -53,11 +53,7 @@ public final class ComposeContentViewController: UIViewController {
         return configuration
     }
 
-    public private(set) lazy var photoLibraryPicker: PHPickerViewController = {
-        let imagePicker = PHPickerViewController(configuration: ComposeContentViewController.createPhotoLibraryPickerConfiguration())
-        imagePicker.delegate = self
-        return imagePicker
-    }()
+    public private(set) var photoLibraryPicker: PHPickerViewController?
     
     public private(set) lazy var imagePickerController: UIImagePickerController = {
         let imagePickerController = UIImagePickerController()
@@ -137,6 +133,7 @@ extension ComposeContentViewController {
             viewModel.$isEmojiActive,
             viewModel.$autoCompleteInfo
         )
+        .receive(on: DispatchQueue.main)
         .sink(receiveValue: { [weak self] keyboardEvents, isEmojiActive, autoCompleteInfo in
             guard let self = self else { return }
             
@@ -270,15 +267,6 @@ extension ComposeContentViewController {
         
         // bind toolbar
         bindToolbarViewModel()
-        
-        // bind attachment picker
-        viewModel.$attachmentViewModels
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                self.resetImagePicker()
-            }
-            .store(in: &disposeBag)
     }
     
     public override func viewDidLayoutSubviews() {
@@ -333,10 +321,10 @@ extension ComposeContentViewController {
         // run on background thread since NLLanguageRecognizer seems to do CPU-bound work
         // that we don’t want on main
             .receive(on: DispatchQueue.global(qos: .utility))
-            .sink { [unowned self] content in
+            .sink { [weak self] content in
                 if content.isEmpty {
                     DispatchQueue.main.async {
-                        self.composeContentToolbarViewModel.suggestedLanguages = []
+                        self?.composeContentToolbarViewModel.suggestedLanguages = []
                     }
                     return
                 }
@@ -345,15 +333,15 @@ extension ComposeContentViewController {
                 let hypotheses = languageRecognizer
                     .languageHypotheses(withMaximum: 3)
                 DispatchQueue.main.async {
-                    self.composeContentToolbarViewModel.suggestedLanguages = hypotheses
+                    self?.composeContentToolbarViewModel.suggestedLanguages = hypotheses
                         .filter { _, probability in probability > 0.1 }
                         .keys
                         .map(\.rawValue)
 
                     if let bestLanguage = hypotheses.max(by: { $0.value < $1.value }), bestLanguage.value > 0.99 {
-                        self.composeContentToolbarViewModel.highConfidenceSuggestedLanguage = bestLanguage.key.rawValue
+                        self?.composeContentToolbarViewModel.highConfidenceSuggestedLanguage = bestLanguage.key.rawValue
                     } else {
-                        self.composeContentToolbarViewModel.highConfidenceSuggestedLanguage = nil
+                        self?.composeContentToolbarViewModel.highConfidenceSuggestedLanguage = nil
                     }
                 }
             }
@@ -374,6 +362,7 @@ extension ComposeContentViewController {
         viewModel.$recentLanguages.assign(to: &composeContentToolbarViewModel.$recentLanguages)
         
         // bind back to source due to visibility not update via delegate
+        composeContentToolbarViewModel.visibility = viewModel.visibility
         composeContentToolbarViewModel.$visibility
             .dropFirst()
             .receive(on: DispatchQueue.main)
@@ -397,7 +386,8 @@ extension ComposeContentViewController {
         }
     }
     
-    private func resetImagePicker() {
+    private func resetPhotoPicker() {
+        photoLibraryPicker?.delegate = nil
         let selectionLimit = max(1, viewModel.maxMediaAttachmentLimit - viewModel.attachmentViewModels.count)
         let configuration = ComposeContentViewController.createPhotoLibraryPickerConfiguration(selectionLimit: selectionLimit)
         photoLibraryPicker = createImagePicker(configuration: configuration)
@@ -469,7 +459,6 @@ extension ComposeContentViewController: PHPickerViewControllerDelegate {
 
         let attachmentViewModels: [AttachmentViewModel] = results.map { result in
             AttachmentViewModel(
-                api: viewModel.context.apiService,
                 authenticationBox: viewModel.authenticationBox,
                 input: .pickerResult(result),
                 sizeLimit: viewModel.sizeLimit,
@@ -488,7 +477,6 @@ extension ComposeContentViewController: UIImagePickerControllerDelegate & UINavi
         guard let image = info[.originalImage] as? UIImage else { return }
 
         let attachmentViewModel = AttachmentViewModel(
-            api: viewModel.context.apiService,
             authenticationBox: viewModel.authenticationBox,
             input: .image(image),
             sizeLimit: viewModel.sizeLimit,
@@ -508,7 +496,6 @@ extension ComposeContentViewController: UIDocumentPickerDelegate {
         guard let url = urls.first else { return }
 
         let attachmentViewModel = AttachmentViewModel(
-            api: viewModel.context.apiService,
             authenticationBox: viewModel.authenticationBox,
             input: .url(url),
             sizeLimit: viewModel.sizeLimit,
@@ -535,7 +522,7 @@ extension ComposeContentViewController: ComposeContentToolbarViewDelegate {
             self.viewModel.isContentWarningActive.toggle()
             if self.viewModel.isContentWarningActive {
                 Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: .second / 20)     // 0.05s
+                    try? await Task.sleep(nanoseconds: .nanosPerUnit / 20)     // 0.05s
                     self.viewModel.setContentWarningTextViewFirstResponderIfNeeds()
                 }   // end Task
             } else {
@@ -548,13 +535,22 @@ extension ComposeContentViewController: ComposeContentToolbarViewDelegate {
         }
     }
     
+    public func presentPhotoLibraryPicker() {
+        if let photoLibraryPicker {
+            guard photoLibraryPicker.presentingViewController == nil else { return }
+        }
+        resetPhotoPicker()
+        guard let photoLibraryPicker else { return }
+        present(photoLibraryPicker, animated: true, completion: nil)
+    }
+    
     func composeContentToolbarView(
         _ viewModel: ComposeContentToolbarView.ViewModel,
         attachmentMenuDidPressed action: ComposeContentToolbarView.ViewModel.AttachmentAction
     ) {
         switch action {
         case .photoLibrary:
-            present(photoLibraryPicker, animated: true, completion: nil)
+            presentPhotoLibraryPicker()
         case .camera:
                 present(imagePickerController, animated: true, completion: nil)
         case .browse:

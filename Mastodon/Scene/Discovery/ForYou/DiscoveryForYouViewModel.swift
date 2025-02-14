@@ -16,7 +16,6 @@ final class DiscoveryForYouViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     @MainActor
@@ -29,8 +28,7 @@ final class DiscoveryForYouViewModel {
     var diffableDataSource: UITableViewDiffableDataSource<DiscoverySection, DiscoveryItem>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
     
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.accounts = []
         self.relationships = []
@@ -48,12 +46,12 @@ extension DiscoveryForYouViewModel {
         do {
             let suggestedAccounts = try await fetchSuggestionAccounts()
 
-            let familiarFollowersResponse = try? await context.apiService.familiarFollowers(
+            let familiarFollowersResponse = try? await APIService.shared.familiarFollowers(
                 query: .init(ids: suggestedAccounts.compactMap { $0.id }),
                 authenticationBox: authenticationBox
             ).value
 
-            let relationships = try? await context.apiService.relationship(
+            let relationships = try? await APIService.shared.relationship(
                 forAccounts: suggestedAccounts,
                 authenticationBox: authenticationBox
             ).value
@@ -85,14 +83,14 @@ extension DiscoveryForYouViewModel {
     
     private func fetchSuggestionAccounts() async throws -> [Mastodon.Entity.Account] {
         do {
-            let response = try await context.apiService.suggestionAccountV2(
+            let response = try await APIService.shared.suggestionAccountV2(
                 query: nil,
                 authenticationBox: authenticationBox
             ).value
             return response.compactMap { $0.account }
         } catch {
             // fallback V1
-            let response = try await context.apiService.suggestionAccount(
+            let response = try await APIService.shared.suggestionAccount(
                 query: nil,
                 authenticationBox: authenticationBox
             ).value

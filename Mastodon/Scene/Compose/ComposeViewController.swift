@@ -17,11 +17,13 @@ import MastodonUI
 import MastodonLocalization
 import MastodonSDK
 
-final class ComposeViewController: UIViewController, NeedsDependency {
+final class ComposeViewController: UIViewController {
     static let minAutoCompleteVisibleHeight: CGFloat = 100
-        
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+    lazy var publishProgressView: UIProgressView = {
+        let progressView = UIProgressView(progressViewStyle: .bar)
+        progressView.alpha = 0
+        return progressView
+    }()
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: ComposeViewModel
@@ -29,9 +31,39 @@ final class ComposeViewController: UIViewController, NeedsDependency {
     init(viewModel: ComposeViewModel) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
+        self.setUpPublishingIndicator()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    
+    func setUpPublishingIndicator() {
+        publishProgressView.translatesAutoresizingMaskIntoConstraints = false
+        publishProgressView.tintColor = .systemIndigo
+        publishProgressView.trackTintColor = .systemGray
+        publishButton.addSubview(publishProgressView)
+        let constraints = [
+            publishProgressView.leadingAnchor.constraint(equalTo: publishButton.leadingAnchor),
+            publishProgressView.trailingAnchor.constraint(equalTo: publishButton.trailingAnchor),
+            publishProgressView.topAnchor.constraint(equalTo: publishButton.topAnchor),
+            publishProgressView.bottomAnchor.constraint(equalTo: publishButton.bottomAnchor),
+            publishProgressView.heightAnchor.constraint(greaterThanOrEqualToConstant: 35)
+        ]
+        NSLayoutConstraint.activate(constraints)
+        
+        PublisherService.shared.$currentPublishProgress
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] progress in
+                guard let self = self else { return }
+                let progress = Float(progress)
+                if progress > 0 {
+                    UIView.animate(withDuration: 0.25) {
+                        self.publishProgressView.alpha = 1
+                    }
+                    self.publishProgressView.setProgress(progress, animated: true)
+                }
+            }
+            .store(in: &disposeBag)
+    }
 
     lazy var composeContentViewModel: ComposeContentViewModel = {
 
@@ -48,7 +80,6 @@ final class ComposeViewController: UIViewController, NeedsDependency {
         }
 
         return ComposeContentViewModel(
-            context: context,
             authenticationBox: viewModel.authenticationBox,
             composeContext: composeContext,
             destination: viewModel.destination,
@@ -217,7 +248,7 @@ extension ComposeViewController {
             let alertController = UIAlertController(for: error, title: nil, preferredStyle: .alert)
             let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
             alertController.addAction(okAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
         
@@ -235,7 +266,7 @@ extension ComposeViewController {
                 self?.enqueuePublishStatus()
             }
             alertController.addAction(confirmAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
         
@@ -245,7 +276,34 @@ extension ComposeViewController {
     private func enqueuePublishStatus() {
         do {
             let statusPublisher = try composeContentViewModel.statusPublisher()
-            viewModel.context.publisherService.enqueue(
+            cancelBarButtonItem.isEnabled = false
+            publishButton.isEnabled = false
+            statusPublisher.state
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] result in
+                    self?.cancelBarButtonItem.isEnabled = true
+                    
+                    switch result {
+                    case .success:
+                        self?.publishProgressView.progress = 100
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            self?.dismiss(animated: true, completion: nil)
+                        }
+                    case .failure(let error):
+                        UIView.animate(withDuration: 0.25) {
+                            self?.publishProgressView.alpha = 0
+                        }
+                        self?.publishButton.isEnabled = true
+                        let alertController = UIAlertController.standardAlert(of: error)
+                        self?.present(alertController, animated: true)
+                        // HomeTimelineViewController is also listening and will post the alert if this view has been dismissed
+                    case .pending:
+                        break
+                    }
+                }
+                .store(in: &disposeBag)
+            
+            PublisherService.shared.enqueue(
                 statusPublisher: statusPublisher,
                 authenticationBox: viewModel.authenticationBox
             )
@@ -254,8 +312,6 @@ extension ComposeViewController {
             present(alertController, animated: true)
             return
         }
-
-        dismiss(animated: true, completion: nil)
     }
 
     @objc
@@ -266,7 +322,7 @@ extension ComposeViewController {
             let alertController = UIAlertController(for: error, title: nil, preferredStyle: .alert)
             let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default, handler: nil)
             alertController.addAction(okAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
 
@@ -284,7 +340,7 @@ extension ComposeViewController {
                 self?.enqueuePublishStatusEdit()
             }
             alertController.addAction(confirmAction)
-            _ = coordinator.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .alertController(alertController: alertController), from: nil, transition: .alertController(animated: true, completion: nil))
             return
         }
         
@@ -294,7 +350,7 @@ extension ComposeViewController {
     private func enqueuePublishStatusEdit() {
         do {
             guard let editStatusPublisher = try composeContentViewModel.statusEditPublisher() else { return }
-            viewModel.context.publisherService.enqueue(
+            PublisherService.shared.enqueue(
                 statusPublisher: editStatusPublisher,
                 authenticationBox: viewModel.authenticationBox
             )
@@ -325,7 +381,6 @@ extension ComposeViewController {
         if UIPasteboard.general.hasImages, let images = UIPasteboard.general.images {
             let attachmentViewModels = images.map { image in
                 return AttachmentViewModel(
-                    api: viewModel.context.apiService,
                     authenticationBox: viewModel.authenticationBox,
                     input: .image(image),
                     sizeLimit: composeContentViewModel.sizeLimit,
@@ -461,16 +516,15 @@ extension ComposeViewController {
         case .publishPost:
             publishBarButtonItemPressed(publishBarButtonItem)
         case .mediaBrowse:
-            guard !isViewControllerIsAlreadyModal(composeContentViewController.documentPickerController) else { return }
+            guard composeContentViewController.documentPickerController.presentingViewController == nil else { return }
             present(composeContentViewController.documentPickerController, animated: true, completion: nil)
         case .mediaPhotoLibrary:
-            guard !isViewControllerIsAlreadyModal(composeContentViewController.photoLibraryPicker) else { return }
-            present(composeContentViewController.photoLibraryPicker, animated: true, completion: nil)
+            composeContentViewController.presentPhotoLibraryPicker()
         case .mediaCamera:
             guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
                 return
             }
-            guard !isViewControllerIsAlreadyModal(composeContentViewController.imagePickerController) else { return }
+            guard composeContentViewController.imagePickerController.presentingViewController == nil else { return }
             present(composeContentViewController.imagePickerController, animated: true, completion: nil)
         case .togglePoll:
             composeContentViewModel.isPollActive.toggle()
@@ -485,10 +539,6 @@ extension ComposeViewController {
         case .selectVisibilityDirect:
             composeContentViewModel.visibility = .direct
         }
-    }
-    
-    private func isViewControllerIsAlreadyModal(_ viewController: UIViewController) -> Bool {
-        return viewController.presentingViewController != nil
     }
     
 }

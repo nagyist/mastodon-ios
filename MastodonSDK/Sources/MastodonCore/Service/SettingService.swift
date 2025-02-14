@@ -13,35 +13,30 @@ import MastodonAsset
 import MastodonLocalization
 import MastodonCommon
 
+@MainActor
 public final class SettingService {
+    
+    public static let shared = { SettingService() }()
     
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    weak var apiService: APIService?
-    weak var notificationService: NotificationService?
-    
+    var apiService: APIService { APIService.shared }
+    var notificationService: NotificationService { NotificationService.shared
+    }
     // output
     let settingFetchedResultController: SettingFetchedResultController
     public let currentSetting = CurrentValueSubject<Setting?, Never>(nil)
     
-    init(
-        apiService: APIService,
-        notificationService: NotificationService
-    ) {
-        self.apiService = apiService
-        self.notificationService = notificationService
-        self.settingFetchedResultController = SettingFetchedResultController(
-            managedObjectContext: AppContext.shared.managedObjectContext,
-            additionalPredicate: nil
-        )
+    private init() {
+        self.settingFetchedResultController = SettingFetchedResultController()
 
         // create setting (if non-exist) for authenticated users
         AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .compactMap { [weak self] mastodonAuthenticationBoxes -> AnyPublisher<[MastodonAuthenticationBox], Never>? in
                 guard let self = self else { return nil }
                 
-                let managedObjectContext = AppContext.shared.backgroundManagedObjectContext
+                let managedObjectContext = PersistenceManager.shared.backgroundManagedObjectContext
                 return managedObjectContext.performChanges {
                     for authenticationBox in mastodonAuthenticationBoxes {
                         let domain = authenticationBox.domain
@@ -95,7 +90,7 @@ public final class SettingService {
             guard setting.domain == authenticationBox.domain,
                   setting.userID == authenticationBox.userID else { return nil }
             
-            let _viewModel = self.notificationService?.dequeueNotificationViewModel(
+            let _viewModel = notificationService.dequeueNotificationViewModel(
                 mastodonAuthenticationBox: authenticationBox
             )
             guard let viewModel = _viewModel else { return nil }

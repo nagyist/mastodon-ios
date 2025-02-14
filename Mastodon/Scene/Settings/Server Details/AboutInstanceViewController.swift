@@ -10,11 +10,9 @@ protocol AboutInstanceViewControllerDelegate: AnyObject {
     func sendEmailToAdmin(_ viewController: AboutInstanceViewController, emailAddress: String)
 }
 
-class AboutInstanceViewController: UIViewController, NeedsDependency, AuthContextProvider {
+class AboutInstanceViewController: UIViewController, AuthContextProvider {
 
     var authenticationBox: MastodonAuthenticationBox
-    var context: AppContext!
-    var coordinator: SceneCoordinator!
 
     weak var delegate: AboutInstanceViewControllerDelegate?
     var dataSource: AboutInstanceTableViewDataSource?
@@ -25,11 +23,8 @@ class AboutInstanceViewController: UIViewController, NeedsDependency, AuthContex
 
     var instance: Mastodon.Entity.V2.Instance?
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, coordinator: SceneCoordinator) {
-
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
-        self.coordinator = coordinator
 
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false

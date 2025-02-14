@@ -13,7 +13,7 @@ extension MastodonPickServerViewModel {
     
     func setupDiffableDataSource(
         for tableView: UITableView,
-        dependency: NeedsDependency,
+        dependency: UIViewController,
         pickServerServerSectionTableHeaderViewDelegate: PickServerServerSectionTableHeaderViewDelegate
     ) {
         // set section header

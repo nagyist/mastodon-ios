@@ -14,15 +14,17 @@ final class SearchHistoryViewModel {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     @Published public var items: [Persistence.SearchHistory.Item]
 
     // output
     var diffableDataSource: UICollectionViewDiffableDataSource<SearchHistorySection, SearchHistoryItem>?
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    public var isRecentSearchEmpty: Bool {
+        return items.isEmpty
+    }
+    
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.items = (try? FileManager.default.searchItems(for: authenticationBox)) ?? []
     }

@@ -7,6 +7,7 @@
 
 import UIKit
 import MastodonSDK
+import MastodonUI
 
 extension ReportStatusTableViewCell {
     // todo: refactor / remove this
@@ -30,20 +31,9 @@ extension ReportStatusTableViewCell {
             statusView.frame.size.width = tableView.frame.width - ReportStatusTableViewCell.checkboxLeadingMargin - ReportStatusTableViewCell.checkboxSize.width - ReportStatusTableViewCell.statusViewLeadingSpacing
         }
         
-        statusView.configure(status: viewModel.value)
+        let contentDisplayMode = StatusView.ContentConcealViewModel(status: viewModel.value, filterBox: nil, filterContext: nil).byShowingAll().effectiveDisplayMode
         
-        statusView.viewModel.$isContentReveal
-            .removeDuplicates()
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak tableView, weak self] isContentReveal in
-                guard let tableView = tableView else { return }
-                guard let _ = self else { return }
-                
-                tableView.beginUpdates()
-                tableView.endUpdates()
-            }
-            .store(in: &disposeBag)
+        statusView.configure(status: viewModel.value, contentDisplayMode: contentDisplayMode)
     }
     
 }

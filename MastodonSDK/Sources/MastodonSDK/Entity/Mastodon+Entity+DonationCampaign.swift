@@ -14,6 +14,20 @@ extension Mastodon.Entity {
 
     public struct DonationCampaign: Codable {
         
+        public enum DonationCampaignRequestSource {
+            case banner
+            case menu
+            
+            public var queryValue: String? {
+                switch self {
+                case .banner:
+                    return nil
+                case .menu:
+                    return "menu"
+                }
+            }
+        }
+        
         public enum DonationSource {
             case campaign(id: String)
             case menu

@@ -14,18 +14,19 @@ import MastodonSDK
 extension DataSourceFacade {
     @MainActor
     public static func responseToStatusBookmarkAction(
-        provider: NeedsDependency & AuthContextProvider & DataSourceProvider,
+        provider: AuthContextProvider & DataSourceProvider,
         status: MastodonStatus
     ) async throws {
         FeedbackGenerator.shared.generate(.selectionChanged)
         
-        let updatedStatus = try await provider.context.apiService.bookmark(
+        let updatedStatus = try await APIService.shared.bookmark(
             record: status,
             authenticationBox: provider.authenticationBox
         ).value
         
         let newStatus: MastodonStatus = .fromEntity(updatedStatus)
-        newStatus.isSensitiveToggled = status.isSensitiveToggled
+        newStatus.showDespiteContentWarning = status.showDespiteContentWarning
+        newStatus.showDespiteFilter = status.showDespiteFilter
         
         provider.update(status: newStatus, intent: .bookmark(updatedStatus.bookmarked == true))
     }

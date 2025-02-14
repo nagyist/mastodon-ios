@@ -108,21 +108,11 @@ private struct MastodonServerRulesButton: View {
     }
 }
 
-final class MastodonServerRulesViewController: UIHostingController<MastodonServerRulesView>, NeedsDependency {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class MastodonServerRulesViewController: UIHostingController<MastodonServerRulesView> {
     
-    private var viewModel: MastodonServerRulesViewModel!
-    
-    init(viewModel: MastodonServerRulesViewModel) {
+    init(viewModel: MastodonServerRulesView.ViewModel) {
         super.init(rootView: MastodonServerRulesView())
-        self.viewModel = viewModel
-        self.rootView.viewModel = .init(
-            disclaimer: LocalizedStringKey(L10n.Scene.ServerRules.subtitle(viewModel.domain)),
-            rules: viewModel.rules.map({ $0.text }),
-            onAgree: { self.nextButtonPressed(nil) },
-            onDisagree: { self.backButtonPressed(nil) })
+        self.rootView.viewModel = viewModel
     }
     
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {
@@ -140,19 +130,6 @@ extension MastodonServerRulesViewController {
 
         navigationItem.largeTitleDisplayMode = .always
         title = L10n.Scene.ServerRules.title
-    }
-}
-
-extension MastodonServerRulesViewController {
-    @objc private func backButtonPressed(_ sender: UIButton?) {
-        navigationController?.popViewController(animated: true)
-    }
-
-    @objc private func nextButtonPressed(_ sender: UIButton?) {
-        let domain = viewModel.domain
-        let viewModel = PrivacyViewModel(domain: domain, authenticateInfo: viewModel.authenticateInfo, rows: [.iOSApp, .server(domain: domain)], instance: viewModel.instance, applicationToken: viewModel.applicationToken)
-
-        _ = coordinator.present(scene: .mastodonPrivacyPolicies(viewModel: viewModel), from: self, transition: .show)
     }
 }
 

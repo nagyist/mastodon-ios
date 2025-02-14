@@ -52,6 +52,29 @@ extension Mastodon.API.Instance {
             }
             .eraseToAnyPublisher()
     }
+    
+    public static func instance(
+        session: URLSession,
+        authorization: Mastodon.API.OAuth.Authorization?,
+        domain: String
+    ) async throws -> Mastodon.Entity.Instance {
+        let request = Mastodon.API.get(url: instanceEndpointURL(domain: domain), authorization: authorization)
+        let (data, response) = try await session.data(for: request)
+        
+        let value: Mastodon.Entity.Instance
+        
+        do {
+            value = try Mastodon.API.decode(type: Mastodon.Entity.Instance.self, from: data, response: response)
+        } catch {
+            if let response = response as? HTTPURLResponse, 400 ..< 500 ~= response.statusCode {
+                // For example, AUTHORIZED_FETCH may result in authentication errors
+                value = Mastodon.Entity.Instance(domain: domain)
+            } else {
+                throw error
+            }
+        }
+        return value
+    }
 
     static func extendedDescriptionEndpointURL(domain: String) -> URL {
         return Mastodon.API.endpointURL(domain: domain).appendingPathComponent("instance").appendingPathComponent("extended_description")

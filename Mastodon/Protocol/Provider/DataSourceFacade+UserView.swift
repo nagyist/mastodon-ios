@@ -5,21 +5,22 @@ import MastodonUI
 import CoreDataStack
 import MastodonCore
 import MastodonSDK
+import UIKit
 
 extension DataSourceFacade {
     static func responseToUserViewButtonAction(
-        dependency: ViewControllerWithDependencies & AuthContextProvider,
+        dependency: UIViewController & AuthContextProvider,
         account: Mastodon.Entity.Account,
         buttonState: UserView.ButtonState
-    ) async throws {
+    ) async throws -> Mastodon.Entity.Relationship? {
         switch buttonState {
             case .follow, .request, .unfollow, .blocked, .pending:
-                _ = try await DataSourceFacade.responseToUserFollowAction(
+                return try await DataSourceFacade.responseToUserFollowAction(
                     dependency: dependency,
                     account: account
                 )
             case .none, .loading:
-                break //no-op
+                return nil
         }
     }
 }

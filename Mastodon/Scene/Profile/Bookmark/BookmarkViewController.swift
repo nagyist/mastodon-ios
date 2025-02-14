@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import AVKit
 import Combine
 import GameplayKit
 import MastodonAsset
@@ -14,10 +13,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class BookmarkViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class BookmarkViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: BookmarkViewModel!

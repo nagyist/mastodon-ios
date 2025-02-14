@@ -14,21 +14,17 @@ protocol MastodonLoginViewModelDelegate: AnyObject {
   func serversUpdated(_ viewModel: MastodonLoginViewModel)
 }
 
+@MainActor
 class MastodonLoginViewModel {
 
   private var serverList: [Mastodon.Entity.Server] = []
   var filteredServers: [Mastodon.Entity.Server] = []
 
-  weak var appContext: AppContext?
   weak var delegate: MastodonLoginViewModelDelegate?
   var disposeBag = Set<AnyCancellable>()
 
-  init(appContext: AppContext) {
-    self.appContext = appContext
-  }
-
   func updateServers() {
-    appContext?.apiService.servers(registrations: "all").sink(receiveCompletion: { [weak self] completion in
+      APIService.shared.servers(registrations: "all").sink(receiveCompletion: { [weak self] completion in
       switch completion {
         case .finished:
           guard let self = self else { return }

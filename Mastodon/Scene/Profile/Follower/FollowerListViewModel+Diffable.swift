@@ -17,7 +17,6 @@ extension FollowerListViewModel {
     ) {
         diffableDataSource = UserSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             authenticationBox: authenticationBox,
             userTableViewCellDelegate: userTableViewCellDelegate
         )

@@ -88,12 +88,11 @@ extension StatusTableViewControllerNavigateableCore where Self: DataSourceProvid
         FeedbackGenerator.shared.generate(.selectionChanged)
 
         let composeViewModel = ComposeViewModel(
-            context: self.context,
             authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .reply(parent: status)
         )
-        _ = self.coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .compose(viewModel: composeViewModel),
             from: self,
             transition: .modal(animated: true, completion: nil)

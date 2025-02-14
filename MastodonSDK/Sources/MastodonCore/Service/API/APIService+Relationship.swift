@@ -24,8 +24,15 @@ extension APIService {
         forAccounts accounts: [Mastodon.Entity.Account],
         authenticationBox: MastodonAuthenticationBox
     ) async throws -> Mastodon.Response.Content<[Mastodon.Entity.Relationship]> {
-
+        
         let ids: [String] = accounts.compactMap { $0.id }
+        return try await relationship(forAccountIds: ids, authenticationBox: authenticationBox)
+    }
+    
+    public func relationship(
+        forAccountIds ids: [String],
+        authenticationBox: MastodonAuthenticationBox
+    ) async throws -> Mastodon.Response.Content<[Mastodon.Entity.Relationship]> {
 
         guard ids.isEmpty == false else { throw APIError.implicit(.badRequest) }
 

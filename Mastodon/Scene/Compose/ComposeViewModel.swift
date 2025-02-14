@@ -29,7 +29,6 @@ final class ComposeViewModel {
     let id = UUID()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let composeContext: Context
     let destination: ComposeContentViewModel.Destination
@@ -43,13 +42,11 @@ final class ComposeViewModel {
     @Published var title: String
     
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         composeContext: ComposeViewModel.Context,
         destination: ComposeContentViewModel.Destination,
         initialContent: String = ""
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.destination = destination
         self.initialContent = initialContent

@@ -5,9 +5,7 @@
 //  Created by sxiaojian on 2021/2/5.
 //
 
-import func AVFoundation.AVMakeRect
 import UIKit
-import AVKit
 import Combine
 import CoreData
 import CoreDataStack
@@ -17,12 +15,12 @@ import MastodonCore
 import MastodonUI
 import MastodonSDK
 
+@MainActor
 final class HomeTimelineViewModel: NSObject {
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let dataController: FeedDataController
 
@@ -56,7 +54,7 @@ final class HomeTimelineViewModel: NSObject {
     let homeTimelineNeedRefresh = PassthroughSubject<Void, Never>()
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
 
     // top loader
@@ -90,14 +88,20 @@ final class HomeTimelineViewModel: NSObject {
 
     var cellFrameCache = NSCache<NSNumber, NSValue>()
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context  = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
-        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox)
+        self.dataController = FeedDataController(authenticationBox: authenticationBox, kind: .home(timeline: timelineContext))
         super.init()
-        self.dataController.records = (try? FileManager.default.cachedHomeTimeline(for: authenticationBox).map {
+        let initialRecords = (try? PersistenceManager.shared.cachedTimeline(.homeTimeline(authenticationBox)).map {
             MastodonFeed.fromStatus($0, kind: .home)
         }) ?? []
+        Task {
+            await self.dataController.setRecordsAfterFiltering(initialRecords)
+        }
+        
+        authenticationBox.inMemoryCache.$followingUserIds.sink { [weak self] _ in
+            self?.homeTimelineNeedRefresh.send()
+        }.store(in: &disposeBag)
         
         homeTimelineNeedRefresh
             .sink { [weak self] _ in
@@ -141,7 +145,7 @@ final class HomeTimelineViewModel: NSObject {
 
 extension HomeTimelineViewModel {
     struct ScrollPositionRecord {
-        let item: StatusItem
+        let item: MastodonItemIdentifier
         let offset: CGFloat
         let timestamp: Date
     }
@@ -157,36 +161,36 @@ extension HomeTimelineViewModel {
 
     // load timeline gap
     @MainActor
-    func loadMore(item: StatusItem, at indexPath: IndexPath) async {
-        guard case let .feedLoader(record) = item else { return }
+    func loadMore(item: MastodonItemIdentifier, at indexPath: IndexPath) async {
+        guard case let .feedLoader(feedItem) = item else { return }
 
-        guard let status = record.status else { return }
-        record.isLoadingMore = true
+        guard let status = feedItem.status else { return }
+        feedItem.isLoadingMore = true
 
-        await AuthenticationServiceProvider.shared.fetchAccounts(apiService: context.apiService)
+        await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
         // fetch data
         let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>?
         
         switch timelineContext {
         case .home:
-            response = try? await context.apiService.homeTimeline(
+            response = try? await APIService.shared.homeTimeline(
                maxID: status.id,
                authenticationBox: authenticationBox
            )
         case .public:
-            response = try? await context.apiService.publicTimeline(
+            response = try? await APIService.shared.publicTimeline(
                 query: .init(local: true, maxID: status.id),
                 authenticationBox: authenticationBox
             )
         case let .list(id):
-            response = try? await context.apiService.listTimeline(
-                id: id, 
+            response = try? await APIService.shared.listTimeline(
+                id: id,
                 query: .init(local: true, maxID: status.id),
                 authenticationBox: authenticationBox
             )
         case let .hashtag(tag):
-            response = try? await context.apiService.hashtagTimeline(
+            response = try? await APIService.shared.hashtagTimeline(
                 hashtag: tag,
                 authenticationBox: authenticationBox
             )
@@ -194,7 +198,7 @@ extension HomeTimelineViewModel {
         
         // insert missing items
         guard let items = response?.value else {
-            record.isLoadingMore = false
+            feedItem.isLoadingMore = false
             return
         }
         
@@ -228,10 +232,13 @@ extension HomeTimelineViewModel {
         }
 
         let combinedRecords = Array(head + feedItems + tail)
-        dataController.records = combinedRecords
         
-        record.isLoadingMore = false
-        record.hasMore = false
+        Task {
+            await dataController.setRecordsAfterFiltering(combinedRecords)
+            
+            feedItem.isLoadingMore = false
+            feedItem.hasMore = false
+        }
     }
     
 }

@@ -37,7 +37,6 @@ extension DiscoverySection {
 
     static func diffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<DiscoverySection, DiscoveryItem> {
         

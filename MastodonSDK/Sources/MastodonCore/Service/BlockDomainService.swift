@@ -13,6 +13,7 @@ import MastodonSDK
 import OSLog
 import UIKit
 
+@MainActor
 public final class BlockDomainService {
     
     // input

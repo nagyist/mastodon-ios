@@ -20,7 +20,7 @@ final class MediaPreviewVideoViewModel {
     let item: Item
     
     // output
-    public private(set) var player: AVPlayer?
+    public let player: AVPlayer?
     private var playerLooper: AVPlayerLooper?
     @Published var playbackState = PlaybackState.unknown
     
@@ -31,14 +31,14 @@ final class MediaPreviewVideoViewModel {
 
         switch item {
         case .video(let mediaContext):
-            guard let assertURL = mediaContext.assetURL else { return }
-            let playerItem = AVPlayerItem(url: assertURL)
+            guard let assetURL = mediaContext.assetURL else { player = nil; return }
+            let playerItem = AVPlayerItem(url: assetURL)
             let _player = AVPlayer(playerItem: playerItem)
             self.player = _player
 
         case .gif(let mediaContext):
-            guard let assertURL = mediaContext.assetURL else { return }
-            let playerItem = AVPlayerItem(url: assertURL)
+            guard let assetURL = mediaContext.assetURL else { player = nil; return }
+            let playerItem = AVPlayerItem(url: assetURL)
             let _player = AVQueuePlayer(playerItem: playerItem)
             _player.isMuted = true
             self.player = _player
@@ -48,24 +48,24 @@ final class MediaPreviewVideoViewModel {
             }
         }
         
-        guard let player = player else {
-            assertionFailure()
+        guard let player else {
+            assertionFailure("no url for playable media")
             return
         }
 
         // setup player state observer
         $playbackState
             .receive(on: DispatchQueue.main)
-            .sink { status in
+            .sink { [weak self] status in
+                guard let self, let player = self.player else { return }
                 switch status {
                 case .unknown, .buffering, .readyToPlay:
                     break
                 case .playing:
-                    try? AVAudioSession.sharedInstance().setCategory(.playback)
-                    try? AVAudioSession.sharedInstance().setActive(true)
+                    MediaPreviewVideoViewModel.startAudioSession()
+                    player.play()
                 case .paused, .stopped, .failed:
-                    try? AVAudioSession.sharedInstance().setCategory(.ambient)  // set to ambient to allow mixed (needed for GIFV)
-                    try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                    MediaPreviewVideoViewModel.endAudioSession()
                 }
             }
             .store(in: &disposeBag)
@@ -98,6 +98,39 @@ final class MediaPreviewVideoViewModel {
             .store(in: &disposeBag)
     }
     
+    // MARK: Manage AVAudioSession
+    static var activeAudioSessionRequestCounter = 0
+    static func startAudioSession() {
+        Task { @MainActor in
+            activeAudioSessionRequestCounter += 1
+            guard activeAudioSessionRequestCounter == 1 else { return }
+            try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+            // https://developer.apple.com/documentation/avfaudio/avaudiosession/setactive(_:options:)
+            //  "If you attempt to activate a session with category record or playAndRecord when another app is already hosting a call, then your session fails with the error AVAudioSessionErrorInsufficientPriority."
+            //  "The session fails to activate if another audio session has higher priority than yours (such as a phone call) and neither audio session allows mixing."
+            // "mixWithOthers: If you set the audio session category to ambient, the session automatically sets this option. If you set this option, your app mixes its audio with audio playing in background apps, such as the Music app."
+            // CONCLUSION: Since we are never attempting to record and we allow mixing with others, activating the session should never fail, so there is no need to handle an error here.
+            try? AVAudioSession.sharedInstance().setActive(true)
+        }
+    }
+    static func endAudioSession() {
+        Task { @MainActor in
+            activeAudioSessionRequestCounter -= 1
+            guard activeAudioSessionRequestCounter == 0 else { return }
+            try? AVAudioSession.sharedInstance().setCategory(.ambient)  // set to ambient to allow mixed (needed for GIFV)
+            // https://developer.apple.com/documentation/avfaudio/avaudiosession/setactive(_:options:)
+            // "Deactivating an audio session with running audio objects stops the objects, makes the session inactive, and returns an AVAudioSessionErrorCodeIsBusy error."
+            // "When your app deactivates a session, the return value is false but the active state changes to deactivate."
+            // CONCLUSION: Deactivating a session always succeeds, even when an error is thrown, so any error thrown here can be ignored.
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
+    }
+    
+    deinit {
+        if playbackState == .playing {
+            MediaPreviewVideoViewModel.endAudioSession()
+        }
+    }
 }
 
 extension MediaPreviewVideoViewModel {

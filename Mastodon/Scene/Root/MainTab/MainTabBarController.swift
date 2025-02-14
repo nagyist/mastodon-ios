@@ -18,9 +18,6 @@ class MainTabBarController: UITabBarController {
 
     public var disposeBag = Set<AnyCancellable>()
     
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
-    
     var authenticationBox: MastodonAuthenticationBox?
     
     private let largeContentViewerInteraction = UILargeContentViewerInteraction()
@@ -38,8 +35,8 @@ class MainTabBarController: UITabBarController {
     let homeTimelineViewController: HomeTimelineViewController
     let searchViewController: SearchViewController
     let composeViewController: UIViewController // placeholder
-    let notificationViewController: NotificationViewController
-    let meProfileViewController: ProfileViewController
+    let notificationViewController: UIViewController
+    var meProfileViewController: UIViewController // placeholder
 
     private(set) var isReadyForWizardAvatarButton = false
     
@@ -50,45 +47,36 @@ class MainTabBarController: UITabBarController {
     private let feedbackGenerator = FeedbackGenerator.shared
     
     init(
-        context: AppContext,
-        coordinator: SceneCoordinator,
         authenticationBox: MastodonAuthenticationBox?
     ) {
-        self.context = context
-        self.coordinator = coordinator
         self.authenticationBox = authenticationBox
 
         homeTimelineViewController = HomeTimelineViewController()
         homeTimelineViewController.configureTabBarItem(with: .home)
-        homeTimelineViewController.context = context
-        homeTimelineViewController.coordinator = coordinator
 
         searchViewController = SearchViewController()
         searchViewController.configureTabBarItem(with: .search)
-        searchViewController.context = context
-        searchViewController.coordinator = coordinator
 
         composeViewController = UIViewController()
         composeViewController.configureTabBarItem(with: .compose)
-
-        notificationViewController = NotificationViewController()
+        
+        if BetaTestSettingsViewModel().testGroupedNotifications {
+            notificationViewController = NotificationListViewController()
+        } else {
+            notificationViewController = NotificationViewController()
+        }
         notificationViewController.configureTabBarItem(with: .notifications)
-        notificationViewController.context = context
-        notificationViewController.coordinator = coordinator
 
-        meProfileViewController = ProfileViewController()
-        meProfileViewController.context = context
-        meProfileViewController.coordinator = coordinator
+
+        meProfileViewController = UIViewController()
         meProfileViewController.configureTabBarItem(with: .me)
 
         if let authenticationBox {
-            notificationViewController.viewModel = NotificationViewModel(context: context, authenticationBox: authenticationBox)
-            homeTimelineViewController.viewModel = HomeTimelineViewModel(context: context, authenticationBox: authenticationBox)
-            searchViewController.viewModel = SearchViewModel(context: context, authenticationBox: authenticationBox)
-
-            if let account = authenticationBox.authentication.account() {
-                meProfileViewController.viewModel = ProfileViewModel(context: context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
+            if let notificationController = notificationViewController as? NotificationViewController {
+                notificationController.viewModel = NotificationViewModel(context: AppContext.shared, authenticationBox: authenticationBox)
             }
+            homeTimelineViewController.viewModel = HomeTimelineViewModel(authenticationBox: authenticationBox)
+            searchViewController.viewModel = SearchViewModel(authenticationBox: authenticationBox)
         }
 
         super.init(nibName: nil, bundle: nil)
@@ -99,6 +87,12 @@ class MainTabBarController: UITabBarController {
         layoutAvatarButton()
     }
     
+    private func replace(_ oldVC: UIViewController, with newVC: UIViewController) {
+        guard let navControllers = viewControllers as? [UINavigationController] else { return }
+        guard let toReplace = navControllers.first(where: { $0.viewControllers[0] == oldVC }) else { return }
+        toReplace.viewControllers = [newVC]
+    }
+    
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 }
 
@@ -106,16 +100,6 @@ extension MainTabBarController {
     
     open override var childForStatusBarStyle: UIViewController? {
         return selectedViewController
-    }
-    
-    override var selectedViewController: UIViewController? {
-        willSet {
-            if let profileView = (newValue as? UINavigationController)?.topViewController as? ProfileViewController{
-                guard let authenticationBox,
-                      let account = authenticationBox.authentication.account() else { return }
-                profileView.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
-            }
-        }
     }
     
     override func viewDidLoad() {
@@ -136,10 +120,10 @@ extension MainTabBarController {
             }
         }
         
-        context.apiService.error
+        APIService.shared.error
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
-                guard let self, let coordinator = self.coordinator else { return }
+                guard let self, let coordinator = self.sceneCoordinator else { return }
                 switch error {
                 case .implicit:
                     break
@@ -161,7 +145,7 @@ extension MainTabBarController {
         // handle push notification.
         // toggle entry when finish fetch latest notification
         Publishers.CombineLatest(
-            context.notificationService.unreadNotificationCountDidUpdate,
+            NotificationService.shared.unreadNotificationCountDidUpdate,
             $currentTab
         )
         .receive(on: DispatchQueue.main)
@@ -186,6 +170,30 @@ extension MainTabBarController {
             notificationViewController.navigationController?.tabBarItem.image = image.imageWithoutBaseline()
         }
         .store(in: &disposeBag)
+        
+        $currentTab
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] currentTab in
+                guard let self else { return }
+                
+                if currentTab == .me {
+                    guard let authBox = authenticationBox, let myAccount = authBox.cachedAccount else { return }
+                    let oldMe = meProfileViewController
+                    let updatedProfile = ProfileViewController(.me(myAccount), authenticationBox: authBox)
+                    meProfileViewController = updatedProfile
+                    updatedProfile.configureTabBarItem(with: .me)
+                    self.replace(oldMe, with: updatedProfile)
+                    if let domain = myAccount.domain ?? myAccount.domainFromAcct {
+                        self.avatarURL =  myAccount.avatarImageURLWithFallback(domain: domain)
+                    } else {
+                        self.avatarURL = myAccount.avatarImageURL()
+                    }
+                    
+                    self.avatarButton.removeFromSuperview()
+                    self.layoutAvatarButton()
+                }
+            }
+            .store(in: &disposeBag)
 
         $avatarURL
             .receive(on: DispatchQueue.main)
@@ -198,13 +206,30 @@ extension MainTabBarController {
                 )
             }
             .store(in: &disposeBag)
+        
+        AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher
+            .sink { [weak self] in
+                self?.updateUserAccount()
+            }
+            .store(in: &self.disposeBag)
+        
+        AuthenticationServiceProvider.shared.currentActiveUser
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] activeUser in
+                if let domain = activeUser?.domain {
+                    self?.avatarURL = activeUser?.cachedAccount?.avatarImageURLWithFallback(domain: domain)
+                } else {
+                    self?.avatarURL = activeUser?.cachedAccount?.avatarImageURL()
+                }
+            }
+            .store(in: &disposeBag)
 
         NotificationCenter.default.publisher(for: .userFetched)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self,
                       let authenticationBox,
-                      let account = authenticationBox.authentication.account() else { return }
+                      let account = authenticationBox.cachedAccount else { return }
 
                 self.avatarURL = account.avatarImageURL()
 
@@ -212,14 +237,6 @@ extension MainTabBarController {
                 let _profileTabItem = self.tabBar.items?.first { item in item.tag == Tab.me.tag }
                 guard let profileTabItem = _profileTabItem else { return }
                 profileTabItem.accessibilityHint = L10n.Scene.AccountList.tabBarHint(account.displayNameWithFallback)
-
-                AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher
-                    .sink { [weak self] in
-                        self?.updateUserAccount()
-                    }
-                    .store(in: &self.disposeBag)
-
-                self.meProfileViewController.viewModel = ProfileViewModel(context: self.context, authenticationBox: authenticationBox, account: account, relationship: nil, me: account)
             }
             .store(in: &disposeBag)
         
@@ -266,12 +283,11 @@ extension MainTabBarController {
         feedbackGenerator.generate(.impact(.medium))
         guard let authenticationBox else { return }
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), transition: .modal(animated: true, completion: nil))
     }
     
     private func touchedTab(by sender: UIGestureRecognizer) -> Tab? {
@@ -310,8 +326,8 @@ extension MainTabBarController {
         switch tab {
         case .me:
             guard let authenticationBox else { return }
-            let accountListViewModel = AccountListViewModel(context: context, authenticationBox: authenticationBox)
-            _ = coordinator.present(scene: .accountList(viewModel: accountListViewModel), from: self, transition: .formSheet)
+            let accountListViewModel = AccountListViewModel(authenticationBox: authenticationBox)
+            _ = self.sceneCoordinator?.present(scene: .accountList(viewModel: accountListViewModel), from: self, transition: .formSheet)
         default:
             break
         }
@@ -344,6 +360,7 @@ extension MainTabBarController {
         }
         anchorImageView.alpha = 0
         
+        accountSwitcherChevron.removeFromSuperview()
         accountSwitcherChevron.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(accountSwitcherChevron)
         
@@ -380,8 +397,7 @@ extension MainTabBarController {
         guard let authenticationBox else { return }
         
         Task { @MainActor in
-            let profileResponse = try await context.apiService.authenticatedUserInfo(authenticationBox: authenticationBox)
-            FileManager.default.store(account: profileResponse.value, forUserID: authenticationBox.authentication.userIdentifier())
+            let profileResponse = try await APIService.shared.accountInfo(authenticationBox)
         }
     }
 }
@@ -519,7 +535,7 @@ extension MainTabBarController {
             }
             
             // open settings
-            if context.settingService.currentSetting.value != nil {
+            if SettingService.shared.currentSetting.value != nil {
                 commands.append(openSettingsKeyCommand)
             }
         }
@@ -557,25 +573,24 @@ extension MainTabBarController {
     
     @objc private func showFavoritesKeyCommandHandler(_ sender: UIKeyCommand) {
         guard let authenticationBox else { return }
-        let favoriteViewModel = FavoriteViewModel(context: context, authenticationBox: authenticationBox)
-        _ = coordinator.present(scene: .favorite(viewModel: favoriteViewModel), from: nil, transition: .show)
+        let favoriteViewModel = FavoriteViewModel(authenticationBox: authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .favorite(viewModel: favoriteViewModel), from: nil, transition: .show)
     }
     
     @objc private func openSettingsKeyCommandHandler(_ sender: UIKeyCommand) {
-        guard let setting = context.settingService.currentSetting.value else { return }
+        guard let setting = SettingService.shared.currentSetting.value else { return }
 
-        _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
+        _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
     
     @objc private func composeNewPostKeyCommandHandler(_ sender: UIKeyCommand) {
         guard let authenticationBox else { return }
         let composeViewModel = ComposeViewModel(
-            context: context,
             authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), from: nil, transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), from: nil, transition: .modal(animated: true, completion: nil))
     }
     
 }

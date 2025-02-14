@@ -16,7 +16,6 @@ final class DiscoveryViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let discoveryPostsViewController: DiscoveryPostsViewController
     let discoveryHashtagsViewController: DiscoveryHashtagsViewController
@@ -26,37 +25,27 @@ final class DiscoveryViewModel {
     @Published var viewControllers: [ScrollViewContainer]
     
     @MainActor
-    init(context: AppContext, coordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
-        
-        func setupDependency(_ needsDependency: NeedsDependency) {
-            needsDependency.context = context
-            needsDependency.coordinator = coordinator
-        }
         
         discoveryPostsViewController = {
             let viewController = DiscoveryPostsViewController()
-            setupDependency(viewController)
-            viewController.viewModel = DiscoveryPostsViewModel(context: context, authenticationBox: authenticationBox)
+            viewController.viewModel = DiscoveryPostsViewModel(authenticationBox: authenticationBox)
             return viewController
         }()
         discoveryHashtagsViewController = {
             let viewController = DiscoveryHashtagsViewController()
-            setupDependency(viewController)
-            viewController.viewModel = DiscoveryHashtagsViewModel(context: context, authenticationBox: authenticationBox)
+            viewController.viewModel = DiscoveryHashtagsViewModel(authenticationBox: authenticationBox)
             return viewController
         }()
         discoveryNewsViewController = {
             let viewController = DiscoveryNewsViewController()
-            setupDependency(viewController)
-            viewController.viewModel = DiscoveryNewsViewModel(context: context, authenticationBox: authenticationBox)
+            viewController.viewModel = DiscoveryNewsViewModel(authenticationBox: authenticationBox)
             return viewController
         }()
         discoveryForYouViewController = {
             let viewController = DiscoveryForYouViewController()
-            setupDependency(viewController)
-            viewController.viewModel = DiscoveryForYouViewModel(context: context, authenticationBox: authenticationBox)
+            viewController.viewModel = DiscoveryForYouViewModel(authenticationBox: authenticationBox)
             return viewController
         }()
         self.viewControllers = [

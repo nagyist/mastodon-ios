@@ -41,6 +41,7 @@ extension AutoCompleteViewModel.State {
         }
     }
     
+    @MainActor
     class Loading: AutoCompleteViewModel.State {
         
         var previoursSearchText = ""
@@ -130,7 +131,7 @@ extension AutoCompleteViewModel.State {
             )
             
             do {
-                let response = try await viewModel.context.apiService.search(
+                let response = try await APIService.shared.search(
                     query: query,
                     authenticationBox: viewModel.authenticationBox
                 )

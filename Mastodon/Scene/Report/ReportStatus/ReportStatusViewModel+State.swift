@@ -10,6 +10,7 @@ import Foundation
 import CoreData
 import CoreDataStack
 import GameplayKit
+import MastodonCore
 
 extension ReportStatusViewModel {
     class State: GKState {
@@ -69,7 +70,7 @@ extension ReportStatusViewModel.State {
                 let maxID = await viewModel.dataController.records.last?.id
 
                 do {
-                    let response = try await viewModel.context.apiService.userTimeline(
+                    let response = try await APIService.shared.userTimeline(
                         accountID: viewModel.account.id,
                         maxID: maxID,
                         sinceID: nil,

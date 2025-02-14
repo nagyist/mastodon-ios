@@ -17,7 +17,6 @@ extension DiscoveryForYouViewModel {
     ) {
         diffableDataSource = DiscoverySection.diffableDataSource(
             tableView: tableView,
-            context: context,
             configuration: DiscoverySection.Configuration(
                 authenticationBox: authenticationBox,
                 profileCardTableViewCellDelegate: profileCardTableViewCellDelegate,

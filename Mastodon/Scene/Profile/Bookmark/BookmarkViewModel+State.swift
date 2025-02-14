@@ -124,7 +124,7 @@ extension BookmarkViewModel.State {
             
             Task {
                 do {
-                    let response = try await viewModel.context.apiService.bookmarkedStatuses(
+                    let response = try await APIService.shared.bookmarkedStatuses(
                         maxID: maxID,
                         authenticationBox: viewModel.authenticationBox
                     )

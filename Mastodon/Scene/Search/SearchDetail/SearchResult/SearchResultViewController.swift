@@ -12,10 +12,7 @@ import MastodonCore
 import MastodonUI
 import MastodonAsset
 
-final class SearchResultViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class SearchResultViewController: UIViewController, MediaPreviewableViewController {
 
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
 

@@ -28,6 +28,17 @@ extension ComposeContentViewModel {
         case replyTo
         case status
     }
+    
+    private func composeContentTableViewCellIsInTableView(_ tableView: UIView) -> Bool {
+        var superview = composeContentTableViewCell.superview
+        while superview != nil {
+            if superview == tableView {
+                return true
+            }
+            superview = superview?.superview
+        }
+        return false
+    }
 
     private func setupTableViewCell(tableView: UITableView) {        
         composeContentTableViewCell.contentConfiguration = UIHostingConfigurationBackport {
@@ -39,11 +50,14 @@ extension ComposeContentViewModel {
             .removeDuplicates()
             .sink { [weak self] height in
                 guard let self = self else { return }
-                guard !tableView.visibleCells.isEmpty else { return }
+                guard self.composeContentTableViewCellIsInTableView(tableView) else { return }
                 UIView.performWithoutAnimation {
-                    tableView.beginUpdates()
-                    self.composeContentTableViewCell.frame.size.height = height
-                    tableView.endUpdates()                    
+                    if height != self.composeContentTableViewCell.contentHeight {
+                        tableView.beginUpdates()
+                        self.composeContentTableViewCell.contentHeight = height
+                        self.composeContentTableViewCell.invalidateIntrinsicContentSize()
+                        tableView.endUpdates()
+                    }
                 }
             }
             .store(in: &disposeBag)
@@ -60,8 +74,7 @@ extension ComposeContentViewModel {
             cell.statusView.frame.size.width = tableView.frame.width
 
             // configure status
-            cell.statusView.configure(status: status)
-
+            cell.statusView.configure(status: status, contentDisplayMode: .neverConceal)
         }
     }
 }
@@ -100,8 +113,7 @@ extension ComposeContentViewModel {
     ) {
         let diffableDataSource = CustomEmojiPickerSection.collectionViewDiffableDataSource(
             collectionView: collectionView,
-            authenticationBox: authenticationBox,
-            context: context
+            authenticationBox: authenticationBox
         )
         self.customEmojiPickerDiffableDataSource = diffableDataSource
 

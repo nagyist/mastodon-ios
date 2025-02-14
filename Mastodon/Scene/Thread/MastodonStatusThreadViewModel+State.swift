@@ -10,7 +10,7 @@ extension MastodonStatusThreadViewModel {
         descendants = handleBookmark(status, items: descendants)
     }
     
-    private func handleBookmark(_ status: MastodonStatus, items: [StatusItem]) -> [StatusItem] {
+    private func handleBookmark(_ status: MastodonStatus, items: [MastodonItemIdentifier]) -> [MastodonItemIdentifier] {
         var newRecords = Array(items)
         guard let index = newRecords.firstIndex(where: { $0.mastodonStatus?.id == status.id }) else {
             return items
@@ -27,7 +27,7 @@ extension MastodonStatusThreadViewModel {
         descendants = handleFavorite(status, items: descendants)
     }
     
-    private func handleFavorite(_ status: MastodonStatus, items: [StatusItem]) -> [StatusItem] {
+    private func handleFavorite(_ status: MastodonStatus, items: [MastodonItemIdentifier]) -> [MastodonItemIdentifier] {
         var newRecords = Array(items)
         guard let index = newRecords.firstIndex(where: { $0.mastodonStatus?.id == status.id }) else {
             return items
@@ -44,7 +44,7 @@ extension MastodonStatusThreadViewModel {
         descendants = handleReblog(status, isReblogged, items: descendants)
     }
     
-    private func handleReblog(_ status: MastodonStatus, _ isReblogged: Bool, items: [StatusItem]) -> [StatusItem] {
+    private func handleReblog(_ status: MastodonStatus, _ isReblogged: Bool, items: [MastodonItemIdentifier]) -> [MastodonItemIdentifier] {
         var newRecords = Array(items)
 
         switch isReblogged {
@@ -85,7 +85,7 @@ extension MastodonStatusThreadViewModel {
         descendants = handleSensitive(status, isVisible, descendants)
     }
     
-    private func handleSensitive(_ status: MastodonStatus, _ isVisible: Bool, _ items: [StatusItem]) -> [StatusItem] {
+    private func handleSensitive(_ status: MastodonStatus, _ isVisible: Bool, _ items: [MastodonItemIdentifier]) -> [MastodonItemIdentifier] {
         var newRecords = Array(items)
         guard let index = newRecords.firstIndex(where: { $0.mastodonStatus?.id == status.id }) else {
             return items
@@ -102,7 +102,7 @@ extension MastodonStatusThreadViewModel {
         descendants = handleEdit(status, items: descendants)
     }
     
-    private func handleEdit(_ status: MastodonStatus, items: [StatusItem]) -> [StatusItem] {
+    private func handleEdit(_ status: MastodonStatus, items: [MastodonItemIdentifier]) -> [MastodonItemIdentifier] {
         var newRecords = Array(items)
         guard let index = newRecords.firstIndex(where: { $0.mastodonStatus?.id == status.id }) else {
             return items
@@ -119,7 +119,7 @@ extension MastodonStatusThreadViewModel {
         descendants = handleDelete(status, descendants)
     }
     
-    private func handleDelete(_ status: MastodonStatus, _ items: [StatusItem]) -> [StatusItem] {
+    private func handleDelete(_ status: MastodonStatus, _ items: [MastodonItemIdentifier]) -> [MastodonItemIdentifier] {
         var newRecords = Array(items)
         newRecords.removeAll(where: { $0.mastodonStatus?.id == status.id })
         return newRecords
@@ -127,7 +127,7 @@ extension MastodonStatusThreadViewModel {
 }
 
 
-private extension StatusItem {
+private extension MastodonItemIdentifier {
     var mastodonStatus: MastodonStatus? {
         get {
             switch self {
@@ -148,11 +148,11 @@ private extension StatusItem {
             guard let status = newValue else { return }
             switch self {
             case .feed(let record):
-                self = .feed(record: .fromStatus(status, kind: record.kind))
+                self = .feed(.fromStatus(status, kind: record.kind))
             case .feedLoader(let record):
-                self = .feedLoader(record: .fromStatus(status, kind: record.kind))
+                self = .feedLoader(feed: .fromStatus(status, kind: record.kind))
             case .status:
-                self = .status(record: status)
+                self = .status(status)
             case let .thread(thread):
                 var newThread = thread
                 newThread.record = status

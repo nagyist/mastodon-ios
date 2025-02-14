@@ -8,6 +8,7 @@
 import Foundation
 import GameplayKit
 import MastodonSDK
+import MastodonCore
 
 extension UserListViewModel {
     class State: GKState {
@@ -128,13 +129,13 @@ extension UserListViewModel.State {
                     let accountResponse: Mastodon.Response.Content<[Mastodon.Entity.Account]>
                     switch viewModel.kind {
                     case .favoritedBy(let status):
-                        accountResponse = try await viewModel.context.apiService.favoritedBy(
+                        accountResponse = try await APIService.shared.favoritedBy(
                             status: status,
                             query: .init(maxID: maxID, limit: nil),
                             authenticationBox: authenticationBox
                         )
                     case .rebloggedBy(let status):
-                        accountResponse = try await viewModel.context.apiService.rebloggedBy(
+                        accountResponse = try await APIService.shared.rebloggedBy(
                             status: status,
                             query: .init(maxID: maxID, limit: nil),
                             authenticationBox: authenticationBox
@@ -151,7 +152,7 @@ extension UserListViewModel.State {
 
                     var hasNewAppend = false
 
-                    let newRelationships = try await viewModel.context.apiService.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
+                    let newRelationships = try await APIService.shared.relationship(forAccounts: accountResponse.value, authenticationBox: viewModel.authenticationBox)
 
                     var accounts = viewModel.accounts
 

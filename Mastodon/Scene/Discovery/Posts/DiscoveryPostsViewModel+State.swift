@@ -122,7 +122,7 @@ extension DiscoveryPostsViewModel.State {
             
             Task {
                 do {
-                    let response = try await viewModel.context.apiService.trendStatuses(
+                    let response = try await APIService.shared.trendStatuses(
                         domain: viewModel.authenticationBox.domain,
                         query: Mastodon.API.Trends.StatusQuery(
                             offset: offset,

@@ -21,28 +21,16 @@ extension AttachmentViewModel {
             }
             return .image(data, imageKind: .png)
         case .url(let url):
-            do {
-                let output = try await AttachmentViewModel.load(url: url)
-                return output
-            } catch {
-                throw error
-            }
+            let output = try await AttachmentViewModel.load(url: url)
+            return output
         case .mastodonAssetUrl(let url, _):
             return try await Self.loadMastodonAsset(url: url)
         case .pickerResult(let pickerResult):
-            do {
-                let output = try await AttachmentViewModel.load(itemProvider: pickerResult.itemProvider)
-                return output
-            } catch {
-                throw error
-            }
+            let output = try await AttachmentViewModel.load(itemProvider: pickerResult.itemProvider)
+            return output
         case .itemProvider(let itemProvider):
-            do {
-                let output = try await AttachmentViewModel.load(itemProvider: itemProvider)
-                return output
-            } catch {
-                throw error
-            }
+            let output = try await AttachmentViewModel.load(itemProvider: itemProvider)
+            return output
         }
     }
     
@@ -88,7 +76,7 @@ extension AttachmentViewModel {
             guard let result = try await itemProvider.loadImageData() else {
                 throw AttachmentError.invalidAttachmentType
             }
-            let imageKind: Output.ImageKind = {
+            let imageKind: Output.ImageKind = try {
                 if let type = result.type {
                     if type == UTType.png {
                         return .png
@@ -107,9 +95,8 @@ extension AttachmentViewModel {
                 if assetType == .jpeg {
                     return .jpg
                 }
-                
-                assertionFailure("unknown image kind")
-                return .jpg
+                assertionFailure()
+                throw AttachmentError.invalidAttachmentType
             }()
             return .image(result.data, imageKind: imageKind)
         } else if itemProvider.isMovie() {

@@ -16,7 +16,6 @@ final class FollowingListViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     @Published var accounts: [Mastodon.Entity.Account]
     @Published var relationships: [Mastodon.Entity.Relationship]
@@ -44,12 +43,10 @@ final class FollowingListViewModel {
     }()
 
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         domain: String?,
         userID: String?
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.domain = domain
         self.userID = userID

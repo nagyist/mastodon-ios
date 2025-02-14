@@ -16,18 +16,21 @@ final class PrivacyViewModel {
     let rows: [PrivacyRow]
     let instance: Mastodon.Entity.Instance
     let applicationToken: Mastodon.Entity.Token
+    let didAccept: ()->()
 
     init(
         domain: String,
         authenticateInfo: AuthenticationViewModel.AuthenticateInfo,
         rows: [PrivacyRow],
         instance: Mastodon.Entity.Instance,
-        applicationToken: Mastodon.Entity.Token
+        applicationToken: Mastodon.Entity.Token,
+        didAccept: @escaping ()->()
     ) {
         self.domain = domain
         self.authenticateInfo = authenticateInfo
         self.rows = rows
         self.instance = instance
         self.applicationToken = applicationToken
+        self.didAccept = didAccept
     }
 }

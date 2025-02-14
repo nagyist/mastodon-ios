@@ -18,7 +18,6 @@ extension FollowingListViewModel {
     ) {
         diffableDataSource = UserSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             authenticationBox: authenticationBox,
             userTableViewCellDelegate: userTableViewCellDelegate
         )

@@ -28,10 +28,8 @@ extension HashtagWidgetProvider {
         Task {
             await MainActor.run {
                 
-                AuthenticationServiceProvider.shared.prepareForUse()
-                
                 guard
-                    let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                    let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
                 else {
                     if context.isPreview {
                         return completion(.placeholder)
@@ -51,8 +49,7 @@ extension HashtagWidgetProvider {
                 Task {
                     
                     do {
-                        let mostRecentStatuses = try await AppContext.shared
-                            .apiService
+                        let mostRecentStatuses = try await APIService.shared
                             .hashtagTimeline(limit: 40, hashtag: desiredHashtag, authenticationBox: authBox)
                             .value
                         

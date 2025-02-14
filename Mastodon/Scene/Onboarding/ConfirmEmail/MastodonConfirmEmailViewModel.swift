@@ -14,7 +14,6 @@ final class MastodonConfirmEmailViewModel {
     var disposeBag = Set<AnyCancellable>()
 
     // input
-    let context: AppContext
     var email: String
     let authenticateInfo: AuthenticationViewModel.AuthenticateInfo
     let userToken: Mastodon.Entity.Token
@@ -26,13 +25,11 @@ final class MastodonConfirmEmailViewModel {
         .eraseToAnyPublisher()
 
     init(
-        context: AppContext,
         email: String,
         authenticateInfo: AuthenticationViewModel.AuthenticateInfo,
         userToken: Mastodon.Entity.Token,
         updateCredentialQuery: Mastodon.API.Account.UpdateCredentialQuery
     ) {
-        self.context = context
         self.email = email
         self.authenticateInfo = authenticateInfo
         self.userToken = userToken
@@ -41,7 +38,6 @@ final class MastodonConfirmEmailViewModel {
 
     #if DEBUG || SNAPSHOT
     init() {
-        self.context = AppContext.shared
         self.email = "example.com"
         self.authenticateInfo = AuthenticationViewModel.AuthenticateInfo(
             domain: "",
