@@ -21,6 +21,7 @@ struct InlinePostPreview: View {
                 Text(String(content.characters[...]))
                     .font(.subheadline)
                     .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if let attachmentInfo = viewModel.attachmentInfo {
                 HStack {
