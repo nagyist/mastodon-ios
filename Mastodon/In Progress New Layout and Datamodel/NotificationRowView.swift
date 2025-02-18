@@ -1001,6 +1001,7 @@ extension Mastodon.Entity.Status {
     public struct ViewModel {
         public let content: AttributedString?
         public let visibility: Mastodon.Entity.Status.Visibility?
+        public let isReply: Bool
         public let isPinned: Bool
         public let accountDisplayName: String?
         public let accountFullName: String?
@@ -1042,6 +1043,7 @@ extension Mastodon.Entity.Status {
 
         return ViewModel(
             content: displayableContent, visibility: visibility,
+            isReply: inReplyToID != nil,
             isPinned: false,
             accountDisplayName: account.displayName,
             accountFullName: accountFullName,
