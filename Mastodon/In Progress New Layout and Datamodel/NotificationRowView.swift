@@ -178,6 +178,15 @@ extension GroupedNotificationType {
             return .gray
         }
     }
+    
+    var wantsFullStatusLayout: Bool {
+        switch self {
+        case .status, .mention:
+            return true
+        default:
+            return false
+        }
+    }
 
     func actionSummaryLabel(_ sourceAccounts: NotificationSourceAccounts)
         -> AttributedString?
@@ -673,10 +682,10 @@ struct NotificationRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .weightedText(let string, let weight):
             textComponent(string, fontWeight: weight)
-        case .status(let viewModel):
-            InlinePostPreview(viewModel: viewModel)
+        case .status(let statusViewModel):
+            InlinePostPreview(viewModel: statusViewModel, showAttributionHeader: !viewModel.type.wantsFullStatusLayout)
                 .onTapGesture {
-                    viewModel.navigateToStatus()
+                    statusViewModel.navigateToStatus()
                 }
         case .hyperlinkButton(let label, let url):
             Button(label) {

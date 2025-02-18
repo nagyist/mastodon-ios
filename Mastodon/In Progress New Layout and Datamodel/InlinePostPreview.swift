@@ -11,6 +11,7 @@ import SwiftUI
 
 struct InlinePostPreview: View {
     let viewModel: Mastodon.Entity.Status.ViewModel
+    let showAttributionHeader: Bool  // TODO: remove this option when full post layout is available
     
     @Environment(\.colorScheme) private var colorScheme
 
@@ -20,7 +21,7 @@ struct InlinePostPreview: View {
             if let content = viewModel.content {
                 Text(String(content.characters[...]))
                     .font(.subheadline)
-                    .lineLimit(3)
+                    .lineLimit(showAttributionHeader ? 3 : 9)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let attachmentInfo = viewModel.attachmentInfo {
@@ -50,7 +51,7 @@ struct InlinePostPreview: View {
 
     @ViewBuilder func header() -> some View {
         HStack(spacing: 4) {
-            if viewModel.needsUserAttribution {
+            if showAttributionHeader && viewModel.needsUserAttribution {
                 if let url = viewModel.accountAvatarUrl {
                     AsyncImage(
                         url: url,
