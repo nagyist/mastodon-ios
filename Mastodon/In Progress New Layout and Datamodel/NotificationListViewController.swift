@@ -1,6 +1,7 @@
 // Copyright © 2025 Mastodon gGmbH. All rights reserved.
 
 import Combine
+import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 import MastodonSDK
@@ -166,6 +167,12 @@ struct NotificationListView: View {
         case .groupedNotification(let viewModel):
             // TODO: implement unread using Mastodon.Entity.Marker
             NotificationRowView(viewModel: viewModel)
+                .padding(.vertical, 4)
+                .listRowBackground(
+                    Rectangle()
+                        .fill(viewModel.usePrivateBackground ?  Asset.Colors.accent.swiftUIColor : .clear)
+                        .opacity(0.1)
+                )
         }
     }
 

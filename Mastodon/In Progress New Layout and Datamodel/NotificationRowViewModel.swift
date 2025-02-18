@@ -19,6 +19,7 @@ class NotificationRowViewModel: ObservableObject {
     let presentError: (Error) -> Void
     let defaultNavigation: (() -> Void)?
     let iconStyle: GroupedNotificationType.MainIconStyle?
+    let usePrivateBackground: Bool
     let actionSuperheader: (iconName: String, text: String, color: Color)?
     
     @Published public var headerComponents: [NotificationViewComponent] = []
@@ -58,6 +59,8 @@ class NotificationRowViewModel: ObservableObject {
         self.navigateToScene = navigateToScene
         self.presentError = presentError
         self.defaultNavigation = notificationInfo.defaultNavigation
+        
+        var needsPrivateBackground = false
 
         switch notificationInfo.groupedNotificationType {
 
@@ -99,6 +102,7 @@ class NotificationRowViewModel: ObservableObject {
                             ?? "")
                 ]
                 contentComponents = [.status(statusViewModel)]
+                needsPrivateBackground = statusViewModel.visibility == .direct
             } else {
                 actionSuperheader = nil
                 headerTextComponents = [._other("POST BY UNKNOWN ACCOUNT")]
@@ -116,6 +120,7 @@ class NotificationRowViewModel: ObservableObject {
                             ?? "")
                 ]
                 contentComponents = [.status(statusViewModel)]
+                needsPrivateBackground = statusViewModel.visibility == .direct
             } else {
                 headerTextComponents = [
                     ._other("REBLOGGED/FAVOURITED BY UNKNOWN ACCOUNT")
@@ -133,6 +138,7 @@ class NotificationRowViewModel: ObservableObject {
                             ?? "")
                 ]
                 contentComponents = [.status(statusViewModel)]
+                needsPrivateBackground = statusViewModel.visibility == .direct
             } else {
                 headerTextComponents = [
                     ._other("POLL/UPDATE FROM UNKNOWN ACCOUNT")
@@ -208,6 +214,9 @@ class NotificationRowViewModel: ObservableObject {
                 ._other("UNEXPECTED NOTIFICATION TYPE: \(text)")
             ]
         }
+        
+        usePrivateBackground = needsPrivateBackground
+        
         resetHeaderComponents()
     }
     
