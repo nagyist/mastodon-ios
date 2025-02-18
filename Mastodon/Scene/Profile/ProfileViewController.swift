@@ -18,47 +18,375 @@ import TabBarPager
 import XLPagerTabStrip
 import MastodonSDK
 
-protocol ProfileViewModelEditable {
-    var isEdited: Bool { get }
+fileprivate enum ActionableRelationship {
+    case blocked
+    case domainBlocked
+    case muted
+    case followed(Bool)
+    
+    init(_ relationship: Mastodon.Entity.Relationship) {
+        if relationship.blocking {
+            self = .blocked
+        } else if relationship.domainBlocking {
+            self = .domainBlocked
+        } else if relationship.muting {
+            self = .muted
+        } else {
+            self = .followed(relationship.following)
+        }
+    }
 }
 
-final class ProfileViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    public static let containerViewMarginForRegularHorizontalSizeClass: CGFloat = 64
-    public static let containerViewMarginForCompactHorizontalSizeClass: CGFloat = 16
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
-    
-    var disposeBag = Set<AnyCancellable>()
+enum ProfileViewError: Error {
+    case invalidStateTransition
+    case invalidDomain
+    case accountNotFound
+    case attemptToPushInvalidProfileChanges
+    case profileChangeServerError(String)
+}
 
-    var viewModel: ProfileViewModel? {
-        didSet {
-            if isViewLoaded {
-                guard let viewModel = viewModel else { return }
-                viewModel.isEditing = false
-                
-                if profileHeaderViewController == nil {
-                    createSupplementaryViews(withViewModel: viewModel)
-                }
-                bindToViewModel(viewModel)
-                
-                guard let profileHeaderViewController = profileHeaderViewController else { return }
-                profileHeaderViewController.viewModel.isEditing = false
-                profilePagingViewController?.viewModel?.profileAboutViewController.viewModel?.isEditing = false
-                viewModel.profileAboutViewModel.isEditing = false
+extension ProfileViewController.ProfileType: UserIdentifier {
+    public var domain: String {
+        return accountToDisplay.domain ?? ""
+    }
+    
+    public var userID: MastodonSDK.Mastodon.Entity.Account.ID {
+        return accountToDisplay.id
+    }
+    
+    
+}
+
+extension ProfileViewController {
+    public enum ProfileType {
+        case me(Mastodon.Entity.Account)
+        case notMe(me: Mastodon.Entity.Account, displayAccount: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?)
+        
+        var isMe: Bool {
+            switch self {
+            case .me:
+                return true
+            case .notMe:
+                return false
+            }
+        }
+        
+        var accountToDisplay: Mastodon.Entity.Account {
+            switch self {
+            case .me(let account):
+                return account
+            case .notMe(_, let account, _):
+                return account
+            }
+        }
+        
+        var myAccount: Mastodon.Entity.Account {
+            switch self {
+            case .me(let account):
+                return account
+            case .notMe(let myAccount, _, _):
+                return myAccount
+            }
+        }
+        
+        var myRelationshipToDisplayedAccount: Mastodon.Entity.Relationship? {
+            switch self {
+            case .me:
+                return nil
+            case .notMe(_, _, let relationship):
+                return relationship
+            }
+        }
+        
+        var canEditProfile: Bool {
+            switch self {
+            case .me: return true
+            case .notMe: return false
             }
         }
     }
+}
 
+@MainActor
+class ProfileViewController: UIViewController, MediaPreviewableViewController, AuthContextProvider {
+    
+    var subscriptions = Set<AnyCancellable>()
+    
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
+    private var profilePagingViewController: ProfilePagingViewController?
+    
+    nonisolated let authenticationBox: MastodonAuthenticationBox
+    private var viewModel: ProfileViewModelImmutable {
+        didSet {
+            updateDisplay(viewModel)
+        }
+    }
+    
+    required init(_ profileType: ProfileType, authenticationBox: MastodonAuthenticationBox) {
+        self.authenticationBox = authenticationBox
+        self.viewModel = ProfileViewModelImmutable(profileType: profileType, state: .idle)
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        createSupplementaryViews()
+        setUpSupplementaryViews()
+        setAppearanceDetails()
+        
+        tabBarPagerController.delegate = self
+        tabBarPagerController.dataSource = self
+        
+        navigationItem.titleView = titleView
+        
+        addChild(tabBarPagerController)
+        tabBarPagerController.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(tabBarPagerController.view)
+        tabBarPagerController.didMove(toParent: self)
+        tabBarPagerController.view.pinToParent()
+        
+        tabBarPagerController.relayScrollView.refreshControl = refreshControl
+        refreshControl.addTarget(self, action: #selector(ProfileViewController.refreshControlValueChanged(_:)), for: .valueChanged)
+    
+        updateDisplay(viewModel)
+        
+        reloadCurrentTimeline()
+        
+        PublisherService.shared.statusPublishResult.sink { [weak self] result in
+            if case .success(.edit(let status)) = result {
+                self?.updateViewModelsWithDataControllers(status: .fromEntity(status.value), intent: .edit)
+            }
+        }.store(in: &subscriptions)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        Task {
+            await self.refetchAllData()
+        }
+    }
+    
+    private func updateDisplay(_ viewModel: ProfileViewModelImmutable) {
+        guard isViewLoaded else { return }
+        // TODO: careful about resetting things if we failed to push edits
+        
+        if !viewModel.state.isUpdating {
+            if refreshControl.isRefreshing {
+                refreshControl.endRefreshing()
+            }
+        }
+        
+        // Bridge to the old way of doing things until we replace the UI sometime in the future
+        updateHeader(viewModel)
+        updateAboutView(viewModel)
+        updateTabBarPager(viewModel)
+        updatePagingViewController(viewModel)
+        updateBarButtonItems(viewModel)
+        updateMoreButton(viewModel)
+    }
+    
+    private func updateHeader(_ viewModel: ProfileViewModelImmutable) {
+        guard let headerViewControllerViewModel = profileHeaderViewController?.viewModel else {
+            return
+        }
+        guard let headerViewViewModel = profileHeaderViewController?.profileHeaderView.viewModel else { return }
+        
+        let relationship = viewModel.profileType.myRelationshipToDisplayedAccount
+        headerViewControllerViewModel.relationship = relationship
+        headerViewViewModel.relationship = relationship
+        
+        headerViewControllerViewModel.account = viewModel.profileType.accountToDisplay
+        headerViewControllerViewModel.isEditing = viewModel.state.isEditing
+        headerViewControllerViewModel.isUpdating = viewModel.state.isUpdating
+        headerViewControllerViewModel.accountForEdit = viewModel.state.isEditing ? viewModel.profileType.accountToDisplay : nil
+        
+        if viewModel.state.isEditing {
+            headerViewControllerViewModel.setProfileInfo(accountForEdit: viewModel.profileType.accountToDisplay)
+        }
+        
+        guard let relationship else { return }
+        
+        for userTimeLineViewModel in [
+            profilePagingViewController?.viewModel?.postUserTimelineViewController.viewModel,
+            profilePagingViewController?.viewModel?.repliesUserTimelineViewController.viewModel,
+            profilePagingViewController?.viewModel?.mediaUserTimelineViewController.viewModel,
+        ] {
+            userTimeLineViewModel?.isBlocking = relationship.blocking
+            userTimeLineViewModel?.isBlockedBy = relationship.blockedBy
+            userTimeLineViewModel?.isSuspended = viewModel.profileType.accountToDisplay.suspended ?? false
+        }
+    }
+    
+    private func updateAboutView(_ viewModel: ProfileViewModelImmutable) {
+        guard let aboutViewModel = profilePagingViewController?.viewModel?.profileAboutViewController.viewModel else { return }
+        aboutViewModel.fields = viewModel.profileType.accountToDisplay.mastodonFields
+        aboutViewModel.account = viewModel.profileType.accountToDisplay
+        aboutViewModel.isEditing = viewModel.state.isEditing
+        aboutViewModel.accountForEdit = viewModel.state.isEditing ? viewModel.profileType.accountToDisplay : nil
+    }
+    
+    private func updateBarButtonItems(_ viewModel: ProfileViewModelImmutable) {
+        self.cancelEditingBarButtonItem.isEnabled = !viewModel.state.isUpdating
+        
+        var items: [UIBarButtonItem] = []
+        defer {
+            if items.isNotEmpty {
+                self.navigationItem.rightBarButtonItems = items
+            } else {
+                self.navigationItem.rightBarButtonItems = nil
+            }
+        }
+        
+        let suspended = viewModel.profileType.accountToDisplay.suspended ?? false
+        
+        guard !suspended else { return }
+        
+        guard !viewModel.state.isEditing else {
+            items.append(self.cancelEditingBarButtonItem)
+            return
+        }
+        
+        let isTitleViewDisplaying = profileHeaderViewController?.viewModel.isTitleViewDisplaying ?? false
+        guard !isTitleViewDisplaying else {
+            return
+        }
+        
+        guard viewModel.hideIsMeBarButtonItems else {
+            items.append(self.settingBarButtonItem)
+            items.append(self.shareBarButtonItem)
+            items.append(self.favoriteBarButtonItem)
+            items.append(self.bookmarkBarButtonItem)
+            
+            if self.currentInstance?.canFollowTags == true {
+                items.append(self.followedTagsBarButtonItem)
+            }
+            
+            return
+        }
+        
+        if !viewModel.hideMoreMenuBarButtonItem {
+            items.append(self.moreMenuBarButtonItem)
+        }
+        if !viewModel.hideReplyBarButtonItem {
+            items.append(self.replyBarButtonItem)
+        }
+    }
+    
+    private func updateMoreButton(_ viewModel: ProfileViewModelImmutable) {
+        switch viewModel.profileType {
+        case .me:
+            moreMenuBarButtonItem.menu = nil
+        case .notMe(let me, let displayAccount, let relationship):
+            guard let relationship, let domain = displayAccount.domainFromAcct, let myDomain = me.domainFromAcct else {
+                moreMenuBarButtonItem.menu = nil
+                return
+            }
+            
+            let name = displayAccount.displayNameWithFallback
+            
+            var items: [MastodonMenu.Submenu] = []
+            
+            items.append(MastodonMenu.Submenu(actions: [
+                .shareUser(.init(name: name)),
+                .openUserInBrowser(URL(string: displayAccount.url)),
+                .copyProfileLink(URL(string: displayAccount.url))
+            ]))
+            
+            
+            var relationshipActions: [MastodonMenu.Action] = [
+                .followUser(.init(name: name, isFollowing: relationship.following)),
+                .muteUser(.init(name: name, isMuting: relationship.muting))
+            ]
+            
+            if relationship.following {
+                relationshipActions.append(.hideReblogs(.init(showReblogs: relationship.showingReblogs)))
+            }
+            
+            items.append(MastodonMenu.Submenu(actions: relationshipActions))
+            
+            var destructiveActions: [MastodonMenu.Action] = [
+                .blockUser(.init(name: name, isBlocking: relationship.blocking)),
+                .reportUser(.init(name: name)),
+            ]
+            
+            if myDomain != domain {
+                destructiveActions.append(
+                    .blockDomain(.init(domain: domain, isBlocking: relationship.domainBlocking))
+                )
+            }
+            
+            items.append(MastodonMenu.Submenu(actions: destructiveActions))
+            
+            let menu = MastodonMenu.setupMenu(
+                submenus: items,
+                delegate: self
+            )
+            
+            moreMenuBarButtonItem.menu = menu
+        }
+    }
+    
+    private func updateTabBarPager(_ viewModel: ProfileViewModelImmutable) {
+        tabBarPagerController.relayScrollView.refreshControl = viewModel.state.isEditing ? nil : refreshControl
+    }
+    
+    private func updatePagingViewController(_ viewModel: ProfileViewModelImmutable) {
+        guard let pagingViewController = profilePagingViewController else { return }
+        pagingViewController.containerView.isScrollEnabled = viewModel.isPagingEnabled
+        pagingViewController.buttonBarView.isUserInteractionEnabled = viewModel.isPagingEnabled
+        
+        // set first responder for key command
+        if !viewModel.state.isEditing {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                pagingViewController.becomeFirstResponder()
+            }
+            // dismiss keyboard if needs
+            self.view.endEditing(true)
+        }
+        
+        if viewModel.state.isEditing,
+           let index = pagingViewController.viewControllers.firstIndex(where: { type(of: $0) is ProfileAboutViewController.Type }),
+           pagingViewController.canMoveTo(index: index)
+        {
+            pagingViewController.moveToViewController(at: index)
+        }
+    }
+
+    
+    private func createSupplementaryViews() {
+        profileHeaderViewController = createProfileHeaderViewController()
+        profilePagingViewController = createProfilePagingViewController()
+    }
+    
+    private func setUpSupplementaryViews() {
+        profileHeaderViewController?.delegate = self
+        profilePagingViewController?.viewModel?.profileAboutViewController.delegate = self
+    }
+    
+    private func setAppearanceDetails() {
+        view.backgroundColor = .secondarySystemBackground
+        let barAppearance = UINavigationBarAppearance()
+        if isModal {
+            barAppearance.configureWithDefaultBackground()
+        } else {
+            barAppearance.configureWithTransparentBackground()
+        }
+        navigationItem.standardAppearance = barAppearance
+        navigationItem.compactAppearance = barAppearance
+        navigationItem.scrollEdgeAppearance = barAppearance
+    }
+    
+    // MARK: From original ProfileViewController
     
     private(set) lazy var cancelEditingBarButtonItem: UIBarButtonItem = {
         let barButtonItem = UIBarButtonItem(title: L10n.Common.Controls.Actions.cancel, style: .plain, target: self, action: #selector(ProfileViewController.cancelEditingBarButtonItemPressed(_:)))
         barButtonItem.tintColor = .white
         return barButtonItem
     }()
-
+    
     private(set) lazy var settingBarButtonItem: UIBarButtonItem = {
         let barButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "gear")?.withRenderingMode(.alwaysTemplate),
@@ -70,7 +398,7 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
         barButtonItem.accessibilityLabel = L10n.Common.Controls.Actions.settings
         return barButtonItem
     }()
-
+    
     private(set) lazy var shareBarButtonItem: UIBarButtonItem = {
         let barButtonItem = UIBarButtonItem(
             image: Asset.Arrow.squareAndArrowUp.image.withRenderingMode(.alwaysTemplate),
@@ -82,7 +410,7 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
         barButtonItem.accessibilityLabel = L10n.Common.Controls.Actions.share
         return barButtonItem
     }()
-
+    
     private(set) lazy var favoriteBarButtonItem: UIBarButtonItem = {
         let barButtonItem = UIBarButtonItem(
             image: Asset.ObjectsAndTools.star.image.withRenderingMode(.alwaysTemplate),
@@ -106,14 +434,14 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
         barButtonItem.accessibilityLabel = L10n.Scene.Bookmark.title
         return barButtonItem
     }()
-
+    
     private(set) lazy var replyBarButtonItem: UIBarButtonItem = {
         let barButtonItem = UIBarButtonItem(image: UIImage(systemName: "arrowshape.turn.up.left"), style: .plain, target: self, action: #selector(ProfileViewController.replyBarButtonItemPressed(_:)))
         barButtonItem.tintColor = .white
         barButtonItem.accessibilityLabel = L10n.Common.Controls.Actions.reply
         return barButtonItem
     }()
-
+    
     let moreMenuBarButtonItem: UIBarButtonItem = {
         let barButtonItem = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), style: .plain, target: nil, action: nil)
         barButtonItem.tintColor = .white
@@ -127,7 +455,7 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
         barButtonItem.accessibilityLabel = L10n.Scene.FollowedTags.title
         return barButtonItem
     }()
-
+    
     let refreshControl: RefreshControl = {
         let refreshControl = RefreshControl()
         refreshControl.tintColor = .white
@@ -135,460 +463,440 @@ final class ProfileViewController: UIViewController, NeedsDependency, MediaPrevi
     }()
     
     private(set) lazy var tabBarPagerController = TabBarPagerController()
-
+    
     private(set) var profileHeaderViewController: ProfileHeaderViewController?
     
-    private func createSupplementaryViews(withViewModel viewModel: ProfileViewModel) {
-        profileHeaderViewController = createProfileHeaderViewController(viewModel: viewModel)
-        profilePagingViewController = createProfilePagingViewController(viewModel: viewModel)
-    }
-    
-    private func createProfileHeaderViewController(viewModel: ProfileViewModel) -> ProfileHeaderViewController {
-        let viewController = ProfileHeaderViewController(context: context, authenticationBox: viewModel.authenticationBox, coordinator: coordinator, profileViewModel: viewModel)
+    private func createProfileHeaderViewController() -> ProfileHeaderViewController {
+        let viewController = ProfileHeaderViewController(authenticationBox: authenticationBox, account: viewModel.profileType.accountToDisplay, me: viewModel.profileType.myAccount, relationship: viewModel.profileType.myRelationshipToDisplayedAccount)
         return viewController
     }
     
-    private(set) var profilePagingViewController: ProfilePagingViewController?
-    
-    private func createProfilePagingViewController(viewModel: ProfileViewModel) -> ProfilePagingViewController {
+    private func createProfilePagingViewController() -> ProfilePagingViewController {
         let profilePagingViewController = ProfilePagingViewController()
+        let timelineUserIdentifier = viewModel.profileType
         profilePagingViewController.viewModel = {
             let profilePagingViewModel = ProfilePagingViewModel(
-                postsUserTimelineViewModel: viewModel.postsUserTimelineViewModel,
-                repliesUserTimelineViewModel: viewModel.repliesUserTimelineViewModel,
-                mediaUserTimelineViewModel: viewModel.mediaUserTimelineViewModel,
-                profileAboutViewModel: viewModel.profileAboutViewModel
+                postsUserTimelineViewModel: userTimelineViewModel(.posts),
+                repliesUserTimelineViewModel: userTimelineViewModel(.postsAndReplies),
+                mediaUserTimelineViewModel: userTimelineViewModel(.media),
+                profileAboutViewModel: profileAboutViewModel
             )
-            profilePagingViewModel.viewControllers.forEach { viewController in
-                if let viewController = viewController as? NeedsDependency {
-                    viewController.context = context
-                    viewController.coordinator = coordinator
-                }
-            }
+            profilePagingViewModel.postUserTimelineViewController.viewModel.userIdentifier = timelineUserIdentifier
+            profilePagingViewModel.repliesUserTimelineViewController.viewModel.userIdentifier = timelineUserIdentifier
+            profilePagingViewModel.mediaUserTimelineViewController.viewModel.userIdentifier = timelineUserIdentifier
             return profilePagingViewModel
         }()
         return profilePagingViewController
     }
+}
 
+extension ProfileViewController: ProfileHeaderViewControllerDelegate {
+    // TODO: replace delegate with async streams
+    
+    func profileHeaderViewController(_ profileHeaderViewController: ProfileHeaderViewController, profileHeaderView: ProfileHeaderView, relationshipButtonDidPressed button: MastodonUI.ProfileRelationshipActionButton) {
+        relationshipActionButtonTapped()
+    }
+    
+    func profileHeaderViewController(_ profileHeaderViewController: ProfileHeaderViewController, profileHeaderView: ProfileHeaderView, metaTextView: MetaTextKit.MetaTextView, metaDidPressed meta: Meta) {
+        handleMetaPress(meta)
+    }
+    
+    private func userTimelineViewModel(_ timelineType: TimelineType) -> UserTimelineViewModel {
+        return UserTimelineViewModel(
+        authenticationBox: authenticationBox,
+        title: timelineType.title,
+        queryFilter: timelineType.queryFilter
+    )
+    }
+
+    private var profileAboutViewModel: ProfileAboutViewModel { ProfileAboutViewModel(account: viewModel.profileType.accountToDisplay)
+    }
+    
+    enum TimelineType {
+        case posts
+        case postsAndReplies
+        case media
+        
+        var title: String {
+            switch self {
+            case .posts:
+                return L10n.Scene.Profile.SegmentedControl.posts
+            case .postsAndReplies:
+                return L10n.Scene.Profile.SegmentedControl.postsAndReplies
+            case .media:
+                return L10n.Scene.Profile.SegmentedControl.media
+            }
+        }
+        
+        var queryFilter: UserTimelineViewModel.QueryFilter {
+            switch self {
+            case .posts:
+                return UserTimelineViewModel.QueryFilter(excludeReplies: true)
+            case .postsAndReplies:
+                return UserTimelineViewModel.QueryFilter(excludeReplies: false)
+            case .media:
+                return UserTimelineViewModel.QueryFilter(onlyMedia: true)
+            }
+        }
+        
+    }
+}
+
+// MARK: API Calls
+extension ProfileViewController {
+    
+    private func reloadCurrentTimeline() {
+        if let userTimelineViewController = profilePagingViewController?.currentViewController as? UserTimelineViewController {
+            userTimelineViewController.viewModel.stateMachine.enter(UserTimelineViewModel.State.Reloading.self)
+        }
+    }
+    
+    private func refetchAllData() async {
+        guard viewModel.state == .idle else { return }
+        
+        let reset = viewModel
+        
+        viewModel = ProfileViewModelImmutable(profileType: viewModel.profileType, state: .updating)
+        
+        do {
+            let account = viewModel.profileType.accountToDisplay
+            if let domain = account.domain {
+                let updatedAccount = try await refetchDisplayedAccount()
+                switch viewModel.profileType {
+                case .me:
+                    viewModel = ProfileViewModelImmutable(profileType: .me(updatedAccount), state: .idle)
+                case .notMe:
+                    // also update me and my relationship
+                    let updatedMe = try await APIService.shared.accountInfo(authenticationBox)
+                    let updatedRelationship = try await APIService.shared.relationship(forAccounts: [updatedAccount], authenticationBox: authenticationBox).value.first
+                    viewModel = ProfileViewModelImmutable(profileType: .notMe(me: updatedMe, displayAccount: updatedAccount, relationship: updatedRelationship ?? viewModel.profileType.myRelationshipToDisplayedAccount), state: .idle)
+                }
+            }
+        } catch let error {
+            displayError(error, andResetView: reset)
+        }
+    }
+    
+    private func refetchDisplayedAccount() async throws -> Mastodon.Entity.Account {
+        switch viewModel.profileType {
+        case .me(let account):
+            let (account, authBox) = try await APIService.shared.verifyAndActivateUser(domain: authenticationBox.domain, clientID: authenticationBox.authentication.clientID, clientSecret: authenticationBox.authentication.clientSecret, authorization: authenticationBox.userAuthorization)
+            return account
+        case .notMe(let me, let displayAccount, let relationship):
+            guard let domain = displayAccount.domain else { throw ProfileViewError.invalidDomain }
+            guard let refreshedAccount = try await APIService.shared.fetchNotMeUser(username: displayAccount.acct, domain: domain, authenticationBox: authenticationBox) else { throw ProfileViewError.accountNotFound }
+            return refreshedAccount
+        }
+    }
+    
+    func pushProfileChanges(
+        headerDetails: ProfileHeaderDetails,
+        profileFields: [ (String, String) ]
+    ) async throws -> Mastodon.Entity.Account {
+        let domain = authenticationBox.domain
+        let authorization = authenticationBox.userAuthorization
+        
+        let newBannerImage: UIImage?
+        let newAvatarImage: UIImage?
+        
+        if case let .local(image) = headerDetails.bannerImage {
+            if image.size.width <= ProfileHeaderViewModel.bannerImageMaxSizeInPixel.width {
+                newBannerImage = image
+            } else {
+                newBannerImage = image.af.imageScaled(to: ProfileHeaderViewModel.bannerImageMaxSizeInPixel)
+            }
+        } else {
+            newBannerImage = nil
+        }
+
+        if case let .local(image) = headerDetails.avatarImage {
+            if image.size.width <= ProfileHeaderViewModel.avatarImageMaxSizeInPixel.width {
+                newAvatarImage = image
+            } else {
+                newAvatarImage = image.af.imageScaled(to: ProfileHeaderViewModel.avatarImageMaxSizeInPixel)
+            }
+        } else { newAvatarImage = nil }
+        
+        let fieldsAttributes = profileFields.map { Mastodon.Entity.Field(name: $0.0, value: $0.1) }
+        
+        let query = Mastodon.API.Account.UpdateCredentialQuery(
+            discoverable: nil,
+            bot: nil,
+            displayName: headerDetails.displayName,
+            note: headerDetails.bioText,
+            avatar: newAvatarImage.flatMap { Mastodon.Query.MediaAttachment.png($0.pngData()) },
+            header: newBannerImage.flatMap { Mastodon.Query.MediaAttachment.png($0.pngData()) },
+            locked: nil,
+            source: nil,
+            fieldsAttributes: fieldsAttributes
+        )
+        let response = try await APIService.shared.accountUpdateCredentials(
+            domain: domain,
+            query: query,
+            authorization: authorization
+        )
+        // TODO: Publish the details, rather than using notification center to broadcast. This may actually already be handled in some other way.
+        NotificationCenter.default.post(name: .userFetched, object: nil)
+        
+        return response.value
+    }
+}
+
+// MARK: Older code
+extension ProfileViewController {
     // title view nested in header
     var titleView: DoubleTitleLabelNavigationBarTitleView? {
         profileHeaderViewController?.titleView
     }
     
-
-}
-
-extension ProfileViewController {
-    
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
     }
-
+    
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
-
+        
         profileHeaderViewController?.updateHeaderContainerSafeAreaInset(view.safeAreaInsets)
     }
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        NotificationCenter.default.addObserver(self, selector: #selector(ProfileViewController.relationshipChanged(_:)), name: .relationshipChanged, object: nil)
-
-        view.backgroundColor = .secondarySystemBackground
-        let barAppearance = UINavigationBarAppearance()
-        if isModal {
-            barAppearance.configureWithDefaultBackground()
-        } else {
-            barAppearance.configureWithTransparentBackground()
-        }
-        navigationItem.standardAppearance = barAppearance
-        navigationItem.compactAppearance = barAppearance
-        navigationItem.scrollEdgeAppearance = barAppearance
-
-        navigationItem.titleView = titleView
-
-        addChild(tabBarPagerController)
-        tabBarPagerController.view.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(tabBarPagerController.view)
-        tabBarPagerController.didMove(toParent: self)
-        tabBarPagerController.view.pinToParent()
-        
-        tabBarPagerController.relayScrollView.refreshControl = refreshControl
-        refreshControl.addTarget(self, action: #selector(ProfileViewController.refreshControlValueChanged(_:)), for: .valueChanged)
-                
-        if let viewModel = viewModel {
-            setUpSupplementaryViews(viewModel: viewModel)
-        }
-    }
-    
-    private func setUpSupplementaryViews(viewModel: ProfileViewModel) {
-        // setup delegate
-        if profileHeaderViewController == nil {
-            createSupplementaryViews(withViewModel: viewModel)
-        }
-        profileHeaderViewController?.delegate = self
-        profilePagingViewController?.viewModel?.profileAboutViewController.delegate = self
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-
-        navigationController?.navigationBar.prefersLargeTitles = false
-
-        if let viewModel = viewModel {
-            bindToViewModel(viewModel)
-        }
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        viewModel?.viewDidAppear.send()
-
-        setNeedsStatusBarAppearanceUpdate()
-    }
-
-}
-
-extension ProfileViewController {
-    
-    private func bindToViewModel(_ viewModel: ProfileViewModel) {
-        guard let profileHeaderViewController = profileHeaderViewController, let profilePagingViewController = profilePagingViewController else { return }
-        bindViewModel(viewModel, toHeaderViewController: profileHeaderViewController)
-        bindTitleView(profileHeaderViewController.titleView, headerView: profileHeaderViewController.profileHeaderView)
-        bindMoreBarButtonItem(viewModel: viewModel)
-        bindPager(pagingViewController: profilePagingViewController)
-        tabBarPagerController.delegate = self
-        tabBarPagerController.dataSource = self
-    }
-    
-    private func bindViewModel(_ viewModel: ProfileViewModel, toHeaderViewController headerViewController: ProfileHeaderViewController) {
-        // header
-        let headerViewModel = headerViewController.viewModel
-        viewModel.$account
-            .assign(to: \.account, on: headerViewModel)
-            .store(in: &disposeBag)
-        viewModel.$isEditing
-            .assign(to: \.isEditing, on: headerViewModel)
-            .store(in: &disposeBag)
-        viewModel.$isUpdating
-            .assign(to: \.isUpdating, on: headerViewModel)
-            .store(in: &disposeBag)
-        viewModel.$relationship
-            .assign(to: \.relationship, on: headerViewModel)
-            .store(in: &disposeBag)
-        viewModel.$accountForEdit
-            .assign(to: \.accountForEdit, on: headerViewModel)
-            .store(in: &disposeBag)
-
-        [
-            viewModel.postsUserTimelineViewModel,
-            viewModel.repliesUserTimelineViewModel,
-            viewModel.mediaUserTimelineViewModel,
-        ].forEach { userTimelineViewModel in
-
-            viewModel.relationship.publisher
-                .map { $0.blocking }
-                .assign(to: \UserTimelineViewModel.isBlocking, on: userTimelineViewModel)
-                .store(in: &disposeBag)
-
-            viewModel.relationship.publisher
-                .compactMap { $0.blockedBy }
-                .assign(to: \UserTimelineViewModel.isBlockedBy, on: userTimelineViewModel)
-                .store(in: &disposeBag)
-
-            viewModel.$account
-                .compactMap { $0.suspended }
-                .assign(to: \UserTimelineViewModel.isSuspended, on: userTimelineViewModel)
-                .store(in: &disposeBag)
-        }
-    
-        // about
-        let aboutViewModel = viewModel.profileAboutViewModel
-        viewModel.$account
-            .assign(to: \.account, on: aboutViewModel)
-            .store(in: &disposeBag)
-        viewModel.$isEditing
-            .assign(to: \.isEditing, on: aboutViewModel)
-            .store(in: &disposeBag)
-        viewModel.$accountForEdit
-            .assign(to: \.accountForEdit, on: aboutViewModel)
-            .store(in: &disposeBag)
-
-        let editingAndUpdatingPublisher = Publishers.CombineLatest(
-            viewModel.$isEditing,
-            viewModel.$isUpdating
-        )
-        // note: not add .share() here
-
-        let barButtonItemHiddenPublisher = Publishers.CombineLatest3(
-            viewModel.$isMeBarButtonItemsHidden,
-            viewModel.$isReplyBarButtonItemHidden,
-            viewModel.$isMoreMenuBarButtonItemHidden
-        )
-
-        editingAndUpdatingPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isEditing, isUpdating in
-                guard let self = self else { return }
-                self.cancelEditingBarButtonItem.isEnabled = !isUpdating
-            }
-            .store(in: &disposeBag)
-
-        // build items
-        Publishers.CombineLatest4(
-            viewModel.$relationship,
-            headerViewController.viewModel.$isTitleViewDisplaying,
-            editingAndUpdatingPublisher,
-            barButtonItemHiddenPublisher
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] account, isTitleViewDisplaying, tuple1, tuple2 in
-            guard let self, let viewModel = self.viewModel else { return }
-            let (isEditing, _) = tuple1
-            let (isMeBarButtonItemsHidden, isReplyBarButtonItemHidden, isMoreMenuBarButtonItemHidden) = tuple2
-
-            var items: [UIBarButtonItem] = []
-            defer {
-                if items.isNotEmpty {
-                    self.navigationItem.rightBarButtonItems = items
-                } else {
-                    self.navigationItem.rightBarButtonItems = nil
-                }
-            }
-
-            if let suspended = viewModel.account.suspended, suspended == true {
-                return
-            }
-
-            guard isEditing == false else {
-                items.append(self.cancelEditingBarButtonItem)
-                return
-            }
-
-            guard isTitleViewDisplaying == false else {
-                return
-            }
-
-            guard isMeBarButtonItemsHidden else {
-                items.append(self.settingBarButtonItem)
-                items.append(self.shareBarButtonItem)
-                items.append(self.favoriteBarButtonItem)
-                items.append(self.bookmarkBarButtonItem)
-
-                if self.currentInstance?.canFollowTags == true {
-                    items.append(self.followedTagsBarButtonItem)
-                }
-
-                return
-            }
-
-            if !isMoreMenuBarButtonItemHidden {
-                items.append(self.moreMenuBarButtonItem)
-            }
-            if !isReplyBarButtonItemHidden {
-                items.append(self.replyBarButtonItem)
-            }
-        }
-        .store(in: &disposeBag)
-
-        viewModel.$isEditing
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isEditing in
-                guard let self else { return }
-
-                if isEditing {
-                    tabBarPagerController.relayScrollView.refreshControl = nil
-                } else {
-                    tabBarPagerController.relayScrollView.refreshControl = refreshControl
-                }
-            }
-            .store(in: &disposeBag)
-
-        context.publisherService.statusPublishResult.sink { [weak self] result in
-            if case .success(.edit(let status)) = result {
-                self?.updateViewModelsWithDataControllers(status: .fromEntity(status.value), intent: .edit)
-            }
-        }.store(in: &disposeBag)
-
-    }
-
-    private func bindTitleView(_ titleView: DoubleTitleLabelNavigationBarTitleView, headerView: ProfileHeaderView) {
-        Publishers.CombineLatest3(
-            headerView.viewModel.$name,
-            headerView.viewModel.$emojiMeta,
-            headerView.viewModel.$statusesCount
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] name, emojiMeta, statusesCount in
-            guard let self = self else { return }
-            guard let title = name, let statusesCount = statusesCount,
-                  let formattedStatusCount = MastodonMetricFormatter().string(from: statusesCount) else {
-                titleView.isHidden = true
-                return
-            }
-            titleView.isHidden = false
-            let subtitle = L10n.Plural.Count.MetricFormatted.post(formattedStatusCount, statusesCount)
-            let mastodonContent = MastodonContent(content: title, emojis: emojiMeta)
+    @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
+        let reset = viewModel
+        Task { [weak self] in
+            guard let s = self else { return }
             do {
-                let metaContent = try MastodonMetaContent.convert(document: mastodonContent)
-                titleView.update(titleMetaContent: metaContent, subtitle: subtitle)
-            } catch {
-
+                await s.refetchAllData()
+            } catch let error {
+                s.displayError(error, andResetView: reset)
             }
         }
-        .store(in: &disposeBag)
-        headerView.viewModel.$name
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] name in
-                guard let self = self, self.isModal == false else { return }
-                self.navigationItem.title = name
-            }
-            .store(in: &disposeBag)
-    }
-
-    // This More-button is only visible for other users, but not myself
-    private func bindMoreBarButtonItem(viewModel: ProfileViewModel) {
-        Publishers.CombineLatest3(
-            viewModel.$account,
-            viewModel.$me,
-            viewModel.$relationship
-        )
-        .asyncMap { [weak self] user, me, relationship -> UIMenu? in
-            guard let self, let relationship, let domain = user.domainFromAcct, let myDomain = me.domainFromAcct else { return nil }
-
-            let name = user.displayNameWithFallback
-
-            var items: [MastodonMenu.Submenu] = []
-
-            items.append(MastodonMenu.Submenu(actions: [
-                .shareUser(.init(name: name)),
-                .openUserInBrowser(URL(string: user.url)),
-                .copyProfileLink(URL(string: user.url))
-            ]))
-
-
-            var relationshipActions: [MastodonMenu.Action] = [
-                .followUser(.init(name: name, isFollowing: relationship.following)),
-                .muteUser(.init(name: name, isMuting: relationship.muting))
-            ]
-
-            if relationship.following {
-                relationshipActions.append(.hideReblogs(.init(showReblogs: relationship.showingReblogs)))
-            }
-
-            items.append(MastodonMenu.Submenu(actions: relationshipActions))
-
-            var destructiveActions: [MastodonMenu.Action] = [
-                .blockUser(.init(name: name, isBlocking: relationship.blocking)),
-                .reportUser(.init(name: name)),
-            ]
-
-            if myDomain != domain {
-                destructiveActions.append(
-                    .blockDomain(.init(domain: domain, isBlocking: relationship.domainBlocking))
-                )
-            }
-
-            items.append(MastodonMenu.Submenu(actions: destructiveActions))
-
-            let menu = MastodonMenu.setupMenu(
-                submenus: items,
-                delegate: self
-            )
-            return menu
-        }
-        .sink { [weak self] completion in
-            guard let self = self else { return }
-            switch completion {
-            case .failure:
-                self.moreMenuBarButtonItem.menu = nil
-            case .finished:
-                break
-            }
-        } receiveValue: { [weak self] menu in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-              self.moreMenuBarButtonItem.menu = menu
-            }
-        }
-        .store(in: &disposeBag)
     }
     
-    private func bindPager(pagingViewController: ProfilePagingViewController) {
-        guard let viewModel = viewModel else { return }
-        viewModel.$isPagingEnabled
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isPagingEnabled in
-                guard let self else { return }
-                pagingViewController.containerView.isScrollEnabled = isPagingEnabled
-                pagingViewController.buttonBarView.isUserInteractionEnabled = isPagingEnabled
-            }
-            .store(in: &disposeBag)
-        
-        viewModel.$isEditing
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isEditing in
-                guard let self = self else { return }
-                // set first responder for key command
-                if !isEditing {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                        pagingViewController.becomeFirstResponder()
-                    }
-                    // dismiss keyboard if needs
-                    self.view.endEditing(true)
-                }
+    private func relationshipActionButtonTapped() {
+        // if viewing your own profile, this means edit or save
+        // if viewing another account, this is unblock if blocked, or unmute if muted, or follow/unfollow
+        guard viewModel.state.actionButtonEnabled else { return }
 
-                if isEditing,
-                   let index = pagingViewController.viewControllers.firstIndex(where: { type(of: $0) is ProfileAboutViewController.Type }),
-                   pagingViewController.canMoveTo(index: index)
-                {
-                    pagingViewController.moveToViewController(at: index)
-                }
-            }
-            .store(in: &disposeBag)
+        switch viewModel.profileType {
+        case .me:
+            toggleEditing()
+        case .notMe:
+            toggleRelationship()
+        }
     }
+    
+    private func toggleEditing() {
+        assert(viewModel.profileType.canEditProfile)
+        switch viewModel.state {
+        case .idle:
+            let reset = viewModel
+            Task { [weak self] in
+                guard let s = self else { return }
+                do {
+                    try await s.refetchAllData()
+                    s.viewModel = ProfileViewModelImmutable(profileType: s.viewModel.profileType, state: .editing)
+                } catch let error {
+                    s.displayError(error, andResetView: reset)
+                }
+            }
+        case .editing:
+            let reset = viewModel
+            Task { [weak self] in
+                guard let s = self else { return }
+                do {
+                    let updatedAccount = try await s.pushProfileEdits()
+                    s.viewModel = ProfileViewModelImmutable(profileType: .me(updatedAccount), state: .idle)
+                } catch let error {
+                    s.displayError(error, andResetView: reset)
+                }
+            }
+        case .updating, .pushingEdits:
+            break
+        }
+    }
+    
+    private func displayError(_ error: Error, andResetView reset: ProfileViewModelImmutable?) {
+        let alertController = UIAlertController(
+            for: error,
+            title: L10n.Common.Alerts.EditProfileFailure.title,
+            preferredStyle: .alert
+        )
+        let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default)
+        alertController.addAction(okAction)
+        present(alertController, animated: true)
+        if let reset {
+            viewModel = reset
+        }
+    }
+    
+    private func pushProfileEdits() async throws -> Mastodon.Entity.Account {
+        guard viewModel.state == .editing else { throw ProfileViewError.invalidStateTransition }
+        guard let editedHeaderDetails = profileHeaderViewController?.editedDetails, let editedAboutFields = profilePagingViewController?.viewModel?.profileAboutViewController.currentEditableFields else { throw ProfileViewError.attemptToPushInvalidProfileChanges }
+        
+        viewModel = ProfileViewModelImmutable(profileType: viewModel.profileType, state: .pushingEdits)
+        
+        // TODO: also check that there are actual changes?
+        //  cancelEditing() <- if no actual changes
+        let updatedAccount = try await pushProfileChanges(headerDetails: editedHeaderDetails, profileFields: editedAboutFields)
+        return updatedAccount
+    }
+    
+    private func cancelEditing() {
+        viewModel = ProfileViewModelImmutable(profileType: viewModel.profileType, state: .idle)
+    }
+    
+    private func toggleRelationship() {
+        guard let relationship = viewModel.profileType.myRelationshipToDisplayedAccount else { return }
+        let actionableRelationship = ActionableRelationship(relationship)
+        let account = viewModel.profileType.accountToDisplay
+        
+        if let confirmationAlert = confirmationAlertForRelationshipToggle(onOtherAccount: viewModel.profileType.accountToDisplay, myCurrentRelationship: actionableRelationship) {
+            self.sceneCoordinator?.present(scene: .alertController(alertController: confirmationAlert), transition: .alertController(animated: true))
+        } else {
+            doToggleRelationship(actionableRelationship, on: account)
+        }
+    }
+    
+    private func confirmationAlertForRelationshipToggle(onOtherAccount account: Mastodon.Entity.Account, myCurrentRelationship relationship: ActionableRelationship) -> UIAlertController? {
+        
+        let confirmationAlert = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
+        confirmationAlert.title = confirmationTitle(relationship)
+        
+        let entityName: String
+        switch relationship {
+        case .followed:
+            return nil
+        case .blocked:
+            entityName = viewModel.profileType.accountToDisplay.displayNameWithFallback
+            
+        case .domainBlocked:
+            guard let domain = account.domain else { return nil }
+            entityName = domain
+            
+        case .muted:
+            entityName = account.displayNameWithFallback
+        }
+        confirmationAlert.message = confirmationMessage(relationship, entityName: entityName)
 
+        let toggleAction = UIAlertAction(title: confirmationActionTitle(relationship, entityName: entityName), style: .default) { [weak self] _ in
+            guard let s = self else { return }
+            s.doToggleRelationship(relationship, on: account)
+        }
+        confirmationAlert.addAction(toggleAction)
+        
+        let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
+        confirmationAlert.addAction(cancelAction)
+        return confirmationAlert
+    }
+    
+    private func confirmationTitle(_ actionableRelationship: ActionableRelationship) -> String {
+        switch actionableRelationship {
+        case .followed:
+            return ""
+        case .blocked:
+            return L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockUser.title
+        case .domainBlocked:
+            return L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockDomain.title
+        case .muted:
+            return L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnmuteUser.title
+        }
+    }
+    
+    private func confirmationMessage(_ relationship: ActionableRelationship, entityName: String) -> String {
+        switch relationship {
+        case .followed:
+            return ""
+        case .blocked:
+            return L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockUser.message(entityName)
+        case .domainBlocked:
+            return L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockDomain.message(entityName)
+        case .muted:
+            return L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnmuteUser.message(entityName)
+        }
+    }
+    
+    private func confirmationActionTitle(_ relationship: ActionableRelationship, entityName: String) -> String {
+        switch relationship {
+        case .followed:
+            return ""
+        case .blocked:
+            return L10n.Common.Controls.Friendship.unblock
+        case .domainBlocked:
+            return L10n.Common.Controls.Actions.unblockDomain(entityName)
+        case .muted:
+            return L10n.Common.Controls.Friendship.unmute
+        }
+    }
+    
+    private func doToggleRelationship(_ actionableRelationship: ActionableRelationship, on account: Mastodon.Entity.Account) {
+        
+        let reset = viewModel
+        viewModel = ProfileViewModelImmutable(profileType: viewModel.profileType, state: .updating)
+        Task { [weak self] in
+            guard let s = self else { return }
+            do {
+                let updatedRelationship: Mastodon.Entity.Relationship
+                
+                switch actionableRelationship {
+                case .followed:
+                    updatedRelationship = try await DataSourceFacade.responseToUserFollowAction(
+                        dependency: s,
+                        account: s.viewModel.profileType.accountToDisplay
+                    )
+                case .blocked:
+                    updatedRelationship = try await DataSourceFacade.responseToUserBlockAction(
+                        dependency: s,
+                        account: s.viewModel.profileType.accountToDisplay
+                    )
+                case .domainBlocked:
+                    _ = try await DataSourceFacade.responseToDomainBlockAction(dependency: s, account: account)
+                    
+                    guard let s1 = self, let fetchedRelationship = try await APIService.shared.relationship(forAccounts: [account], authenticationBox: s1.authenticationBox).value.first else { return }
+                    updatedRelationship = fetchedRelationship
+                case .muted:
+                    updatedRelationship = try await DataSourceFacade.responseToUserMuteAction(dependency: s, account: s.viewModel.profileType.accountToDisplay)
+                }
+                guard let s2 = self else { return }
+                let newType = ProfileType.notMe(me: s2.viewModel.profileType.myAccount, displayAccount: s2.viewModel.profileType.accountToDisplay, relationship: updatedRelationship)
+                s2.viewModel = ProfileViewModelImmutable(profileType: newType, state: .idle)
+            } catch let error {
+                self?.displayError(error, andResetView: reset)
+            }
+        }
+    }
+    
     private func handleMetaPress(_ meta: Meta) {
         switch meta {
         case .url(_, _, let url, _):
             guard let url = URL(string: url) else { return }
-            _ = coordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
         case .mention(_, _, let userInfo):
             guard let href = userInfo?["href"] as? String,
                   let url = URL(string: href) else { return }
-            _ = coordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
+            _ = self.sceneCoordinator?.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
         case .hashtag(_, let hashtag, _):
-            guard let viewModel = viewModel else { break }
-            let hashtagTimelineViewModel = HashtagTimelineViewModel(context: context, authenticationBox: viewModel.authenticationBox, hashtag: hashtag)
-            _ = coordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
+            let hashtagTimelineViewModel = HashtagTimelineViewModel(authenticationBox: authenticationBox, hashtag: hashtag)
+            _ = self.sceneCoordinator?.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
         case .email, .emoji:
             break
         }
     }
-
-}
-
-extension ProfileViewController {
-
+    
     @objc private func cancelEditingBarButtonItemPressed(_ sender: UIBarButtonItem) {
         cancelEditing()
     }
-
+    
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let setting = context.settingService.currentSetting.value else { return }
-
-        _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
-    }
-
-    @objc private func shareBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let viewModel = viewModel else { return }
+        guard let setting = SettingService.shared.currentSetting.value else { return }
         
+        _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
+    }
+    
+    @objc private func shareBarButtonItemPressed(_ sender: UIBarButtonItem) {
         let activityViewController = DataSourceFacade.createActivityViewController(
             dependency: self,
-            account: viewModel.account
+            account: viewModel.profileType.accountToDisplay
         )
-        _ = self.coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .activityViewController(
                 activityViewController: activityViewController,
                 sourceView: nil,
@@ -598,77 +906,141 @@ extension ProfileViewController {
             transition: .activityViewControllerPresent(animated: true, completion: nil)
         )
     }
-
+    
     @objc private func favoriteBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let viewModel = viewModel else { return }
-        
-        let favoriteViewModel = FavoriteViewModel(context: context, authenticationBox: viewModel.authenticationBox)
-        _ = coordinator.present(scene: .favorite(viewModel: favoriteViewModel), from: self, transition: .show)
+        let favoriteViewModel = FavoriteViewModel(authenticationBox: authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .favorite(viewModel: favoriteViewModel), from: self, transition: .show)
     }
     
     @objc private func bookmarkBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let viewModel = viewModel else { return }
-        
-        let bookmarkViewModel = BookmarkViewModel(context: context, authenticationBox: viewModel.authenticationBox)
-        _ = coordinator.present(scene: .bookmark(viewModel: bookmarkViewModel), from: self, transition: .show)
+        let bookmarkViewModel = BookmarkViewModel(authenticationBox: authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .bookmark(viewModel: bookmarkViewModel), from: self, transition: .show)
     }
-
+    
     @objc private func replyBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let viewModel = viewModel else { return }
-        
-        let mention = "@" + viewModel.account.acct
+        let mention = "@" + viewModel.profileType.accountToDisplay.acct
         UITextChecker.learnWord(mention)
         let composeViewModel = ComposeViewModel(
-            context: context,
-            authenticationBox: viewModel.authenticationBox,
+            authenticationBox: authenticationBox,
             composeContext: .composeStatus,
             destination: .topLevel,
             initialContent: mention
         )
-        _ = coordinator.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
+        _ = self.sceneCoordinator?.present(scene: .compose(viewModel: composeViewModel), from: self, transition: .modal(animated: true, completion: nil))
     }
     
     @objc private func followedTagsItemPressed(_ sender: UIBarButtonItem) {
-        guard let viewModel = viewModel else { return }
+        let followedTagsViewModel = FollowedTagsViewModel(authenticationBox: authenticationBox)
+        _ = self.sceneCoordinator?.present(scene: .followedTags(viewModel: followedTagsViewModel), from: self, transition: .show)
+    }
+}
+
+// MARK: - ProfileAboutViewControllerDelegate
+extension ProfileViewController: ProfileAboutViewControllerDelegate {
+    // TODO: replace delegate with async stream
+    func profileAboutViewController(
+        _ viewController: ProfileAboutViewController,
+        profileFieldCollectionViewCell: ProfileFieldCollectionViewCell,
+        metaLabel: MetaLabel,
+        didSelectMeta meta: Meta
+    ) {
+        handleMetaPress(meta)
+    }
+}
+
+// MARK: - MastodonMenuDelegate
+extension ProfileViewController: MastodonMenuDelegate {
+    func menuAction(_ action: MastodonMenu.Action) {
+        switch action {
+        case .muteUser(_), .blockUser(_), .blockDomain(_), .hideReblogs(_), .reportUser(_), .shareUser(_), .openUserInBrowser(_), .copyProfileLink(_), .followUser(_):
+            Task {
+                try await DataSourceFacade.responseToMenuAction(
+                    dependency: self,
+                    action: action,
+                    menuContext: DataSourceFacade.MenuContext(
+                        author: viewModel.profileType.accountToDisplay,
+                        statusViewModel: nil,
+                        button: nil,
+                        barButtonItem: self.moreMenuBarButtonItem
+                    ))
+            }
+        case .translateStatus(_), .showOriginal, .bookmarkStatus(_), .shareStatus, .deleteStatus, .editStatus, .boostStatus(_), .favoriteStatus(_), .copyStatusLink, .openStatusInBrowser:
+            break
+        }
+    }
+}
+
+// MARK: - ScrollViewContainer
+extension ProfileViewController: ScrollViewContainer {
+    var scrollView: UIScrollView {
+        return tabBarPagerController.relayScrollView
+    }
+}
+
+extension ProfileViewController {
+    
+    override var keyCommands: [UIKeyCommand]? {
+        switch viewModel.state {
+        case .idle:
+            return pagerTabStripNavigateKeyCommands
+        case .editing, .pushingEdits, .updating:
+            return nil
+        }
+    }
+    
+}
+
+// MARK: - PagerTabStripNavigateable
+extension ProfileViewController: PagerTabStripNavigateable {
+    
+    var navigateablePageViewController: PagerTabStripViewController? {
+        return profilePagingViewController
+    }
+    
+    @objc func pagerTabStripNavigateKeyCommandHandlerRelay(_ sender: UIKeyCommand) {
+        pagerTabStripNavigateKeyCommandHandler(sender)
+    }
+    
+}
+
+private extension ProfileViewController {
+    var currentInstance: MastodonAuthentication.InstanceConfiguration? {
+        authenticationBox.authentication.instanceConfiguration
+    }
+}
+
+extension ProfileViewController: DataSourceProvider {
+    var filterContext: MastodonSDK.Mastodon.Entity.FilterContext? {
+        .none
+    }
+    
+    func didToggleContentWarningDisplayStatus(status: MastodonSDK.MastodonStatus) {
+        reloadTables()
+    }
+    
+    func item(from source: DataSourceItem.Source) async -> DataSourceItem? {
+        assertionFailure("Not required")
+        return nil
+    }
+    
+    func reloadTables() {
+        profilePagingViewController?.reloadTables()
+    }
+    
+    func update(status: MastodonStatus, intent: MastodonStatus.UpdateIntent) {
+        updateViewModelsWithDataControllers(status: status, intent: intent)
+    }
+    
+    func updateViewModelsWithDataControllers(status: MastodonStatus, intent: MastodonStatus.UpdateIntent) {
         
-        let followedTagsViewModel = FollowedTagsViewModel(context: context, authenticationBox: viewModel.authenticationBox)
-        _ = coordinator.present(scene: .followedTags(viewModel: followedTagsViewModel), from: self, transition: .show)
+        profilePagingViewController?.viewModel?.postUserTimelineViewController.update(status: status, intent: intent)
+        profilePagingViewController?.viewModel?.repliesUserTimelineViewController.update(status: status, intent: intent)
+        profilePagingViewController?.viewModel?.mediaUserTimelineViewController.update(status: status, intent: intent)
     }
-
-    @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
-        if let userTimelineViewController = profilePagingViewController?.currentViewController as? UserTimelineViewController {
-            userTimelineViewController.viewModel.stateMachine.enter(UserTimelineViewModel.State.Reloading.self)
-        }
-
-        Task {
-            guard let viewModel = viewModel else { return }
-            
-            let account = viewModel.account
-            if let domain = account.domain,
-               let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox),
-               let updatedRelationship = try? await context.apiService.relationship(forAccounts: [updatedAccount], authenticationBox: viewModel.authenticationBox).value.first
-            {
-                viewModel.account = updatedAccount
-                viewModel.relationship = updatedRelationship
-                viewModel.profileAboutViewModel.fields = updatedAccount.mastodonFields
-            }
-
-            if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
-                viewModel.me = updatedMe
-                FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                sender.endRefreshing()
-            }
-        }
-    }
-
 }
 
 // MARK: - TabBarPagerDelegate
 extension ProfileViewController: TabBarPagerDelegate {
-    
     func tabBarMinimalHeight() -> CGFloat {
         return ProfileHeaderViewController.headerMinHeight
     }
@@ -691,11 +1063,11 @@ extension ProfileViewController: TabBarPagerDelegate {
         // scrollView.adjustedContentInset.bottom: \(scrollView.adjustedContentInset.bottom)
         // """
         // )
-
+        
         guard let profileHeaderViewController = profileHeaderViewController else { return }
         
         // elastically banner
-
+        
         // make banner top snap to window top
         // do not rely on the view frame becase the header frame is .zero during the initial call
         profileHeaderViewController.profileHeaderView.bannerImageViewTopLayoutConstraint.constant = min(0, scrollView.contentOffset.y)
@@ -710,7 +1082,7 @@ extension ProfileViewController: TabBarPagerDelegate {
             // print("bannerContainerBottomOffset: \(bannerContainerBottomOffset)")
             
             let height = profileHeaderViewController.view.frame.height - bannerContainerInWindow.height
-            // make avata hidden when scroll 0.5x avatar height 
+            // make avatar hidden when scroll 0.5x avatar height
             let throttle = height != .zero ? 0.5 * ProfileHeaderView.avatarImageViewSize.height / height : 0
             let progress: CGFloat
             
@@ -761,350 +1133,16 @@ extension ProfileViewController: TabBarPagerDataSource {
     }
 }
 
-// MARK: - AuthContextProvider
-extension ProfileViewController: AuthContextProvider {
-    var authenticationBox: MastodonAuthenticationBox { viewModel!.authenticationBox }
-}
-
-// MARK: - ProfileHeaderViewControllerDelegate
-extension ProfileViewController: ProfileHeaderViewControllerDelegate {
-    func profileHeaderViewController(
-        _ profileHeaderViewController: ProfileHeaderViewController,
-        profileHeaderView: ProfileHeaderView,
-        relationshipButtonDidPressed button: ProfileRelationshipActionButton
-    ) {
-        guard let viewModel = viewModel else { return }
-        if viewModel.me == viewModel.account {
-            editProfile()
-        } else {
-            editRelationship()
-        }
-    }
-
-
-    private func editProfile() {
-        // do nothing when updating
-        guard let viewModel = viewModel, let profileHeaderViewModel = profileHeaderViewController?.viewModel else { return }
-        guard viewModel.isUpdating == false else {
-            return
-        }
-        
-        guard let profileAboutViewModel = profilePagingViewController?.viewModel?.profileAboutViewController.viewModel else { return }
-
-        let isEdited = profileHeaderViewModel.isEdited || profileAboutViewModel.isEdited
-
-        if isEdited {
-            // update profile when edited
-            viewModel.isUpdating = true
-            Task { @MainActor in
-                do {
-                    // TODO: handle error
-                    let updatedAccount = try await viewModel.updateProfileInfo(
-                        headerProfileInfo: profileHeaderViewModel.profileInfoEditing,
-                        aboutProfileInfo: profileAboutViewModel.profileInfoEditing
-                    ).value
-                    viewModel.isEditing = false
-                    self.profileHeaderViewController?.viewModel.isEditing = false
-                    profileAboutViewModel.isEditing = false
-                    viewModel.account = updatedAccount
-                    viewModel.profileAboutViewModel.fields = updatedAccount.mastodonFields
-
-                } catch {
-                    let alertController = UIAlertController(
-                        for: error,
-                        title: L10n.Common.Alerts.EditProfileFailure.title,
-                        preferredStyle: .alert
-                    )
-                    let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default)
-                    alertController.addAction(okAction)
-                    self.present(alertController, animated: true)
-                }
-
-                // finish updating
-                viewModel.isUpdating = false
-            }
-        } else if viewModel.isEditing == false {
-            // set `updating` then toggle `edit` state
-            viewModel.isUpdating = true
-            profileHeaderViewController?.viewModel.isUpdating = true
-            viewModel.fetchEditProfileInfo()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] completion in
-                    guard let self else { return }
-                    defer {
-                        // finish updating
-                        viewModel.isUpdating = false
-                        self.profileHeaderViewController?.viewModel.isUpdating = false
-                    }
-                    switch completion {
-                    case .failure(let error):
-                        let alertController = UIAlertController(for: error, title: L10n.Common.Alerts.EditProfileFailure.title, preferredStyle: .alert)
-                        let okAction = UIAlertAction(title: L10n.Common.Controls.Actions.ok, style: .default)
-                        alertController.addAction(okAction)
-                        _ = self.coordinator.present(
-                            scene: .alertController(alertController: alertController),
-                            from: nil,
-                            transition: .alertController(animated: true, completion: nil)
-                        )
-                    case .finished:
-                        // enter editing mode
-                        viewModel.isEditing = true
-                        self.profileHeaderViewController?.viewModel.isEditing = true
-                        profileAboutViewModel.isEditing = true
-                    }
-                } receiveValue: { [weak self] response in
-                    guard let self else { return }
-
-                    self.profileHeaderViewController?.viewModel.setProfileInfo(accountForEdit: response.value)
-                    viewModel.accountForEdit = response.value
-                }
-                .store(in: &disposeBag)
-        } else if isEdited == false {
-            cancelEditing()
-        }
-    }
-
-    private func cancelEditing() {
-        guard let viewModel = viewModel else { return }
-        viewModel.isEditing = false
-        profileHeaderViewController?.viewModel.isEditing = false
-        profilePagingViewController?.viewModel?.profileAboutViewController.viewModel.isEditing = false
-        viewModel.profileAboutViewModel.isEditing = false
-    }
-
-    private func editRelationship() {
-        guard let viewModel = viewModel, let relationship = viewModel.relationship, viewModel.isUpdating == false else {
-            return
-        }
-
-        let account = viewModel.account
-
-        viewModel.isUpdating = true
-
-        if relationship.blocking {
-            let name = account.displayNameWithFallback
-
-            let alertController = UIAlertController(
-                title: L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockUser.title,
-                message: L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockUser.message(name),
-                preferredStyle: .alert
-            )
-            let unblockAction = UIAlertAction(title: L10n.Common.Controls.Friendship.unblock, style: .default) { [weak self] _ in
-                guard let self else { return }
-                Task {
-                    _ = try await DataSourceFacade.responseToUserBlockAction(
-                        dependency: self,
-                        account: account
-                    )
-                }
-            }
-            alertController.addAction(unblockAction)
-            let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
-            alertController.addAction(cancelAction)
-            coordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
-        } else if relationship.domainBlocking {
-            guard let domain = account.domain else { return }
-
-            let alertController = UIAlertController(
-                title: L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockDomain.title,
-                message: L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnblockDomain.message(domain),
-                preferredStyle: .alert
-            )
-
-            let unblockAction = UIAlertAction(title: L10n.Common.Controls.Actions.unblockDomain(domain), style: .default) { [weak self] _ in
-                guard let self, let viewModel = self.viewModel else { return }
-                Task {
-                    _ = try await DataSourceFacade.responseToDomainBlockAction(dependency: self, account: account)
-
-                    guard let newRelationship = try await self.context.apiService.relationship(forAccounts: [account], authenticationBox: viewModel.authenticationBox).value.first else { return }
-
-                    viewModel.isUpdating = false
-
-                    // we need to trigger this here as domain block doesn't return a relationship
-                    let userInfo = [
-                        UserInfoKey.relationship: newRelationship,
-                    ]
-
-                    NotificationCenter.default.post(name: .relationshipChanged, object: self, userInfo: userInfo)
-                }
-            }
-            alertController.addAction(unblockAction)
-            let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
-            alertController.addAction(cancelAction)
-            coordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
-
-        } else if relationship.muting {
-            let name = account.displayNameWithFallback
-
-            let alertController = UIAlertController(
-                title: L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnmuteUser.title,
-                message: L10n.Scene.Profile.RelationshipActionAlert.ConfirmUnmuteUser.message(name),
-                preferredStyle: .alert
-            )
-
-            let unmuteAction = UIAlertAction(title: L10n.Common.Controls.Friendship.unmute, style: .default) { [weak self] _ in
-                guard let self else { return }
-                Task {
-                    _ = try await DataSourceFacade.responseToUserMuteAction(dependency: self, account: account)
-                }
-            }
-            alertController.addAction(unmuteAction)
-            let cancelAction = UIAlertAction(title: L10n.Common.Controls.Actions.cancel, style: .cancel)
-            alertController.addAction(cancelAction)
-            coordinator.present(scene: .alertController(alertController: alertController), transition: .alertController(animated: true))
-        } else {
-            Task { [weak self] in
-                guard let self else { return }
-
-                _ = try await DataSourceFacade.responseToUserFollowAction(
-                    dependency: self,
-                    account: viewModel.account
-                )
-            }
-        }
-    }
-
-    func profileHeaderViewController(
-        _ profileHeaderViewController: ProfileHeaderViewController,
-        profileHeaderView: ProfileHeaderView,
-        metaTextView: MetaTextView,
-        metaDidPressed meta: Meta
-    ) {
-        handleMetaPress(meta)
-    }
-}
-
-// MARK: - ProfileAboutViewControllerDelegate
-extension ProfileViewController: ProfileAboutViewControllerDelegate {
-    func profileAboutViewController(
-        _ viewController: ProfileAboutViewController,
-        profileFieldCollectionViewCell: ProfileFieldCollectionViewCell,
-        metaLabel: MetaLabel,
-        didSelectMeta meta: Meta
-    ) {
-        handleMetaPress(meta)
-    }
-}
-
-// MARK: - MastodonMenuDelegate
-extension ProfileViewController: MastodonMenuDelegate {
-    func menuAction(_ action: MastodonMenu.Action) {
-        guard let viewModel = viewModel else { return }
-        switch action {
-        case .muteUser(_), .blockUser(_), .blockDomain(_), .hideReblogs(_), .reportUser(_), .shareUser(_), .openUserInBrowser(_), .copyProfileLink(_), .followUser(_):
-            Task {
-                try await DataSourceFacade.responseToMenuAction(
-                    dependency: self,
-                    action: action,
-                    menuContext: DataSourceFacade.MenuContext(
-                        author: viewModel.account,
-                        statusViewModel: nil,
-                        button: nil,
-                        barButtonItem: self.moreMenuBarButtonItem
-                    ))
-            }
-        case .translateStatus(_), .showOriginal, .bookmarkStatus(_), .shareStatus, .deleteStatus, .editStatus, .boostStatus(_), .favoriteStatus(_), .copyStatusLink, .openStatusInBrowser:
-            break
-        }
-    }
-}
-
-// MARK: - ScrollViewContainer
-extension ProfileViewController: ScrollViewContainer {
-    var scrollView: UIScrollView {
-        return tabBarPagerController.relayScrollView
-    }
-}
-
 extension ProfileViewController {
-
-    override var keyCommands: [UIKeyCommand]? {
-        guard let viewModel = viewModel else { return nil }
-        if !viewModel.isEditing {
-            return pagerTabStripNavigateKeyCommands
-        }
-
-        return nil
-    }
-
-}
-
-// MARK: - PagerTabStripNavigateable
-extension ProfileViewController: PagerTabStripNavigateable {
-
-    var navigateablePageViewController: PagerTabStripViewController? {
-        return profilePagingViewController
-    }
-
-    @objc func pagerTabStripNavigateKeyCommandHandlerRelay(_ sender: UIKeyCommand) {
-        pagerTabStripNavigateKeyCommandHandler(sender)
-    }
-
-}
-
-private extension ProfileViewController {
-    var currentInstance: MastodonAuthentication.InstanceConfiguration? {
-        authenticationBox.authentication.instanceConfiguration
-    }
-}
-
-extension ProfileViewController: DataSourceProvider {
-    func item(from source: DataSourceItem.Source) async -> DataSourceItem? {
-        assertionFailure("Not required")
-        return nil
-    }
-    
-    func update(status: MastodonStatus, intent: MastodonStatus.UpdateIntent) {
-        updateViewModelsWithDataControllers(status: status, intent: intent)
-    }
-    
-    func updateViewModelsWithDataControllers(status: MastodonStatus, intent: MastodonStatus.UpdateIntent) {
-        guard let viewModel = viewModel else { return }
-        viewModel.postsUserTimelineViewModel.dataController.update(status: status, intent: intent)
-        viewModel.repliesUserTimelineViewModel.dataController.update(status: status, intent: intent)
-        viewModel.mediaUserTimelineViewModel.dataController.update(status: status, intent: intent)
-    }
-}
-
-//MARK: - Notifications
-
-extension ProfileViewController {
-    @objc
-    func relationshipChanged(_ notification: Notification) {
-
-        guard let userInfo = notification.userInfo, let relationship = userInfo[UserInfoKey.relationship] as? Mastodon.Entity.Relationship else {
-            return
-        }
-        
-        guard let viewModel = viewModel else { return }
-
-        viewModel.isUpdating = true
-        if viewModel.account.id == relationship.id {
-            // if relationship belongs to an other account
-            Task {
-                let account = viewModel.account
-                if let domain = account.domain,
-                   let updatedAccount = try? await context.apiService.fetchUser(username: account.acct, domain: domain, authenticationBox: viewModel.authenticationBox) {
-                    viewModel.account = updatedAccount
-
-                    viewModel.relationship = relationship
-                    self.profileHeaderViewController?.viewModel.relationship = relationship
-                    self.profileHeaderViewController?.profileHeaderView.viewModel.relationship = relationship
-                }
-
-                viewModel.isUpdating = false
-            }
-        } else if viewModel.account == viewModel.me {
-            // update my profile
-            Task {
-                if let updatedMe = try? await context.apiService.authenticatedUserInfo(authenticationBox: viewModel.authenticationBox).value {
-                    viewModel.me = updatedMe
-                    viewModel.account = updatedMe
-                    FileManager.default.store(account: updatedMe, forUserID: viewModel.authenticationBox.authentication.userIdentifier())
-                }
-
-                viewModel.isUpdating = false
-            }
+    static func containerViewMargin(forHorizontalSizeClass sizeClass: UIUserInterfaceSizeClass) -> CGFloat {
+        // TODO: this might be better gated on actual size than on sizeClass (we had previously treated the phone as always compact, for instance)
+        switch sizeClass {
+        case .compact:
+            return 16
+        case .regular, .unspecified:
+            return 64
+        @unknown default:
+            return 16
         }
     }
 }

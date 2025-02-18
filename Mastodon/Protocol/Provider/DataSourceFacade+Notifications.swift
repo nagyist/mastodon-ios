@@ -3,19 +3,21 @@
 import Foundation
 import MastodonCore
 import MastodonSDK
+import UIKit
 
 extension DataSourceFacade {
     @MainActor
     static func coordinateToNotificationRequests(
         provider: DataSourceProvider & AuthContextProvider
     ) async {
-        provider.coordinator.showLoading()
+        guard let sceneCoordinator = provider.sceneCoordinator else { return }
+        sceneCoordinator.showLoading()
 
         do {
-            let notificationRequests = try await provider.context.apiService.notificationRequests(authenticationBox: provider.authenticationBox).value
-            let viewModel = NotificationRequestsViewModel(appContext: provider.context, authenticationBox: provider.authenticationBox, coordinator: provider.coordinator, requests: notificationRequests)
+            let notificationRequests = try await APIService.shared.notificationRequests(authenticationBox: provider.authenticationBox).value
+            let viewModel = NotificationRequestsViewModel(authenticationBox: provider.authenticationBox, requests: notificationRequests)
 
-            provider.coordinator.hideLoading()
+            sceneCoordinator.hideLoading()
 
             let transition: SceneCoordinator.Transition
 
@@ -25,25 +27,26 @@ extension DataSourceFacade {
                 transition = .modal(animated: true)
             }
 
-            provider.coordinator.present(scene: .notificationRequests(viewModel: viewModel), transition: transition)
+            sceneCoordinator.present(scene: .notificationRequests(viewModel: viewModel), transition: transition)
         } catch {
             //TODO: Error Handling
-            provider.coordinator.hideLoading()
+            sceneCoordinator.hideLoading()
         }
     }
 
     @MainActor
     static func coordinateToNotificationRequest(
         request: Mastodon.Entity.NotificationRequest,
-        provider: ViewControllerWithDependencies & AuthContextProvider
+        provider: UIViewController & AuthContextProvider
     ) async -> AccountNotificationTimelineViewController? {
-        provider.coordinator.showLoading()
+        guard let sceneCoordinator = provider.sceneCoordinator else { return nil }
+        sceneCoordinator.showLoading()
 
-        let notificationTimelineViewModel = NotificationTimelineViewModel(context: provider.context, authenticationBox: provider.authenticationBox, scope: .fromAccount(request.account))
+        let notificationTimelineViewModel = NotificationTimelineViewModel(authenticationBox: provider.authenticationBox, scope: .fromAccount(request.account))
 
-        provider.coordinator.hideLoading()
+        sceneCoordinator.hideLoading()
         
-        guard let viewController = provider.coordinator.present(scene: .accountNotificationTimeline(viewModel: notificationTimelineViewModel, request: request), transition: .show) as? AccountNotificationTimelineViewController else { return nil }
+        guard let viewController = sceneCoordinator.present(scene: .accountNotificationTimeline(viewModel: notificationTimelineViewModel, request: request), transition: .show) as? AccountNotificationTimelineViewController else { return nil }
 
         return viewController
 

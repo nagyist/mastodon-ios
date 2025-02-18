@@ -10,6 +10,7 @@ import Combine
 import GameplayKit
 import CoreDataStack
 import MastodonSDK
+import MastodonCore
 
 extension ThreadViewModel {
     class LoadThreadState: GKState {
@@ -53,14 +54,14 @@ extension ThreadViewModel.LoadThreadState {
 
             guard let viewModel, let stateMachine else { return }
             
-            guard let threadContext = viewModel.threadContext else {
-                stateMachine.enter(Fail.self)
-                return
-            }
             
             Task { @MainActor in
+                guard let threadContext = viewModel.threadContext else {
+                    stateMachine.enter(Fail.self)
+                    return
+                }
                 do {
-                    let response = try await viewModel.context.apiService.statusContext(
+                    let response = try await APIService.shared.statusContext(
                         statusID: threadContext.statusID,
                         authenticationBox: viewModel.authenticationBox
                     )
@@ -70,17 +71,17 @@ extension ThreadViewModel.LoadThreadState {
                     // assert(!Thread.isMainThread)
                     // await Task.sleep(1_000_000_000)     // 1s delay to prevent UI render issue
 
-                    _ = try await viewModel.context.apiService.getHistory(forStatusID: threadContext.statusID,
+                    _ = try await APIService.shared.getHistory(forStatusID: threadContext.statusID,
                                                                                           authenticationBox: viewModel.authenticationBox)
                     
-                    viewModel.mastodonStatusThreadViewModel.appendAncestor(
+                    await viewModel.mastodonStatusThreadViewModel.appendAncestor(
                         nodes: MastodonStatusThreadViewModel.Node.replyToThread(
                             for: threadContext.replyToID,
                             from: response.value.ancestors
                         )
                     )
 
-                    viewModel.mastodonStatusThreadViewModel.appendDescendant(
+                    await viewModel.mastodonStatusThreadViewModel.appendDescendant(
                         nodes: response.value.descendants.map { status in
                             return .init(status: .fromEntity(status), children: [])
                         }

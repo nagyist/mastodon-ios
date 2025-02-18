@@ -12,19 +12,14 @@ import MastodonLocalization
 import MastodonUI
 import MastodonSDK
 
-final class FamiliarFollowersViewController: UIViewController, NeedsDependency {
+final class FamiliarFollowersViewController: UIViewController {
 
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
     let viewModel: FamiliarFollowersViewModel
 
     let tableView: UITableView
 
-    init(viewModel: FamiliarFollowersViewModel, context: AppContext, coordinator: SceneCoordinator) {
+    init(viewModel: FamiliarFollowersViewModel) {
         self.viewModel = viewModel
-        self.context = context
-        self.coordinator = coordinator
-
         tableView = UITableView()
         tableView.rowHeight = UITableView.automaticDimension
         tableView.separatorStyle = .none
@@ -83,6 +78,14 @@ extension FamiliarFollowersViewController: UserTableViewCellDelegate {}
 
 //MARK: - DataSourceProvider
 extension FamiliarFollowersViewController: DataSourceProvider {
+    var filterContext: MastodonSDK.Mastodon.Entity.FilterContext? {
+        return .none
+    }
+    
+    func didToggleContentWarningDisplayStatus(status: MastodonSDK.MastodonStatus) {
+        tableView.reloadData()
+    }
+    
     func item(from source: DataSourceItem.Source) async -> DataSourceItem? {
         var _indexPath = source.indexPath
         if _indexPath == nil, let cell = source.tableViewCell {

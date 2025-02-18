@@ -31,13 +31,14 @@ extension EmojiService.CustomEmojiViewModel.LoadState {
             return stateClass == Fail.self || stateClass == Finish.self
         }
         
+        @MainActor
         override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             guard let viewModel,
-                  let authenticationBox = AuthenticationServiceProvider.shared.activeAuthentication,
+                  let authenticationBox = AuthenticationServiceProvider.shared.currentActiveUser.value,
                   let stateMachine else { return }
 
-            let apiService = viewModel.service.apiService
+            let apiService = APIService.shared
 
             apiService.customEmoji(domain: viewModel.domain, authenticationBox: authenticationBox)
                 // .receive(on: DispatchQueue.main)

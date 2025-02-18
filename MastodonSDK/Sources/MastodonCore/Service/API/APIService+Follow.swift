@@ -60,6 +60,25 @@ extension APIService {
 
         return response
     }
+    
+    public func follow(_ accountID: String, authenticationBox: MastodonAuthenticationBox) async throws -> Mastodon.Entity.Relationship {
+        return try await Mastodon.API.Account.follow(
+            session: session,
+            domain: authenticationBox.domain,
+            accountID: accountID,
+            followQueryType: .follow(query: .init()),
+            authorization: authenticationBox.userAuthorization
+        ).singleOutput().value
+    }
+    
+    public func unfollow(_ accountID: String, authenticationBox: MastodonAuthenticationBox) async throws -> Mastodon.Entity.Relationship {
+        return try await Mastodon.API.Account.unfollow(
+            session: session,
+            domain: authenticationBox.domain,
+            accountID: accountID,
+            authorization: authenticationBox.userAuthorization
+        ).singleOutput().value
+    }
 
     public func toggleShowReblogs(
       for user: Mastodon.Entity.Account,

@@ -15,10 +15,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-class SuggestionAccountViewController: UIViewController, NeedsDependency {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+class SuggestionAccountViewController: UIViewController {
 
     var disposeBag = Set<AnyCancellable>()
     var viewModel: SuggestionAccountViewModel!
@@ -127,7 +124,7 @@ extension SuggestionAccountViewController: SuggestionAccountTableViewFooterDeleg
     func followAll(_ footerView: SuggestionAccountTableViewFooter) {
         viewModel.followAllSuggestedAccounts(self, presentedOn: self.navigationController) {
             DispatchQueue.main.async {
-                self.coordinator.hideLoading(on: self.navigationController)
+                self.sceneCoordinator?.hideLoading(on: self.navigationController)
                 self.dismiss(animated: true)
             }
         }

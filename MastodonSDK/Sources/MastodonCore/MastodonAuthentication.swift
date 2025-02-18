@@ -87,6 +87,9 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
         accountCreatedAt: Date
     ) -> Self {
         let now = Date()
+        Task {
+            await InstanceService.shared.updateInstance(domain: domain)
+        }
         return MastodonAuthentication(
             identifier: .init(),
             domain: domain,
@@ -136,14 +139,9 @@ public struct MastodonAuthentication: Codable, Hashable, UserIdentifier {
         )
     }
 
-    public func account() -> Mastodon.Entity.Account? {
-
-        let account = FileManager
-            .default
-            .accounts(for: self.userIdentifier())
-            .first(where: { $0.id == userID })
-
-        return account
+    @MainActor
+    public func cachedAccount() -> Mastodon.Entity.Account? {
+        return PersistenceManager.shared.cachedAccount(for: self)
     }
 
     public func userIdentifier() -> MastodonUserIdentifier {

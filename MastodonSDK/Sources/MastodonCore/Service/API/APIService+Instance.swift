@@ -20,6 +20,13 @@ extension APIService {
         return Mastodon.API.Instance.instance(session: session, authorization: authenticationBox?.userAuthorization, domain: domain)
     }
     
+    public func instance(
+        domain: String,
+        authenticationBox: MastodonAuthenticationBox?
+    ) async throws -> Mastodon.Entity.Instance {
+        return try await Mastodon.API.Instance.instance(session: session, authorization: authenticationBox?.userAuthorization, domain: domain)
+    }
+    
     public func instanceV2(
         domain: String,
         authenticationBox: MastodonAuthenticationBox?

@@ -18,7 +18,7 @@ enum PickServerSection: Equatable, Hashable {
 extension PickServerSection {
     static func tableViewDiffableDataSource(
         for tableView: UITableView,
-        dependency: NeedsDependency
+        dependency: UIViewController
     ) -> UITableViewDiffableDataSource<PickServerSection, PickServerItem> {
         tableView.register(PickServerCell.self, forCellReuseIdentifier: String(describing: PickServerCell.self))
         tableView.register(PickServerLoaderTableViewCell.self, forCellReuseIdentifier: String(describing: PickServerLoaderTableViewCell.self))

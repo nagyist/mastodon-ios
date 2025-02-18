@@ -23,7 +23,6 @@ final class ProfileHeaderViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     
     @Published var me: Mastodon.Entity.Account
@@ -45,8 +44,7 @@ final class ProfileHeaderViewModel {
     @Published var isTitleViewDisplaying = false
     @Published var isTitleViewContentOffsetSet = false    
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox, account: Mastodon.Entity.Account, me: Mastodon.Entity.Account, relationship: Mastodon.Entity.Relationship?) {
         self.authenticationBox = authenticationBox
         self.account = account
         self.me = me
@@ -79,6 +77,10 @@ extension ProfileHeaderViewModel {
         @Published var name: String?
         @Published var note: String?
     }
+    
+    var editedDetails: ProfileHeaderDetails {
+        return ProfileHeaderDetails(bannerImage: profileInfoEditing.header, avatarImage: profileInfoEditing.avatar, displayName: profileInfoEditing.name, bioText: profileInfoEditing.note)
+    }
 }
 
 extension ProfileHeaderViewModel {
@@ -98,7 +100,7 @@ extension ProfileHeaderViewModel {
 }
 
 // MARK: - ProfileViewModelEditable
-extension ProfileHeaderViewModel: ProfileViewModelEditable {
+extension ProfileHeaderViewModel {
     var isEdited: Bool {
         guard isEditing else { return false }
         

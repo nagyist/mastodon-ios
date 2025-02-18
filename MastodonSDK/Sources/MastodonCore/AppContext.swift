@@ -8,36 +8,16 @@
 import UIKit
 import SwiftUI
 import Combine
-import CoreData
-import CoreDataStack
 import AlamofireImage
 
+@MainActor
 public class AppContext: ObservableObject {
-    public static let shared = AppContext()
+    public static let shared = { AppContext() }()
     
     public var disposeBag = Set<AnyCancellable>()
-    
-    public let coreDataStack: CoreDataStack
-    public let managedObjectContext: NSManagedObjectContext
-    public let backgroundManagedObjectContext: NSManagedObjectContext
-    
-    public let apiService: APIService
-    public let emojiService: EmojiService
-
-    public let publisherService: PublisherService
-    public let notificationService: NotificationService
-    public let settingService: SettingService
-    public let instanceService: InstanceService
-
-    public let blockDomainService: BlockDomainService
-    public let statusFilterService: StatusFilterService
-    public let photoLibraryService = PhotoLibraryService()
 
     public let placeholderImageCacheService = PlaceholderImageCacheService()
     public let blurhashImageCacheService = BlurhashImageCacheService.shared
-
-    public let documentStore: DocumentStore
-    private var documentStoreSubscription: AnyCancellable!
     
     let overrideTraitCollection = CurrentValueSubject<UITraitCollection?, Never>(nil)
     let timestampUpdatePublisher = Timer.publish(every: 1.0, on: .main, in: .common)
@@ -46,76 +26,6 @@ public class AppContext: ObservableObject {
         .eraseToAnyPublisher()
     
     private init() {
-
-        let authProvider = AuthenticationServiceProvider.shared
-        let _coreDataStack = CoreDataStack()
-        if authProvider.authenticationMigrationRequired {
-            authProvider.migrateLegacyAuthentications(
-                in: _coreDataStack.persistentContainer.viewContext
-            )
-        }
-
-        let _managedObjectContext = _coreDataStack.persistentContainer.viewContext
-        let _backgroundManagedObjectContext = _coreDataStack.persistentContainer.newBackgroundContext()
-
-        coreDataStack = _coreDataStack
-        managedObjectContext = _managedObjectContext
-        backgroundManagedObjectContext = _backgroundManagedObjectContext
-        
-        let _apiService = APIService(backgroundManagedObjectContext: _backgroundManagedObjectContext)
-        apiService = _apiService
-        
-//        let _authenticationService = AuthenticationService(
-//            managedObjectContext: _managedObjectContext,
-//            backgroundManagedObjectContext: _backgroundManagedObjectContext,
-//            apiService: _apiService
-//        )
-//        authenticationService = _authenticationService
-        
-        emojiService = EmojiService(
-            apiService: apiService
-        )
-        
-        publisherService = .init(apiService: _apiService)
-        
-        let _notificationService = NotificationService(
-            apiService: _apiService
-        )
-        notificationService = _notificationService
-        
-        settingService = SettingService(
-            apiService: _apiService,
-            notificationService: _notificationService
-        )
-        
-        instanceService = InstanceService(
-            apiService: _apiService
-        )
-        
-        blockDomainService = BlockDomainService(
-            backgroundManagedObjectContext: _backgroundManagedObjectContext
-        )
-
-        statusFilterService = StatusFilterService(
-            apiService: _apiService
-        )
-        
-        documentStore = DocumentStore()
-        documentStoreSubscription = documentStore.objectWillChange
-            .receive(on: DispatchQueue.main)
-            .sink { [unowned self] in
-                self.objectWillChange.send()
-            }
-        
-        backgroundManagedObjectContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
-        NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave, object: backgroundManagedObjectContext)
-            .sink { [weak self] notification in
-                guard let self = self else { return }
-                self.managedObjectContext.perform {
-                    self.managedObjectContext.mergeChanges(fromContextDidSave: notification)
-                }
-            }
-            .store(in: &disposeBag)
     }
 }
 

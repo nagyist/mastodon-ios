@@ -95,6 +95,22 @@ extension Mastodon.API.OAuth {
             }
             .eraseToAnyPublisher()
     }
+    
+    public static func accessToken(
+        session: URLSession,
+        domain: String,
+        query: AccessTokenQuery
+    ) async throws -> Mastodon.Entity.Token {
+        let request = Mastodon.API.post(
+            url: accessTokenEndpointURL(domain: domain),
+            query: query,
+            authorization: nil
+        )
+        let (data, response) = try await session.data(for: request)
+        let value = try Mastodon.API.decode(type: Mastodon.Entity.Token.self, from: data, response: response)
+        return value
+    }
+
 
     /// Revoke User Access Token
     ///

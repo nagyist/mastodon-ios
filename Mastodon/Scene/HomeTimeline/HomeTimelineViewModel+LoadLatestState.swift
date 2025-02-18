@@ -48,7 +48,8 @@ extension HomeTimelineViewModel.LoadLatestState {
         }
         
         override func didEnter(from previousState: GKState?) {
-            didEnter(from: previousState, viewModel: viewModel, isUserInitiated: false)
+            super.didEnter(from: previousState)
+            loadLatest(viewModel: viewModel, isUserInitiated: false, isContextSwitch: previousState is HomeTimelineViewModel.LoadLatestState.ContextSwitch)
         }
     }
     
@@ -58,7 +59,8 @@ extension HomeTimelineViewModel.LoadLatestState {
         }
         
         override func didEnter(from previousState: GKState?) {
-            didEnter(from: previousState, viewModel: viewModel, isUserInitiated: true)
+            super.didEnter(from: previousState)
+            loadLatest(viewModel: viewModel, isUserInitiated: true, isContextSwitch: previousState is HomeTimelineViewModel.LoadLatestState.ContextSwitch)
         }
     }
     
@@ -81,14 +83,14 @@ extension HomeTimelineViewModel.LoadLatestState {
 
         override func didEnter(from previousState: GKState?) {
             guard let viewModel else { return }
-            guard let diffableDataSource = viewModel.diffableDataSource else {
-                assertionFailure()
-                return
-            }
-
-            OperationQueue.main.addOperation {
-                viewModel.dataController.records = []
-                var snapshot = NSDiffableDataSourceSnapshot<StatusSection, StatusItem>()
+            Task { @MainActor in
+                guard let diffableDataSource = viewModel.diffableDataSource else {
+                    assertionFailure()
+                    return
+                }
+                
+                await viewModel.dataController.setRecordsAfterFiltering([])
+                var snapshot = NSDiffableDataSourceSnapshot<StatusSection, MastodonItemIdentifier>()
                 snapshot.appendSections([.main])
                 snapshot.appendItems([.topLoader], toSection: .main)
                 diffableDataSource.apply(snapshot) { [weak self] in
@@ -100,14 +102,12 @@ extension HomeTimelineViewModel.LoadLatestState {
         }
     }
 
-    private func didEnter(from previousState: GKState?, viewModel: HomeTimelineViewModel?, isUserInitiated: Bool) {
-        super.didEnter(from: previousState)
-
+    private func loadLatest(viewModel: HomeTimelineViewModel?, isUserInitiated: Bool, isContextSwitch: Bool) {
         guard let viewModel else { return }
-
-        viewModel.timelineIsEmpty.send(nil)
         
         Task { @MainActor in
+            viewModel.timelineIsEmpty.send(nil)
+            
             let latestFeedRecords = viewModel.dataController.records
 
             let latestStatusIDs: [Status.ID] = latestFeedRecords.compactMap { record in
@@ -115,7 +115,7 @@ extension HomeTimelineViewModel.LoadLatestState {
             }
 
             do {
-                await AuthenticationServiceProvider.shared.fetchAccounts(apiService: viewModel.context.apiService)
+                await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
                 let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
                 
                 /// To find out wether or not we need to show the "Load More" button
@@ -124,23 +124,23 @@ extension HomeTimelineViewModel.LoadLatestState {
                 
                 switch viewModel.timelineContext {
                 case .home:
-                    response = try await viewModel.context.apiService.homeTimeline(
+                    response = try await APIService.shared.homeTimeline(
                         sinceID: sinceID,
                         authenticationBox: viewModel.authenticationBox
                     )
                 case .public:
-                    response = try await viewModel.context.apiService.publicTimeline(
+                    response = try await APIService.shared.publicTimeline(
                         query: .init(local: true, sinceID: sinceID),
                         authenticationBox: viewModel.authenticationBox
                     )
                 case let .list(id):
-                    response = try await viewModel.context.apiService.listTimeline(
+                    response = try await APIService.shared.listTimeline(
                         id: id,
                         query: .init(sinceID: sinceID),
                         authenticationBox: viewModel.authenticationBox
                     )
                 case let .hashtag(tag):
-                    response = try await viewModel.context.apiService.hashtagTimeline(
+                    response = try await APIService.shared.hashtagTimeline(
                         hashtag: tag,
                         authenticationBox: viewModel.authenticationBox
                     )
@@ -153,7 +153,7 @@ extension HomeTimelineViewModel.LoadLatestState {
 
                 if statuses.isEmpty {
                     // stop refresher if no new statuses
-                    viewModel.dataController.records = []
+                    await viewModel.dataController.setRecordsAfterFiltering([])
                     viewModel.didLoadLatest.send()
                 } else {
                     var toAdd = [MastodonFeed]()
@@ -169,7 +169,8 @@ extension HomeTimelineViewModel.LoadLatestState {
                         toAdd.last?.hasMore = latestFeedRecords.isNotEmpty
                     }
                     
-                    viewModel.dataController.records = (toAdd + latestFeedRecords).removingDuplicates()
+                    let newRecords = (toAdd + latestFeedRecords).removingDuplicates()
+                    await viewModel.dataController.setRecordsAfterFiltering(newRecords)
                 }
 
                 viewModel.timelineIsEmpty.value = (latestStatusIDs.isEmpty && statuses.isEmpty) ? {
@@ -196,7 +197,7 @@ extension HomeTimelineViewModel.LoadLatestState {
                     return statuses.isNotEmpty
                 }()
                 
-                if hasNewStatuses && (previousState is HomeTimelineViewModel.LoadLatestState.ContextSwitch) == false {
+                if hasNewStatuses && !isContextSwitch {
                     viewModel.hasNewPosts.value = true
                 }
 

@@ -77,7 +77,7 @@ extension AttachmentViewModel {
         do {
             let result = try await upload(
                 context: .init(
-                    apiService: self.api,
+                    apiService: APIService.shared,
                     authenticationBox: self.authenticationBox
                 ),
                 isRetry: isRetry

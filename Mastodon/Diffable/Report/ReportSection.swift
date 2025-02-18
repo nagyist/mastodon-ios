@@ -47,7 +47,6 @@ extension ReportSection {
             case .status(let status):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: ReportStatusTableViewCell.self), for: indexPath) as! ReportStatusTableViewCell
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
                     viewModel: .init(value: status),
@@ -83,19 +82,16 @@ extension ReportSection {
 extension ReportSection {
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: ReportStatusTableViewCell,
         viewModel: ReportStatusTableViewCell.ViewModel,
         configuration: Configuration
     ) {
         StatusSection.setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(

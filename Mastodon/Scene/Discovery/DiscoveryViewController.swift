@@ -12,15 +12,12 @@ import MastodonAsset
 import MastodonCore
 import MastodonUI
 
-public class DiscoveryViewController: PageboyViewController, NeedsDependency {
+public class DiscoveryViewController: PageboyViewController {
 
     public static let containerViewMarginForRegularHorizontalSizeClass: CGFloat = 64
     public static let containerViewMarginForCompactHorizontalSizeClass: CGFloat = 16
     
     var disposeBag = Set<AnyCancellable>()
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
         
     var viewModel: DiscoveryViewModel!
     

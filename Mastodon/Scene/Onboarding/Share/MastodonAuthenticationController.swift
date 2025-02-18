@@ -10,30 +10,28 @@ import Combine
 import AuthenticationServices
 import MastodonCore
 
+@MainActor
 final class MastodonAuthenticationController {
     
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    var context: AppContext
     let authenticateURL: URL
     var authenticationSession: ASWebAuthenticationSession?
     
     // output
-    let isAuthenticating = CurrentValueSubject<Bool, Never>(false)
-    let error = CurrentValueSubject<Error?, Never>(nil)
-    let pinCodePublisher = PassthroughSubject<String, Never>()
+    public let resultStream: AsyncThrowingStream<String, Error>
+    private let resultStreamContinuation: AsyncThrowingStream<String, Error>.Continuation
     
     init(
-        context: AppContext,
         authenticateURL: URL
     ) {
-        self.context = context
         self.authenticateURL = authenticateURL
+        
+        (resultStream, resultStreamContinuation) = AsyncThrowingStream<String, Error>.makeStream()
         
         authentication()
     }
-    
 }
 
 extension MastodonAuthenticationController {
@@ -45,15 +43,7 @@ extension MastodonAuthenticationController {
             guard let self = self else { return }
 
             if let error = error {
-                if let error = error as? ASWebAuthenticationSessionError {
-                    if error.errorCode == ASWebAuthenticationSessionError.canceledLogin.rawValue {
-                        self.isAuthenticating.value = false
-                        return
-                    }
-                }
-                
-                self.isAuthenticating.value = false
-                self.error.value = error
+                self.resultStreamContinuation.finish(throwing: error)
                 return
             }
             
@@ -61,10 +51,12 @@ extension MastodonAuthenticationController {
                   let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                   let codeQueryItem = components.queryItems?.first(where: { $0.name == "code" }),
                   let code = codeQueryItem.value else {
+                self.resultStreamContinuation.finish()
                 return
             }
             
-            self.pinCodePublisher.send(code)
+            self.resultStreamContinuation.yield(code)
+            self.resultStreamContinuation.finish()
         }
         authenticationSession?.prefersEphemeralWebBrowserSession = true
     }

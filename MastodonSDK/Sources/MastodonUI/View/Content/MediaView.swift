@@ -29,7 +29,6 @@ public final class MediaView: UIView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.isUserInteractionEnabled = false
-        imageView.layer.masksToBounds = true    // clip overflow
         imageView.backgroundColor = .gray
         imageView.isOpaque = true
         return imageView
@@ -39,19 +38,20 @@ public final class MediaView: UIView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.isUserInteractionEnabled = false
-        imageView.layer.masksToBounds = true    // clip overflow
         return imageView
     }()
     
-    private(set) lazy var playerViewController: AVPlayerViewController = {
+    private(set) var playerViewController: AVPlayerViewController?
+    private var playerLooper: AVPlayerLooper?
+    
+    private func createPlayerViewController() -> AVPlayerViewController {
         let playerViewController = AVPlayerViewController()
         playerViewController.view.layer.masksToBounds = true
         playerViewController.view.isUserInteractionEnabled = false
         playerViewController.videoGravity = .resizeAspectFill
         playerViewController.updatesNowPlayingInfoCenter = false
         return playerViewController
-    }()
-    private var playerLooper: AVPlayerLooper?
+    }
 
     let overlayViewController: UIHostingController<InlineMediaOverlayContainer> = {
         let vc = UIHostingController(rootView: InlineMediaOverlayContainer())
@@ -68,7 +68,18 @@ public final class MediaView: UIView {
         super.init(coder: coder)
         _init()
     }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+
+        layoutImageUsingFocus(in: blurhashImageView, container: container.bounds)
+        layoutImageUsingFocus(in: imageView, container: container.bounds)
+    }
     
+    deinit {
+        playerLooper?.disableLooping()
+        playerViewController?.player?.pause()
+    }
 }
 
 extension MediaView {
@@ -81,7 +92,10 @@ extension MediaView {
     public func thumbnail() -> UIImage? {
         return imageView.image ?? configuration?.previewImage
     }
-    
+
+    public func contentView() -> UIView {
+        return imageView
+    }
 }
 
 extension MediaView {
@@ -121,34 +135,42 @@ extension MediaView {
     }
     
     private func layoutImage() {
-        imageView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(imageView)
-        imageView.pinToParent()
+        container.clipsToBounds = true
+
         layoutAlt()
     }
     
-    private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {        
-        Publishers.CombineLatest3(
-            configuration.$isReveal,
+    private func bindImage(configuration: Configuration, info: Configuration.ImageInfo) {
+        let subscribedConfigurationIdentifier = ObjectIdentifier(configuration) // this shouldn't be necessary now, but allows a check in debug mode. https://github.com/mastodon/mastodon-ios/issues/1374
+        Publishers.CombineLatest(
             configuration.$previewImage,
             configuration.$blurhashImage
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] isReveal, previewImage, blurhashImage in
+        .sink { [weak self] previewImage, blurhashImage in
             guard let self = self else { return }
-            
-            let image = isReveal ?
+            guard let currentConfiguration = self.configuration, ObjectIdentifier(currentConfiguration) == subscribedConfigurationIdentifier else {
+                assert(false, "\(self) attempt to load an image that belongs to a configuration no longer associated with this MediaView.")
+                return
+            }
+            let image = configuration.isReveal ?
                 (previewImage ?? blurhashImage ?? MediaView.placeholderImage) :
                 (blurhashImage ?? MediaView.placeholderImage)
             self.imageView.image = image
+            self.setNeedsLayout()
         }
-        .store(in: &configuration.disposeBag)
+        .store(in: &_disposeBag)
 
         bindAlt(configuration: configuration, altDescription: info.altDescription)
     }
     
     private func layoutGIF() {
         // use view controller as View here
+        if playerViewController == nil {
+            playerViewController = createPlayerViewController()
+        }
+        guard let playerViewController else { return }
         playerViewController.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(playerViewController.view)
         playerViewController.view.pinToParent()
@@ -162,11 +184,22 @@ extension MediaView {
 
         guard let player = setupGIFPlayer(info: info) else { return }
         setupPlayerLooper(player: player)
+        
+        if playerViewController == nil {
+            playerViewController = createPlayerViewController()
+        }
+        guard let playerViewController else { return }
+        playerViewController.player?.pause()
         playerViewController.player = player
         playerViewController.showsPlaybackControls = false
         
         // auto play for GIF
-        player.play()
+        if configuration.isReveal {
+            blurhashImageView.alpha = 0
+            player.play()
+        } else {
+            blurhashImageView.alpha = 1
+        }
 
         bindAlt(configuration: configuration, altDescription: info.altDescription)
     }
@@ -182,7 +215,8 @@ extension MediaView {
         let imageInfo = Configuration.ImageInfo(
             aspectRadio: info.aspectRadio,
             assetURL: info.previewURL,
-            altDescription: info.altDescription
+            altDescription: info.altDescription,
+            focus: nil
         )
         bindImage(configuration: configuration, info: imageInfo)
     }
@@ -202,9 +236,7 @@ extension MediaView {
     }
 
     private func layoutBlurhash() {
-        blurhashImageView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(blurhashImageView)
-        blurhashImageView.pinToParent()
     }
     
     private func bindBlurhash(configuration: Configuration) {
@@ -213,20 +245,6 @@ extension MediaView {
             .assign(to: \.image, on: blurhashImageView)
             .store(in: &_disposeBag)
         blurhashImageView.alpha = configuration.isReveal ? 0 : 1
-        
-        configuration.$isReveal
-            .dropFirst()
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isReveal in
-                guard let self = self else { return }
-                let animator = UIViewPropertyAnimator(duration: 0.3, curve: .easeInOut)
-                animator.addAnimations {
-                    self.blurhashImageView.alpha = isReveal ? 0 : 1
-                }
-                animator.startAnimation()
-            }
-            .store(in: &_disposeBag)
     }
     
     private func layoutAlt() {
@@ -235,7 +253,47 @@ extension MediaView {
         overlayViewController.view.pinToParent()
     }
     
+    private func layoutImageUsingFocus(in imageView: UIImageView, container: CGRect) {
+        guard let configuration, case let .image(image) = configuration.info,
+           let focus = image.focus, let image = imageView.image else {
+            imageView.frame = container
+            return
+        }
+
+        let imageAspect = image.size.width / image.size.height
+        let containerAspect = container.size.width / container.size.height
+
+        let scaledSize: CGSize = if imageAspect > containerAspect {
+            CGSize(
+                width: image.size.width * container.size.height / image.size.height,
+                height: container.size.height
+            )
+        } else {
+            CGSize(
+                width: container.size.width,
+                height: image.size.height * container.size.width / image.size.width
+            )
+        }
+
+        let focusOffset = CGPoint(
+            x: max(
+                min(0, (container.size.width / 2 - scaledSize.width / 2) * (1 + focus.x)),
+                container.size.width - scaledSize.width
+            ),
+            y: max(
+                min(0, (container.size.height / 2 - scaledSize.height / 2) * (1 + focus.y)),
+                container.size.height - scaledSize.height
+            )
+        )
+
+        imageView.frame = CGRect(origin: focusOffset, size: scaledSize)
+    }
+    
+    @MainActor
     public func prepareForReuse() {
+        for cancellable in _disposeBag {
+            cancellable.cancel()
+        }
         _disposeBag.removeAll()
         
         // reset appearance
@@ -248,13 +306,14 @@ extension MediaView {
         imageView.image = nil
         
         // reset player
-        playerViewController.view.removeFromSuperview()
-        playerViewController.contentOverlayView.flatMap { view in
+        playerLooper?.disableLooping()
+        playerLooper = nil
+        playerViewController?.player?.pause()
+        playerViewController?.view.removeFromSuperview()
+        playerViewController?.contentOverlayView.flatMap { view in
             view.removeConstraints(view.constraints)
         }
-        playerViewController.player?.pause()
-        playerViewController.player = nil
-        playerLooper = nil
+        playerViewController?.player = nil
         
         // blurhash
         blurhashImageView.removeFromSuperview()
@@ -288,6 +347,7 @@ extension MediaView {
     private func setupPlayerLooper(player: AVPlayer) {
         guard let queuePlayer = player as? AVQueuePlayer else { return }
         guard let templateItem = queuePlayer.items().first else { return }
+        playerLooper?.disableLooping()
         playerLooper = AVPlayerLooper(player: queuePlayer, templateItem: templateItem)
     }
     

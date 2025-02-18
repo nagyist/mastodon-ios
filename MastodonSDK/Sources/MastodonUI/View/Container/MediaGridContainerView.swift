@@ -16,6 +16,7 @@ public protocol MediaGridContainerViewDelegate: AnyObject {
 
 public final class MediaGridContainerView: UIView {
     
+    private var overlayHeightConstraint: NSLayoutConstraint?
     static let sensitiveToggleButtonSize = CGSize(width: 34, height: 34)
     public static let maxCount = 9
     
@@ -45,11 +46,19 @@ public final class MediaGridContainerView: UIView {
         return mediaViews
     }()
     
-    fileprivate let contentWarningOverlay = ContentWarningOverlayView()
-    fileprivate var contentWarningHeightConstraint: NSLayoutConstraint?
+    private let contentWarningOverlay = ContentWarningOverlayView()
     public func hideContentWarning(_ hide: Bool) {
-        contentWarningOverlay.isHidden = hide
-        contentWarningHeightConstraint?.isActive = !hide
+        Task { @MainActor in
+            if overlayHeightConstraint == nil {
+                overlayHeightConstraint = contentWarningOverlay.heightAnchor.constraint(equalToConstant: 100)
+            }
+            contentWarningOverlay.isHidden = hide
+            if hide {
+                overlayHeightConstraint?.deactivate()
+            } else {
+                overlayHeightConstraint?.activate()
+            }
+        }
     }
     
     public override init(frame: CGRect) {
@@ -135,7 +144,6 @@ extension MediaGridContainerView {
 extension MediaGridContainerView {
     private func layoutContentWarningOverlay() {
         contentWarningOverlay.translatesAutoresizingMaskIntoConstraints = false
-        contentWarningHeightConstraint = contentWarningOverlay.heightAnchor.constraint(equalToConstant: 100)
         addSubview(contentWarningOverlay)
         contentWarningOverlay.pinToParent()
     }

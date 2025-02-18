@@ -18,12 +18,11 @@ final class DiscoveryPostsViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
     private(set) lazy var stateMachine: GKStateMachine = {
         let stateMachine = GKStateMachine(states: [
             State.Initial(viewModel: self),
@@ -41,8 +40,7 @@ final class DiscoveryPostsViewModel {
     @Published var isServerSupportEndpoint = true
     
     @MainActor
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.dataController = StatusDataController()
         
@@ -55,7 +53,7 @@ final class DiscoveryPostsViewModel {
 extension DiscoveryPostsViewModel {
     func checkServerEndpoint() async {
         do {
-            _ = try await context.apiService.trendStatuses(
+            _ = try await APIService.shared.trendStatuses(
                 domain: authenticationBox.domain,
                 query: .init(offset: nil, limit: nil),
                 authenticationBox: authenticationBox

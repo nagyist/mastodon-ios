@@ -14,6 +14,19 @@ import MastodonUI
 import MastodonSDK
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    
+    static private var delegates = [ ObjectIdentifier : SceneDelegate ]()
+    
+    static func assign(delegate: SceneDelegate, to windowScene: UIWindowScene) {
+        delegates[ObjectIdentifier(windowScene)] = delegate
+    }
+    
+    static func delegate(for view: UIView) -> SceneDelegate? {
+        guard let windowScene = view.window?.windowScene else {
+            return nil
+        }
+        return delegates[ObjectIdentifier(windowScene)]
+    }
 
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
@@ -46,6 +59,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.coordinator = sceneCoordinator
         
         sceneCoordinator.setup()
+        
+        SceneDelegate.assign(delegate: self, to: windowScene)
+        
         window.makeKeyAndVisible()
         
         if let urlContext = connectionOptions.urlContexts.first {
@@ -89,10 +105,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
 
         // update application badge
-        AppContext.shared.notificationService.applicationIconBadgeNeedsUpdate.send()
+        NotificationService.shared.applicationIconBadgeNeedsUpdate.send()
 
         // trigger status filter update
-        AppContext.shared.statusFilterService.filterUpdatePublisher.send()
+        StatusFilterService.shared.filterUpdatePublisher.send()
         
         // trigger authenticated user account update
         AuthenticationServiceProvider.shared.updateActiveUserAccountPublisher.send()
@@ -111,8 +127,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private func handleUniversalLink(userActivity: NSUserActivity) {
         guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let incomingURL = userActivity.webpageURL,
-              let components = NSURLComponents(url: incomingURL, resolvingAgainstBaseURL: true) else {
+              let incomingURL = userActivity.webpageURL else { return }
+        openUniversalLink(incomingURL)
+    }
+    
+    private func openUniversalLink(_ incomingURL: URL) {
+        guard let components = NSURLComponents(url: incomingURL, resolvingAgainstBaseURL: true) else {
             return
         }
 
@@ -139,27 +159,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         switch (profile, statusID) {
             case (profile, nil):
                 Task {
-                    guard let me = authenticationBox.authentication.account() else { return }
+                    guard let me = authenticationBox.cachedAccount else { return }
 
-                    guard let account = try await AppContext.shared.apiService.search(
+                    guard let account = try await APIService.shared.search(
                         query: .init(q: incomingURL.absoluteString, type: .accounts, resolve: true),
                         authenticationBox: authenticationBox
                     ).value.accounts.first else { return }
 
-                    guard let relationship = try await AppContext.shared.apiService.relationship(
+                    guard let relationship = try await APIService.shared.relationship(
                         forAccounts: [account],
                         authenticationBox: authenticationBox
                     ).value.first else { return }
 
-                    let profileViewModel = ProfileViewModel(
-                        context: AppContext.shared,
-                        authenticationBox: authenticationBox,
-                        account: account,
-                        relationship: relationship,
-                        me: me
-                    )
+                    let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
                     _ = self.coordinator?.present(
-                        scene: .profile(viewModel: profileViewModel),
+                        scene: .profile(profileType),
                         from: nil,
                         transition: .show
                     )
@@ -167,10 +181,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
             case (profile, statusID):
                 Task {
-                    guard let statusOnMyInstance = try await AppContext.shared.apiService.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authenticationBox).value.statuses.first else { return }
+                    guard let statusOnMyInstance = try await APIService.shared.search(query: .init(q: incomingURL.absoluteString, resolve: true), authenticationBox: authenticationBox).value.statuses.first else { return }
 
                     let threadViewModel = RemoteThreadViewModel(
-                        context: AppContext.shared,
                         authenticationBox: authenticationBox,
                         statusID: statusOnMyInstance.id
                     )
@@ -208,9 +221,8 @@ extension SceneDelegate {
                 return false
             }
 
-            let _isActive = try? await AuthenticationServiceProvider.shared.activeMastodonUser(
-                domain: authentication.domain,
-                userID: authentication.userID
+            let _isActive = AuthenticationServiceProvider.shared.activateExistingUser(authentication.userID,
+                inDomain: authentication.domain
             )
             
             guard _isActive == true else {
@@ -249,7 +261,6 @@ extension SceneDelegate {
         } else {
             if let authenticationBox = coordinator?.authenticationBox {
                 let composeViewModel = ComposeViewModel(
-                    context: AppContext.shared,
                     authenticationBox: authenticationBox,
                     composeContext: .composeStatus,
                     destination: .topLevel
@@ -283,28 +294,21 @@ extension SceneDelegate {
             
             Task {
                 do {
-                    guard let me = authenticationBox.authentication.account() else { return }
+                    guard let me = authenticationBox.cachedAccount else { return }
                     
-                    guard let account = try await AppContext.shared.apiService.search(
+                    guard let account = try await APIService.shared.search(
                         query: .init(q: components[1], type: .accounts, resolve: true),
                         authenticationBox: authenticationBox
                     ).value.accounts.first else { return }
                     
-                    guard let relationship = try await AppContext.shared.apiService.relationship(
+                    guard let relationship = try await APIService.shared.relationship(
                         forAccounts: [account],
                         authenticationBox: authenticationBox
                     ).value.first else { return }
                     
-                    let profileViewModel = ProfileViewModel(
-                        context: AppContext.shared,
-                        authenticationBox: authenticationBox,
-                        account: account,
-                        relationship: relationship,
-                        me: me
-                    )
-                    
+                    let profileType: ProfileViewController.ProfileType = me == account ? .me(me) : .notMe(me: me, displayAccount: account, relationship: relationship)
                     self.coordinator?.present(
-                        scene: .profile(viewModel: profileViewModel),
+                        scene: .profile(profileType),
                         from: nil,
                         transition: .show
                     )
@@ -322,7 +326,6 @@ extension SceneDelegate {
             let statusId = components[1]
             // View post from user
             let threadViewModel = RemoteThreadViewModel(
-                context: AppContext.shared,
                 authenticationBox: authenticationBox,
                 statusID: statusId
             )
@@ -337,6 +340,15 @@ extension SceneDelegate {
             let viewModel = SearchDetailViewModel(authenticationBox: authenticationBox, initialSearchText: searchQuery)
             coordinator?.present(scene: .searchDetail(viewModel: viewModel), from: nil, transition: .show)
         default:
+            var openableUrl: URL?
+            if let host = url.host(percentEncoded: false) {
+                openableUrl = URL(string: "https://" + host)
+            } else {
+                openableUrl = URL(string: "https://")
+            }
+            openableUrl?.append(path: url.path())
+            guard let openableUrl else { return }
+            openUniversalLink(openableUrl)
             return
         }
     }

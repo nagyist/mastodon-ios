@@ -7,7 +7,6 @@
 
 import UIKit
 import SwiftUI
-import AVKit
 import MastodonAsset
 import MastodonLocalization
 

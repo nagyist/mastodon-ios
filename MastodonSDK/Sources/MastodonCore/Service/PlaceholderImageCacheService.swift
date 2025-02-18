@@ -8,6 +8,7 @@
 import UIKit
 import AlamofireImage
 
+@MainActor
 public final class PlaceholderImageCacheService {
     
     let cache = NSCache<Key, UIImage>()

@@ -1,5 +1,5 @@
 //
-//  StatusItem.swift
+//  MastodonItemIdentifier.swift
 //  Mastodon
 //
 //  Created by MainasuK on 2022-1-11.
@@ -10,16 +10,17 @@ import CoreDataStack
 import MastodonUI
 import MastodonSDK
 
-enum StatusItem: Hashable {
-    case feed(record: MastodonFeed)
-    case feedLoader(record: MastodonFeed)
-    case status(record: MastodonStatus)
+//@available(*, deprecated, message: "migrate to MastodonFeedItemIdentifier")
+enum MastodonItemIdentifier: Hashable {
+    case feed(MastodonFeed)
+    case feedLoader(feed: MastodonFeed)
+    case status(MastodonStatus)
     case thread(Thread)
     case topLoader
     case bottomLoader
 }
  
-extension StatusItem {
+extension MastodonItemIdentifier {
     enum Thread: Hashable {
         case root(context: Context)
         case reply(context: Context)
@@ -64,7 +65,7 @@ extension StatusItem {
     }
 }
 
-extension StatusItem.Thread {
+extension MastodonItemIdentifier.Thread {
     class Context: Hashable {
         let status: MastodonStatus
         var displayUpperConversationLink: Bool
@@ -80,7 +81,7 @@ extension StatusItem.Thread {
             self.displayBottomConversationLink = displayBottomConversationLink
         }
         
-        static func == (lhs: StatusItem.Thread.Context, rhs: StatusItem.Thread.Context) -> Bool {
+        static func == (lhs: MastodonItemIdentifier.Thread.Context, rhs: MastodonItemIdentifier.Thread.Context) -> Bool {
             return lhs.status == rhs.status
             && lhs.displayUpperConversationLink == rhs.displayUpperConversationLink
             && lhs.displayBottomConversationLink == rhs.displayBottomConversationLink

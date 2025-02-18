@@ -16,6 +16,7 @@ protocol SettingsCoordinatorDelegate: AnyObject {
     func openProfileSettingsURL(_ settingsCoordinator: SettingsCoordinator)
 }
 
+@MainActor
 class SettingsCoordinator: NSObject, Coordinator {
 
     let navigationController: UINavigationController
@@ -48,7 +49,7 @@ class SettingsCoordinator: NSObject, Coordinator {
             let userAuthentication = s.authenticationBox.authentication
             let seed = Mastodon.Entity.DonationCampaign.donationSeed(username: userAuthentication.username, domain: userAuthentication.domain)
             do {
-                let campaign = try await s.appContext.apiService.getDonationCampaign(seed: seed, source: nil).value
+                let campaign = try await APIService.shared.getDonationCampaign(seed: seed, source: .menu).value
                 
                 await MainActor.run {
                     s.settingsViewController.donationCampaign = campaign
@@ -84,8 +85,8 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                 navigationController.pushViewController(generalSettingsViewController, animated: true)
             case .notifications:
 
-                let currentSetting = appContext.settingService.currentSetting.value
-                let notificationsEnabled = appContext.notificationService.isNotificationPermissionGranted.value
+            let currentSetting = SettingService.shared.currentSetting.value
+            let notificationsEnabled = NotificationService.shared.isNotificationPermissionGranted.value
                 let notificationViewController = NotificationSettingsViewController(currentSetting: currentSetting, notificationsEnabled: notificationsEnabled)
                 notificationViewController.delegate = self
 
@@ -101,7 +102,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                 let serverDetailsViewController = ServerDetailsViewController(domain: domain, appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
                 serverDetailsViewController.delegate = self
 
-                appContext.apiService.instanceV2(domain: domain, authenticationBox: authenticationBox)
+            APIService.shared.instanceV2(domain: domain, authenticationBox: authenticationBox)
                     .sink { _ in
 
                     } receiveValue: { content in
@@ -109,7 +110,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                     }
                     .store(in: &disposeBag)
 
-                appContext.apiService.extendedDescription(domain: domain, authenticationBox: authenticationBox)
+            APIService.shared.extendedDescription(domain: domain, authenticationBox: authenticationBox)
                     .sink { _ in
 
                     } receiveValue: { content in
@@ -125,7 +126,7 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                     await MainActor.run { [weak self] in
                         guard let s = self, let donationCampaign = s.settingsViewController.donationCampaign else { return }
                         
-                        let donationFlow = NewDonationNavigationFlow(flowPresenter: viewController, campaign: donationCampaign, appContext: s.appContext, authenticationBox: s.authenticationBox, sceneCoordinator: s.sceneCoordinator)
+                        let donationFlow = NewDonationNavigationFlow(flowPresenter: viewController, campaign: donationCampaign, authenticationBox: s.authenticationBox, sceneCoordinator: s.sceneCoordinator)
                         s.navigationFlow = donationFlow
                         donationFlow.presentFlow { [weak self] in
                             self?.navigationFlow = nil
@@ -143,11 +144,10 @@ extension SettingsCoordinator: SettingsViewControllerDelegate {
                 navigationController.pushViewController(aboutViewController, animated: true)
             case .logout(_):
                 delegate?.logout(self)
-            case .toggleTestDonations:
-                Mastodon.API.toggleTestingDonations()
-                settingsViewController.tableView.reloadData()
-            case .clearPreviousDonationCampaigns:
-                Mastodon.Entity.DonationCampaign.forgetPreviousCampaigns()
+            case .manageBetaFeatures:
+                let betaTestSettingsViewController = BetaTestSettingsViewController()
+            
+                navigationController.pushViewController(betaTestSettingsViewController, animated: true)
         }
     }
 }
@@ -219,7 +219,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
         guard let subscription = setting.activeSubscription,
               setting.domain == authenticationBox.domain,
               setting.userID == authenticationBox.userID,
-              let legacyViewModel = appContext.notificationService.dequeueNotificationViewModel(mastodonAuthenticationBox: authenticationBox), let deviceToken = appContext.notificationService.deviceToken.value else { return }
+              let legacyViewModel = NotificationService.shared.dequeueNotificationViewModel(mastodonAuthenticationBox: authenticationBox), let deviceToken = NotificationService.shared.deviceToken.value else { return }
 
         let queryData = Mastodon.API.Subscriptions.QueryData(
             policy: viewModel.selectedPolicy.subscriptionPolicy,
@@ -237,7 +237,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
             mastodonAuthenticationBox: authenticationBox
         )
 
-        appContext.apiService.createSubscription(
+        APIService.shared.createSubscription(
             subscriptionObjectID: subscription.objectID,
             query: query,
             mastodonAuthenticationBox: authenticationBox
@@ -260,7 +260,7 @@ extension SettingsCoordinator: NotificationSettingsViewControllerDelegate {
 extension SettingsCoordinator: PolicySelectionViewControllerDelegate {
     func newPolicySelected(_ viewController: PolicySelectionViewController, newPolicy: NotificationPolicy) {
         self.setting.activeSubscription?.policyRaw = newPolicy.subscriptionPolicy.rawValue
-        try? self.appContext.managedObjectContext.save()
+        try? PersistenceManager.shared.mainActorManagedObjectContext.save()
     }
 }
 
@@ -300,7 +300,7 @@ extension SettingsCoordinator: MetaLabelDelegate {
                       let url = URL(string: href) else { return }
                 _ = sceneCoordinator.present(scene: .safari(url: url), from: nil, transition: .safariPresent(animated: true, completion: nil))
             case .hashtag(_, let hashtag, _):
-                let hashtagTimelineViewModel = HashtagTimelineViewModel(context: appContext, authenticationBox: authenticationBox, hashtag: hashtag)
+                let hashtagTimelineViewModel = HashtagTimelineViewModel(authenticationBox: authenticationBox, hashtag: hashtag)
                 _ = sceneCoordinator.present(scene: .hashtagTimeline(viewModel: hashtagTimelineViewModel), from: nil, transition: .show)
             case .email(let email, _):
                 if let emailUrl = URL(string: "mailto:\(email)"), UIApplication.shared.canOpenURL(emailUrl) {

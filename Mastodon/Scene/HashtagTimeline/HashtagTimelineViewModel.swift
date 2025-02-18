@@ -22,7 +22,6 @@ final class HashtagTimelineViewModel {
     var needLoadMiddleIndex: Int? = nil
 
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
     let isFetchingLatestTimeline = CurrentValueSubject<Bool, Never>(false)
@@ -30,7 +29,7 @@ final class HashtagTimelineViewModel {
     let hashtagEntity = CurrentValueSubject<Mastodon.Entity.Tag?, Never>(nil)
 
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
     let didLoadLatest = PassthroughSubject<Void, Never>()
     let hashtagDetails = CurrentValueSubject<Mastodon.Entity.Tag?, Never>(nil)
 
@@ -50,8 +49,7 @@ final class HashtagTimelineViewModel {
     }()
     
     @MainActor
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, hashtag: String) {
-        self.context  = context
+    init(authenticationBox: MastodonAuthenticationBox, hashtag: String) {
         self.authenticationBox = authenticationBox
         self.hashtag = hashtag
         self.dataController = StatusDataController()
@@ -68,7 +66,7 @@ extension HashtagTimelineViewModel {
     func followTag() {
         self.hashtagDetails.send(hashtagDetails.value?.copy(following: true))
         Task { @MainActor in
-            let tag = try? await context.apiService.followTag(
+            let tag = try? await APIService.shared.followTag(
                 for: hashtag,
                 authenticationBox: authenticationBox
             ).value
@@ -79,7 +77,7 @@ extension HashtagTimelineViewModel {
     func unfollowTag() {
         self.hashtagDetails.send(hashtagDetails.value?.copy(following: false))
         Task { @MainActor in
-            let tag = try? await context.apiService.unfollowTag(
+            let tag = try? await APIService.shared.unfollowTag(
                 for: hashtag,
                 authenticationBox: authenticationBox
             ).value
@@ -91,7 +89,7 @@ extension HashtagTimelineViewModel {
 private extension HashtagTimelineViewModel {
     func updateTagInformation() {
         Task { @MainActor in
-            let tag = try? await context.apiService.getTagInformation(
+            let tag = try? await APIService.shared.getTagInformation(
                 for: hashtag,
                 authenticationBox: authenticationBox
             ).value

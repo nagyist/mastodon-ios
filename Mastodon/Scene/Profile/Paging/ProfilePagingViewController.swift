@@ -13,6 +13,10 @@ import MastodonAsset
 import MastodonCore
 import MastodonUI
 
+protocol StatusReloadable {
+    func reloadData()
+}
+
 protocol ProfilePagingViewControllerDelegate: AnyObject {
     func profilePagingViewController(_ viewController: ProfilePagingViewController, didScrollToPostCustomScrollViewContainerController customScrollViewContainerController: ScrollViewContainer, atIndex index: Int)
 }
@@ -27,6 +31,14 @@ final class ProfilePagingViewController: ButtonBarPagerTabStripViewController, T
     
     let buttonBarShadowView = UIView()
     private var buttonBarShadowAlpha: CGFloat = 0.0
+    
+    public func reloadTables() {
+        for viewController in viewControllers {
+            if let vc = viewController as? StatusReloadable {
+                vc.reloadData()
+            }
+        }
+    }
 
     // MARK: - TabBarPageViewController
     
@@ -124,11 +136,9 @@ extension ProfilePagingViewController {
         let margin: CGFloat = {
             switch traitCollection.userInterfaceIdiom {
             case .phone:
-                return ProfileViewController.containerViewMarginForCompactHorizontalSizeClass
+                return ProfileViewController.containerViewMargin(forHorizontalSizeClass: .compact)
             default:
-                return traitCollection.horizontalSizeClass == .regular ?
-                    ProfileViewController.containerViewMarginForRegularHorizontalSizeClass :
-                    ProfileViewController.containerViewMarginForCompactHorizontalSizeClass
+                return ProfileViewController.containerViewMargin(forHorizontalSizeClass: traitCollection.horizontalSizeClass)
             }
         }()
 

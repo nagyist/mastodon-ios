@@ -156,6 +156,10 @@
                 }
             },
             "status": {
+                "reply": "Reply",
+                "private_reply": "Private reply",
+                "mention": "Mention",
+                "private_mention": "Private mention",
                 "user_reblogged": "%s boosted",
                 "user_replied_to": "Replied to %s",
                 "show_post": "Show Post",
@@ -241,6 +245,7 @@
             "friendship": {
                 "follow": "Follow",
                 "following": "Following",
+                "mutual": "Mutual"
                 "request": "Request",
                 "pending": "Pending",
                 "block": "Block",
@@ -312,7 +317,7 @@
         },
         "login": {
             "title": "Welcome Back",
-            "subtitle": "Log in with the server where you created your account.",
+            "subtitle": "Log in with the server where you created your account. For example, if your handle is @you@example.social, enter 'example.social'.",
             "server_search_field": {
                 "placeholder": "Enter URL or search for your server"
             }
@@ -706,6 +711,7 @@
                     "no_results": "No results"
                 },
                 "recent_search": "Recent searches",
+                "no_recent_searches": "No recent searches.",
                 "clear_all": "Clear all",
                 "clear": "Clear"
             }
@@ -734,7 +740,8 @@
                 "reblogged_your_post": "boosted your post",
                 "mentioned_you": "mentioned you",
                 "request_to_follow_you": "request to follow you",
-                "poll_has_ended": "poll has ended"
+                "poll_has_ended": "poll has ended",
+                "relationship_severance": "An admin from %@ has blocked %@, including %@."
             },
             "keyobard": {
                 "show_everything": "Show Everything",
@@ -756,6 +763,7 @@
                 "suspend": "Your account has been suspended.",
                 "learn_more": "Learn More"
             },
+            "learn_more_about_server_blocks" : "Learn more about server blocks",
             "filtered_notification": {
                 "title": "Filtered Notifications",
                 "accept": "Accept",
@@ -871,10 +879,7 @@
                     "custom": "Custom"
                 },
                 "default_post_visibility": {
-                    "title": "Default Post Visibility",
-                    "public": "Public",
-                    "followers_only": "Followers Only",
-                    "only_people_mentioned": "Only People Mentioned"
+                    "title": "Default Post Visibility"
                 },
                 "manually_approve_follow_requests": "Manually Approve Follow Requests",
                 "show_followers_and_following": "Show Followers & Following",

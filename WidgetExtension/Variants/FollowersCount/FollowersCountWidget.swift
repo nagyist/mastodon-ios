@@ -71,12 +71,10 @@ struct FollowersCountWidget: Widget {
 
 private extension FollowersCountWidgetProvider {
     func loadCurrentEntry(for configuration: FollowersCountIntent, in context: Context, completion: @escaping (FollowersCountEntry) -> Void) {
-        Task {
-
-            await AuthenticationServiceProvider.shared.prepareForUse()
+        Task { @MainActor in
 
             guard
-                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -85,14 +83,13 @@ private extension FollowersCountWidgetProvider {
             }
             
             guard
-                let desiredAccount = configuration.account ?? authBox.authentication.account()?.acctWithDomain
+                let desiredAccount = configuration.account ?? authBox.cachedAccount?.acctWithDomain
             else {
                 return completion(.unconfigured)
             }
             
             guard
-                let resultingAccount = try await AppContext.shared
-                    .apiService
+                let resultingAccount = try? await APIService.shared
                     .search(query: .init(q: desiredAccount, type: .accounts), authenticationBox: authBox)
                     .value
                     .accounts
@@ -101,14 +98,19 @@ private extension FollowersCountWidgetProvider {
                 return completion(.unconfigured)
             }
             
-            let imageData = try await URLSession.shared.data(from: resultingAccount.avatarImageURLWithFallback(domain: authBox.domain)).0
-                        
+            let imageData = try? await URLSession.shared.data(from: resultingAccount.avatarImageURLWithFallback(domain: authBox.domain)).0
+            let avatarImage: UIImage
+            if let imageData {
+                avatarImage = UIImage(data: imageData) ?? UIImage(named: "missingAvatar")!
+            } else {
+                avatarImage = UIImage(named: "missingAvatar")!
+            }
             let entry = FollowersCountEntry(
                 date: Date(),
                 account: FollowersEntryAccount.from(
                     mastodonAccount: resultingAccount,
                     domain: authBox.domain,
-                    avatarImage: UIImage(data: imageData) ?? UIImage(named: "missingAvatar")!
+                    avatarImage: avatarImage
                 ),
                 configuration: configuration
             )

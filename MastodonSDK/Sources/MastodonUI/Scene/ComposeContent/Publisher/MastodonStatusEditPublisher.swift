@@ -96,7 +96,7 @@ extension MastodonEditStatusPublisher: StatusPublisher {
         progress.completedUnitCount = 0
 
         // start delay
-        try? await Task.sleep(nanoseconds: 1 * .second)
+        try? await Task.sleep(nanoseconds: 1 * .nanosPerUnit)
         progress.completedUnitCount += publishStatusTaskStartDelayWeight
 
         // Task: attachment

@@ -13,10 +13,7 @@ import MastodonUI
 import MastodonLocalization
 import MastodonSDK
 
-final class FollowerListViewController: UIViewController, NeedsDependency {
-    
-    weak var context: AppContext!
-    weak var coordinator: SceneCoordinator!
+final class FollowerListViewController: UIViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: FollowerListViewModel
@@ -24,10 +21,8 @@ final class FollowerListViewController: UIViewController, NeedsDependency {
     let tableView: UITableView
     let refreshControl: UIRefreshControl
 
-    init(viewModel: FollowerListViewModel, coordinator: SceneCoordinator, context: AppContext) {
+    init(viewModel: FollowerListViewModel) {
 
-        self.context = context
-        self.coordinator = coordinator
         self.viewModel = viewModel
 
         tableView = UITableView()
@@ -126,6 +121,14 @@ extension FollowerListViewController: UserTableViewCellDelegate {}
 
 // MARK: - DataSourceProvider
 extension FollowerListViewController: DataSourceProvider {
+    var filterContext: MastodonSDK.Mastodon.Entity.FilterContext? {
+        .none
+    }
+    
+    func didToggleContentWarningDisplayStatus(status: MastodonSDK.MastodonStatus) {
+        tableView.reloadData()
+    }
+    
     func item(from source: DataSourceItem.Source) async -> DataSourceItem? {
         var _indexPath = source.indexPath
         if _indexPath == nil, let cell = source.tableViewCell {

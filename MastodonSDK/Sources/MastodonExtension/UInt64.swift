@@ -8,5 +8,5 @@
 import Foundation
 
 extension UInt64 {
-    public static let second: UInt64 = 1_000_000_000
+    public static let nanosPerUnit: UInt64 = 1_000_000_000
 }

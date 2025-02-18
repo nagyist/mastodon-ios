@@ -13,16 +13,17 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 final class MastodonRegisterViewModel: ObservableObject {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let domain: String
     let authenticateInfo: AuthenticationViewModel.AuthenticateInfo
     let instance: Mastodon.Entity.Instance
     let applicationToken: Mastodon.Entity.Token
     let viewDidAppear = CurrentValueSubject<Void, Never>(Void())
+    let submitValidatedUserRegistration: (MastodonRegisterViewModel, Bool) async -> ()
 
     @Published var backgroundColor: UIColor = Asset.Scene.Onboarding.background.color
     @Published var name = ""
@@ -57,19 +58,19 @@ final class MastodonRegisterViewModel: ObservableObject {
     let endEditing = PassthroughSubject<Void, Never>()
 
     init(
-        context: AppContext,
         domain: String,
         authenticateInfo: AuthenticationViewModel.AuthenticateInfo,
         instance: Mastodon.Entity.Instance,
-        applicationToken: Mastodon.Entity.Token
+        applicationToken: Mastodon.Entity.Token,
+        submitValidatedUserRegistration: @escaping (MastodonRegisterViewModel, Bool) async ->()
     ) {
         self.domain = domain
-        self.context = context
         self.authenticateInfo = authenticateInfo
         self.instance = instance
         self.applicationToken = applicationToken
         self.approvalRequired = instance.approvalRequired ?? false
         self.applicationAuthorization = Mastodon.API.OAuth.Authorization(accessToken: applicationToken.accessToken)
+        self.submitValidatedUserRegistration = submitValidatedUserRegistration
         
         $name
             .map { name in
@@ -110,7 +111,7 @@ final class MastodonRegisterViewModel: ObservableObject {
             .compactMap { [weak self] text -> AnyPublisher<Result<Mastodon.Response.Content<Mastodon.Entity.Account>, Error>, Never>? in
                 guard let self = self else { return nil }
                 let query = Mastodon.API.Account.AccountLookupQuery(acct: text)
-                return context.apiService.accountLookup(domain: domain, query: query, authorization: self.applicationAuthorization)
+                return APIService.shared.accountLookup(domain: domain, query: query, authorization: self.applicationAuthorization)
                     .map {
                         response -> Result<Mastodon.Response.Content<Mastodon.Entity.Account>, Error> in
                         Result.success(response)

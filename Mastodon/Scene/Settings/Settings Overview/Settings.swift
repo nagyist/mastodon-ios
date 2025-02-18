@@ -17,8 +17,7 @@ enum SettingsEntry: Hashable {
     case makeDonation
     case manageDonations
     case logout(accountName: String)
-    case toggleTestDonations
-    case clearPreviousDonationCampaigns
+    case manageBetaFeatures
 
     var title: String {
         switch self {
@@ -33,15 +32,13 @@ enum SettingsEntry: Hashable {
             case .makeDonation:
                 return L10n.Scene.Settings.Overview.supportMastodon
             case .manageDonations:
-                return L10n.Scene.Settings.Overview.manageDonations
+            return L10n.Scene.Settings.Donation.manage
             case .aboutMastodon:
                 return L10n.Scene.Settings.Overview.aboutMastodon
             case .logout(let accountName):
                 return L10n.Scene.Settings.Overview.logout(accountName)
-            case .toggleTestDonations:
-                return Mastodon.API.isTestingDonations ? "Donations use staging: ON" : "Donations use staging: OFF"
-            case .clearPreviousDonationCampaigns:
-                return "Clear Donation History"
+            case .manageBetaFeatures:
+                return "Beta Features"
         }
     }
 
@@ -51,16 +48,16 @@ enum SettingsEntry: Hashable {
                 return domain
             case .general, .notifications, .privacySafety, .makeDonation, .manageDonations, .aboutMastodon, .logout(_):
                 return nil
-            case .toggleTestDonations, .clearPreviousDonationCampaigns:
+        case .manageBetaFeatures:
                 return nil
         }
     }
 
     var accessoryType: UITableViewCell.AccessoryType {
         switch self {
-            case .general, .notifications, .privacySafety, .serverDetails(_), .makeDonation, .manageDonations, .aboutMastodon, .logout(_):
+        case .general, .notifications, .privacySafety, .serverDetails(_), .manageDonations, .aboutMastodon, .logout(_), .manageBetaFeatures:
                 return .disclosureIndicator
-            case .toggleTestDonations, .clearPreviousDonationCampaigns:
+            case .makeDonation:
                 return .none
         }
     }
@@ -83,8 +80,8 @@ enum SettingsEntry: Hashable {
                 return UIImage(systemName: "info.circle.fill")
             case .logout(_):
                 return nil
-            case .toggleTestDonations, .clearPreviousDonationCampaigns:
-                return nil
+            case .manageBetaFeatures:
+                return UIImage(systemName: "wrench.adjustable.fill")
         }
     }
 
@@ -104,8 +101,8 @@ enum SettingsEntry: Hashable {
                 return .systemPurple
             case .logout(_):
                 return nil
-            case .toggleTestDonations, .clearPreviousDonationCampaigns:
-                return nil
+            case .manageBetaFeatures:
+                return .systemOrange
         }
 
     }
@@ -116,7 +113,7 @@ enum SettingsEntry: Hashable {
                 return .label
             case .logout(_):
                 return .red
-            case .toggleTestDonations, .clearPreviousDonationCampaigns:
+            case .manageBetaFeatures:
                 return .systemIndigo
         }
 

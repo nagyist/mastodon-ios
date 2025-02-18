@@ -29,11 +29,8 @@ public final class UserView: UIView {
 
     public weak var delegate: UserViewDelegate?
     
-    public var disposeBag = Set<AnyCancellable>()
-    
     public private(set) lazy var viewModel: ViewModel = {
         let viewModel = ViewModel()
-        viewModel.bind(userView: self)
         return viewModel
     }()
     
@@ -114,7 +111,8 @@ public final class UserView: UIView {
         button.setContentHuggingPriority(.required, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: 96),
+            button.widthAnchor.constraint(equalToConstant: 96).priority(.defaultHigh),
+            button.widthAnchor.constraint(lessThanOrEqualToConstant: 110).priority(.required),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
         
@@ -122,11 +120,6 @@ public final class UserView: UIView {
     }()
             
     public func prepareForReuse() {
-        disposeBag.removeAll()
-        
-        // viewModel.objects.removeAll()
-        viewModel.authorAvatarImageURL = nil
-        
         avatarButton.avatarImageView.cancelTask()
         setButtonState(.none)
     }
@@ -352,7 +345,6 @@ public extension UserView {
         }
 
         followButton.addTarget(self, action: #selector(didTapFollowButton), for: .touchUpInside)
-        followButton.titleLabel?.font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(for: .boldSystemFont(ofSize: 15))
     }
 }
 

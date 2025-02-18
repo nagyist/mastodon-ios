@@ -45,12 +45,11 @@ extension UITableViewDelegate where Self: DataSourceProvider & AuthContextProvid
                     )
                 } else if let accountWarning = notification.entity.accountWarning {
                     let url = Mastodon.API.disputesEndpoint(domain: authenticationBox.domain, strikeId: accountWarning.id)
-                    _ = coordinator.present(
+                    self.sceneCoordinator?.present(
                         scene: .safari(url: url),
                         from: self,
                         transition: .safariPresent(animated: true, completion: nil)
                     )
-
                 } else {
                     await DataSourceFacade.coordinateToProfileScene(
                         provider: self,
@@ -124,7 +123,7 @@ extension UITableViewDelegate where Self: DataSourceProvider & MediaPreviewableV
                             guard let self = self else { return }
                             Task { @MainActor in
                                 do {
-                                    try await self.context.photoLibraryService.save(
+                                    try await PhotoLibraryService.shared.save(
                                         imageSource: .url(assetURL)
                                     ).singleOutput()
                                 } catch {
@@ -135,7 +134,7 @@ extension UITableViewDelegate where Self: DataSourceProvider & MediaPreviewableV
                                         title: L10n.Common.Alerts.SavePhotoFailure.title,
                                         message: L10n.Common.Alerts.SavePhotoFailure.message
                                     )
-                                    _ = self.coordinator.present(
+                                    self.sceneCoordinator?.present(
                                         scene: .alertController(alertController: alertController),
                                         from: self,
                                         transition: .alertController(animated: true, completion: nil)
@@ -153,7 +152,7 @@ extension UITableViewDelegate where Self: DataSourceProvider & MediaPreviewableV
                         ) { [weak self] _ in
                             guard let self = self else { return }
                             Task {
-                                try await self.context.photoLibraryService.copy(
+                                try await PhotoLibraryService.shared.copy(
                                     imageSource: .url(assetURL)
                                 ).singleOutput()
                             }
@@ -166,10 +165,10 @@ extension UITableViewDelegate where Self: DataSourceProvider & MediaPreviewableV
                             attributes: [],
                             state: .off
                         ) { [weak self] _ in
-                            guard let self = self else { return }
+                            guard let self = self, let coordinator = self.sceneCoordinator else { return }
                             Task {
                                 let applicationActivities: [UIActivity] = [
-                                    SafariActivity(sceneCoordinator: self.coordinator)
+                                    SafariActivity(sceneCoordinator: coordinator)
                                 ]
                                 let activityViewController = UIActivityViewController(
                                     activityItems: [assetURL],

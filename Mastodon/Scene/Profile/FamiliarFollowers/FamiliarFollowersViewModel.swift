@@ -10,7 +10,6 @@ import MastodonCore
 import MastodonSDK
 
 final class FamiliarFollowersViewModel {
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
 
     var accounts: [Mastodon.Entity.Account]
@@ -19,8 +18,7 @@ final class FamiliarFollowersViewModel {
     // output
     var diffableDataSource: UITableViewDiffableDataSource<UserSection, UserItem>?
 
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox, accounts: [Mastodon.Entity.Account], relationships: [Mastodon.Entity.Relationship]) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox, accounts: [Mastodon.Entity.Account], relationships: [Mastodon.Entity.Relationship]) {
         self.authenticationBox = authenticationBox
         self.accounts = accounts
         self.relationships = relationships
@@ -32,7 +30,6 @@ final class FamiliarFollowersViewModel {
     ) {
         diffableDataSource = UserSection.diffableDataSource(
             tableView: tableView,
-            context: context,
             authenticationBox: authenticationBox,
             userTableViewCellDelegate: userTableViewCellDelegate
         )

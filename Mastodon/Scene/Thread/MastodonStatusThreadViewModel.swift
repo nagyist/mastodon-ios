@@ -22,18 +22,18 @@ final class MastodonStatusThreadViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
+    let filterContext: Mastodon.Entity.FilterContext?
     @Published private(set) var deletedObjectIDs: Set<MastodonStatus.ID> = Set()
 
     // output
-    @Published var __ancestors: [StatusItem] = []
-    @Published var ancestors: [StatusItem] = []
+    @Published private var __ancestors: [MastodonItemIdentifier] = []
+    @Published var ancestors: [MastodonItemIdentifier] = []
     
-    @Published var __descendants: [StatusItem] = []
-    @Published var descendants: [StatusItem] = []
+    @Published private var __descendants: [MastodonItemIdentifier] = []
+    @Published var descendants: [MastodonItemIdentifier] = []
     
-    init(context: AppContext) {
-        self.context = context
+    init(filterContext: Mastodon.Entity.FilterContext?) {
+        self.filterContext = filterContext
         
         Publishers.CombineLatest(
             $__ancestors,
@@ -82,9 +82,20 @@ extension MastodonStatusThreadViewModel {
     func appendAncestor(
         nodes: [Node]
     ) {
-        var newItems: [StatusItem] = []
+        var newItems: [MastodonItemIdentifier] = []
         for node in nodes {
-            let item = StatusItem.thread(.leaf(context: .init(status: node.status)))
+            
+            if let filterContext, let filterBox = StatusFilterService.shared.activeFilterBox {
+                let filterResult = filterBox.apply(to: node.status, in: filterContext)
+                switch filterResult {
+                case .hide:
+                    continue
+                default:
+                    break
+                }
+            }
+            
+            let item = MastodonItemIdentifier.thread(.leaf(context: .init(status: node.status)))
             newItems.append(item)
         }
         
@@ -96,21 +107,32 @@ extension MastodonStatusThreadViewModel {
         nodes: [Node]
     ) {
 
-        var newItems: [StatusItem] = []
+        var newItems: [MastodonItemIdentifier] = []
 
         for node in nodes {
-            let context = StatusItem.Thread.Context(status: node.status)
-            let item = StatusItem.thread(.leaf(context: context))
+            
+            if let filterContext, let filterBox = StatusFilterService.shared.activeFilterBox {
+                let filterResult = filterBox.apply(to: node.status, in: filterContext)
+                switch filterResult {
+                case .hide:
+                    continue
+                default:
+                    break
+                }
+            }
+            
+            let context = MastodonItemIdentifier.Thread.Context(status: node.status)
+            let item = MastodonItemIdentifier.thread(.leaf(context: context))
             newItems.append(item)
             
             // second tier
             if let child = node.children.first {
                 guard let secondaryStatus = node.children.first(where: { $0.status.id == child.status.id}) else { continue }
-                let secondaryContext = StatusItem.Thread.Context(
+                let secondaryContext = MastodonItemIdentifier.Thread.Context(
                     status: secondaryStatus.status,
                     displayUpperConversationLink: true
                 )
-                let secondaryItem = StatusItem.thread(.leaf(context: secondaryContext))
+                let secondaryItem = MastodonItemIdentifier.thread(.leaf(context: secondaryContext))
                 newItems.append(secondaryItem)
 
                 // update first tier context

@@ -19,14 +19,15 @@ extension StatusView {
     
     static let statusFilterWorkingQueue = DispatchQueue(label: "StatusFilterWorkingQueue")
     
-    public func configure(feed: MastodonFeed) {
+    public func configure(feed: MastodonFeed, contentMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentMode
         switch feed.kind {
         case .home:
             guard let status = feed.status else {
                 assertionFailure()
                 return
             }
-            configure(status: status)
+            configure(status: status, contentDisplayMode: contentMode)
         case .notificationAll:
             assertionFailure("TODO")
         case .notificationMentions:
@@ -34,33 +35,36 @@ extension StatusView {
         case .none:
             break
         }
-        
+        configureForContentDisplayMode()
     }
 }
 
 extension StatusView {
 
-    public func configure(status: MastodonStatus, statusEdit: Mastodon.Entity.StatusEdit) {
+    public func configure(status: MastodonStatus, statusEdit: Mastodon.Entity.StatusEdit, contentDisplayMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentDisplayMode
+        
         configureHeader(status: status)
         let author = (status.reblog ?? status).entity.account
         configureAuthor(author: author)
         configureTimestamp(timestamp: (status.reblog ?? status).entity.createdAt)
         configureApplicationName(status.entity.application?.name)
-        configureMedia(status: status)
+        configureMedia(status: status, contentDisplayMode: contentDisplayMode)
         configurePollHistory(statusEdit: statusEdit)
         configureCard(status: status)
         configureToolbar(status: status)
-        configureFilter(status: status)
         configureContent(statusEdit: statusEdit, status: status)
-        configureMedia(status: statusEdit)
+        configureMedia(status: statusEdit, contentDisplayMode: contentDisplayMode)
         actionToolbarAdaptiveMarginContainerView.isHidden = true
         authorView.menuButton.isHidden = true
         headerAdaptiveMarginContainerView.isHidden = true
-        viewModel.isSensitiveToggled = true
-        viewModel.isContentReveal = true
+        
+        configureForContentDisplayMode()
     }
 
-    public func configure(status: MastodonStatus) {
+    public func configure(status: MastodonStatus, contentDisplayMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentDisplayMode
+        
         configureHeader(status: status)
         let author = (status.reblog ?? status).entity.account
         configureAuthor(author: author)
@@ -68,12 +72,11 @@ extension StatusView {
         configureTimestamp(timestamp: timestamp)
         configureApplicationName(status.entity.application?.name)
         configureContent(status: status)
-        configureMedia(status: status)
+        configureMedia(status: status, contentDisplayMode: contentDisplayMode)
         configurePoll(status: status)
         configureCard(status: status)
         configureToolbar(status: status)
-        configureFilter(status: status)
-        viewModel.originalStatus = status
+        viewModel._originalStatus = status
 
         viewModel.$translation
             .receive(on: DispatchQueue.main)
@@ -81,14 +84,123 @@ extension StatusView {
                 self?.configureTranslated(status: status)
             }
             .store(in: &disposeBag)
+        
+        configureForContentDisplayMode()
     }
 }
 
 extension StatusView {
+    private func configureForContentDisplayMode() {
+        let hideAll: Bool
+        let hideMediaOnly: Bool
+        let explainationText: String
+
+        switch contentDisplayMode {
+        case .alwaysConceal:
+            hideAll = true
+            hideMediaOnly = false
+            explainationText = ""
+        case .concealAll(let reason, let showAnyway):
+            hideAll = !showAnyway
+            hideMediaOnly = false
+            explainationText = reason
+        case .concealMediaOnly(let showAnyway):
+            hideAll = false
+            hideMediaOnly = !showAnyway
+            explainationText = ""
+        case .neverConceal:
+            hideAll = false
+            hideMediaOnly = false
+            explainationText = ""
+        case .UNDETERMINED:
+            hideAll = false
+            hideMediaOnly = false
+            explainationText = ""
+        }
+        
+        // Show/hide text
+        contentMetaText.textView.isHidden = hideAll
+        setStatusCardControlDisplay(isDisplay: !hideAll)
+        setContentConcealExplainView(isHidden: !hideAll)
+
+        // Show/hide toggle button
+        // The button indicator go-to state for button action direction
+        // eye: when media is hidden
+        // eye-slash: when media display
+        let image = contentDisplayMode.shouldConcealSomething ? UIImage(systemName: "eye.fill") : UIImage(systemName: "eye.slash.fill")
+        authorView.contentSensitiveeToggleButton.setImage(image, for: .normal)
+        
+        setContentSensitiveeToggleButtonDisplay(isDisplay: contentDisplayMode.canToggleConcealed)
+        
+        // Set label on contentConcealView
+        if !explainationText.isEmpty {
+            let label = PlaintextMetaContent(string: explainationText)
+            contentConcealExplainView.spoilerMetaLabel.configure(content: label)
+            historyContentWarningLabel.configure(content: label)
+            historyContentWarningAdaptiveMarginContainerView.isHidden = style != .editHistory
+        } else {
+            contentConcealExplainView.spoilerMetaLabel.reset()
+            historyContentWarningLabel.reset()
+            historyContentWarningAdaptiveMarginContainerView.isHidden = true
+        }
+        
+        // Configure media views
+        let okToShowMedia = !hideAll && !hideMediaOnly
+        mediaGridContainerView.hideContentWarning(okToShowMedia)
+        mediaGridContainerView.viewModel.isSensitiveToggleButtonDisplay = okToShowMedia
+        for configuration in viewModel.mediaViewConfigurations {
+            configuration.isReveal = okToShowMedia
+        }
+
+        // Accessibility:
+        
+        var strings: [String] = []
+        
+        if !explainationText.isEmpty {
+            strings.append(L10n.Common.Controls.Status.contentWarning)
+            strings.append(explainationText)
+        }
+        if !okToShowMedia {
+            // TODO: important to check whether there IS any media?
+            strings.append(L10n.Common.Controls.Status.mediaContentWarning)
+        }
+        
+        if !hideAll, let content = viewModel.content?.string {
+            strings.append(content)
+        }
+        let oneString = strings.joined(separator: ", ")
+        viewModel.contentAccessibilityLabel = oneString
+        contentConcealExplainView.accessibilityLabel = oneString
+        
+        let hidingSomething = (hideAll || hideMediaOnly)
+        let toggleButtonAccessibilityLabel = hidingSomething ? L10n.Scene.Compose.Accessibility.disableContentWarning : L10n.Scene.Compose.Accessibility.enableContentWarning
+        authorView.contentSensitiveeToggleButton.accessibilityLabel = toggleButtonAccessibilityLabel
+        
+        var contentAccessibilityActions = [UIAccessibilityCustomAction]()
+        if !hidingSomething, let entities = viewModel.content?.entities {
+            contentAccessibilityActions = entities.compactMap { entity in
+                if let name = entity.meta.accessibilityLabel {
+                    return UIAccessibilityCustomAction(name: name) { [weak self] action in
+                        guard let self else { return false }
+                        self.delegate?.statusView(self, metaText: self.contentMetaText, didSelectMeta: entity.meta)
+                        return true
+                    }
+                } else {
+                    return nil
+                }
+            }
+        }
+        contentMetaText.textView.accessibilityCustomActions = contentAccessibilityActions
+    }
+    
     private func configureHeader(status: MastodonStatus) {
-        if status.entity.reblogged == true, 
+        configureHeader(status: status.entity)
+    }
+    
+    private func configureHeader(status: Mastodon.Entity.Status) {
+        if status.reblogged == true,
             let authenticationBox = viewModel.authenticationBox,
-           let account = authenticationBox.authentication.account() {
+           let account = authenticationBox.cachedAccount {
 
             let name = account.displayNameWithFallback
             let emojis = account.emojis
@@ -105,8 +217,8 @@ extension StatusView {
                 }
             }()
         } else if status.reblog != nil {
-            let name = status.entity.account.displayNameWithFallback
-            let emojis = status.entity.account.emojis
+            let name = status.account.displayNameWithFallback
+            let emojis = status.account.emojis
 
             viewModel.header = {
                 let text = L10n.Common.Controls.Status.userReblogged(name)
@@ -120,8 +232,8 @@ extension StatusView {
                 }
             }()
 
-        } else if let _ = status.entity.inReplyToID,
-                  let inReplyToAccountID = status.entity.inReplyToAccountID
+        } else if let _ = status.inReplyToID,
+                  let inReplyToAccountID = status.inReplyToAccountID
         {
             func createHeader(
                 name: String?,
@@ -143,7 +255,7 @@ extension StatusView {
                 return header
             }
 
-            if let inReplyToID = status.entity.inReplyToID {
+            if let inReplyToID = status.inReplyToID {
                 // A. replyTo status exist
                 
                 /// we need to initially set an empty header, otherwise the layout gets messed up
@@ -261,13 +373,20 @@ extension StatusView {
     }
     
     public func revertTranslation() {
-        guard let originalStatus = viewModel.originalStatus else { return }
-        
-        viewModel.translation = nil
-        configure(status: originalStatus)
+        if let originalStatus = viewModel._originalStatus {
+            viewModel.translation = nil
+            configure(status: originalStatus, contentDisplayMode: contentDisplayMode)
+        } else if let untranslatedStatus = viewModel.untranslatedStatus {
+            viewModel.translation = nil
+            configure(status: untranslatedStatus, contentDisplayMode: contentDisplayMode)
+        }
     }
     
     func configureTranslated(status: MastodonStatus) {
+        configureTranslated(status: status.entity)
+    }
+    
+    func configureTranslated(status: Mastodon.Entity.Status) {
         guard let translation = viewModel.translation,
               let translatedContent = translation.content else {
             viewModel.isCurrentlyTranslating = false
@@ -276,7 +395,7 @@ extension StatusView {
 
         // content
         do {
-            let content = MastodonContent(content: translatedContent, emojis: status.entity.emojis.asDictionary)
+            let content = MastodonContent(content: translatedContent, emojis: status.emojis.asDictionary)
             let metaContent = try MastodonMetaContent.convert(document: content)
             viewModel.content = metaContent
             viewModel.isCurrentlyTranslating = false
@@ -290,7 +409,7 @@ extension StatusView {
         statusEdit.spoilerText.map {
             viewModel.spoilerContent = PlaintextMetaContent(string: $0)
         }
-        
+
         // language
         viewModel.language = (status.reblog ?? status).entity.language
         // content
@@ -306,16 +425,22 @@ extension StatusView {
     }
 
     private func configureContent(status: MastodonStatus) {
+        configureContent(status: status.entity)
+    }
+    
+    private func configureContent(status: Mastodon.Entity.Status) {
+        
         guard viewModel.translation == nil else {
-            return configureTranslated(status: status)
+            configureTranslated(status: status)
+            return
         }
         
         let status = status.reblog ?? status
         
         // spoilerText
-        if let spoilerText = status.entity.spoilerText, !spoilerText.isEmpty {
+        if let spoilerText = status.spoilerText, !spoilerText.isEmpty {
             do {
-                let content = MastodonContent(content: spoilerText, emojis: status.entity.emojis.asDictionary)
+                let content = MastodonContent(content: spoilerText, emojis: status.emojis.asDictionary)
                 let metaContent = try MastodonMetaContent.convert(document: content)
                 viewModel.spoilerContent = metaContent
             } catch {
@@ -325,11 +450,12 @@ extension StatusView {
         } else {
             viewModel.spoilerContent = nil
         }
+
         // language
-        viewModel.language = (status.reblog ?? status).entity.language
+        viewModel.language = (status.reblog ?? status).language
         // content
         do {
-            let content = MastodonContent(content: status.entity.content ?? "", emojis: status.entity.emojis.asDictionary)
+            let content = MastodonContent(content: status.content ?? "", emojis: status.emojis.asDictionary)
             let metaContent = try MastodonMetaContent.convert(document: content)
             viewModel.content = metaContent
             viewModel.isCurrentlyTranslating = false
@@ -338,27 +464,23 @@ extension StatusView {
             viewModel.content = PlaintextMetaContent(string: "")
         }
         // visibility
-        viewModel.visibility = status.entity.mastodonVisibility
-
-        // sensitive
-        viewModel.isContentSensitive = status.entity.sensitive == true
-        viewModel.isSensitiveToggled = status.isSensitiveToggled
-
+        viewModel.visibility = status.mastodonVisibility
     }
     
-    private func configureMedia(status: MastodonStatus) {
+    private func configureMedia(status: MastodonStatus, contentDisplayMode: ContentDisplayMode) {
         let status = status.reblog ?? status
-        
-        viewModel.isMediaSensitive = status.entity.sensitive == true
-        
-        let configurations = MediaView.configuration(status: status)
+        let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
         viewModel.mediaViewConfigurations = configurations
     }
     
-    private func configureMedia(status: Mastodon.Entity.StatusEdit) {
-        viewModel.isMediaSensitive = status.sensitive
-        
-        let configurations = MediaView.configuration(status: status)
+    private func configureMedia(status: Mastodon.Entity.Status, contentDisplayMode: ContentDisplayMode) {
+        let status = status.reblog ?? status
+        let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
+        viewModel.mediaViewConfigurations = configurations
+    }
+    
+    private func configureMedia(status: Mastodon.Entity.StatusEdit, contentDisplayMode: ContentDisplayMode) {
+        let configurations = MediaView.configuration(status: status, contentDisplayMode: contentDisplayMode)
         viewModel.mediaViewConfigurations = configurations
     }
     
@@ -366,7 +488,7 @@ extension StatusView {
         guard let poll = statusEdit.poll else { return }
 
         let pollItems = poll.options.map { PollItem.history(option: $0) }
-        self.viewModel.pollItems = pollItems
+        self.viewModel.pollItems = pollItems.removingDuplicates()
         pollStatusStackView.isHidden = true
 
         var _snapshot = NSDiffableDataSourceSnapshot<PollSection, PollItem>()
@@ -384,7 +506,7 @@ extension StatusView {
 
         let options = poll.options
         let items: [PollItem] = options.map { .option(record: $0) }
-        self.viewModel.pollItems = items
+        self.viewModel.pollItems = items.removingDuplicates()
 
         let hasSelectedOption = options.contains(where: { $0.isSelected == true })
         viewModel.isVoteButtonEnabled = hasSelectedOption
@@ -419,84 +541,88 @@ extension StatusView {
             .assign(to: \.isVoting, on: viewModel)
             .store(in: &disposeBag)
     }
+    
+    private func configurePoll(status: Mastodon.Entity.Status) {
+        let status = status.reblog ?? status
+        
+        guard let pollEntity = status.poll else {
+            return
+        }
 
+        let poll = MastodonPoll(poll: pollEntity, status: MastodonStatus.fromEntity(status))
+        let options = poll.options
+        let items: [PollItem] = options.map { .option(record: $0) }
+        self.viewModel.pollItems = items.removingDuplicates()
+
+        viewModel.isVoteButtonEnabled = !viewModel.selectedPollItems.isEmpty
+
+        viewModel.voteCount = poll.votesCount
+        viewModel.voterCount = poll.votersCount
+        viewModel.expireAt = poll.expiresAt
+        viewModel.expired = poll.expired
+        viewModel.isVoting = poll.voted ?? false
+    }
+    
     private func configureCard(status: MastodonStatus) {
+        configureCard(status: status.entity)
+    }
+
+    private func configureCard(status: Mastodon.Entity.Status) {
         let status = status.reblog ?? status
         if viewModel.mediaViewConfigurations.isEmpty {
-            viewModel.card = status.entity.card
+            viewModel.card = status.card
         } else {
             viewModel.card = nil
         }
     }
     
     private func configureToolbar(status: MastodonStatus) {
-        let status = status.reblog ?? status
-
-        viewModel.replyCount = status.entity.repliesCount ?? 0
-        
-        viewModel.reblogCount = status.entity.reblogsCount
-        
-        viewModel.favoriteCount = status.entity.favouritesCount
-        
-        viewModel.editedAt = status.entity.editedAt
-
-        // relationship
-        viewModel.isReblog = status.entity.reblogged == true
-        viewModel.isFavorite = status.entity.favourited == true
-        viewModel.isBookmark = status.entity.bookmarked == true
+        configureToolbar(status: status.entity)
     }
     
-    private func configureFilter(status: MastodonStatus) {
+    private func configureToolbar(status: Mastodon.Entity.Status) {
         let status = status.reblog ?? status
+
+        viewModel.replyCount = status.repliesCount ?? 0
         
-        guard let content = status.entity.content?.lowercased() else { return }
+        viewModel.reblogCount = status.reblogsCount
         
-        Publishers.CombineLatest(
-            viewModel.$activeFilters,
-            viewModel.$filterContext
-        )
-        .receive(on: StatusView.statusFilterWorkingQueue)
-        .map { filters, filterContext in
-            var wordFilters: [Mastodon.Entity.Filter] = []
-            var nonWordFilters: [Mastodon.Entity.Filter] = []
-            for filter in filters {
-                guard filter.context.contains(where: { $0 == filterContext }) else { continue }
-                if filter.wholeWord {
-                    wordFilters.append(filter)
-                } else {
-                    nonWordFilters.append(filter)
-                }
-            }
+        viewModel.favoriteCount = status.favouritesCount
+        
+        viewModel.editedAt = status.editedAt
 
-            var needsFilter = false
-            for filter in nonWordFilters {
-                guard content.contains(filter.phrase.lowercased()) else { continue }
-                needsFilter = true
-                break
-            }
-
-            if needsFilter {
-                return true
-            }
-
-            let tokenizer = NLTokenizer(unit: .word)
-            tokenizer.string = content
-            let phraseWords = wordFilters.map { $0.phrase.lowercased() }
-            tokenizer.enumerateTokens(in: content.startIndex..<content.endIndex) { range, _ in
-                let word = String(content[range])
-                if phraseWords.contains(word) {
-                    needsFilter = true
-                    return false
-                } else {
-                    return true
-                }
-            }
-
-            return needsFilter
-        }
-        .receive(on: DispatchQueue.main)
-        .assign(to: \.isFiltered, on: viewModel)
-        .store(in: &disposeBag)
+        // relationship
+        viewModel.isReblog = status.reblogged == true
+        viewModel.isFavorite = status.favourited == true
+        viewModel.isBookmark = status.bookmarked == true
     }
 
+}
+
+extension StatusView {
+    public func configure(status: Mastodon.Entity.Status, contentDisplayMode: ContentDisplayMode) {
+        viewModel.contentDisplayMode = contentDisplayMode
+        
+        configureHeader(status: status)
+        let author = (status.reblog ?? status).account
+        configureAuthor(author: author)
+        let timestamp = (status.reblog ?? status).createdAt
+        configureTimestamp(timestamp: timestamp)
+        configureApplicationName(status.application?.name)
+        configureContent(status: status)
+        configureMedia(status: status, contentDisplayMode: contentDisplayMode)
+        configurePoll(status: status)
+        configureCard(status: status)
+        configureToolbar(status: status)
+        viewModel.untranslatedStatus = status
+
+        viewModel.$translation
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] translation in
+                self?.configureTranslated(status: status)
+            }
+            .store(in: &disposeBag)
+        
+        configureForContentDisplayMode()
+    }
 }

@@ -32,23 +32,20 @@ extension Mastodon.API.App {
     ///   - session: `URLSession`
     ///   - domain: Mastodon instance domain. e.g. "example.com"
     ///   - query: `CreateQuery`
-    /// - Returns: `AnyPublisher` contains `Application` nested in the response
+    /// - Returns: `Application`
     public static func create(
         session: URLSession,
         domain: String,
         query: CreateQuery
-    ) -> AnyPublisher<Mastodon.Response.Content<Mastodon.Entity.Application>, Error>  {
+    ) async throws -> Mastodon.Entity.Application  {
         let request = Mastodon.API.post(
             url: appEndpointURL(domain: domain),
             query: query,
             authorization: nil
         )
-        return session.dataTaskPublisher(for: request)
-            .tryMap { data, response in
-                let value = try Mastodon.API.decode(type: Mastodon.Entity.Application.self, from: data, response: response)
-                return Mastodon.Response.Content(value: value, response: response)
-            }
-            .eraseToAnyPublisher()
+        let (data, response) = try await session.data(for: request)
+        let value = try Mastodon.API.decode(type: Mastodon.Entity.Application.self, from: data, response: response)
+        return value
     }
     
     /// Verify application token

@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import AVKit
 import Combine
 import CoreDataStack
 import GameplayKit
@@ -14,15 +13,16 @@ import TabBarPager
 import XLPagerTabStrip
 import MastodonCore
 
-final class UserTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class UserTimelineViewController: UIViewController, MediaPreviewableViewController, StatusReloadable {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: UserTimelineViewModel!
     
     let mediaPreviewTransitionController = MediaPreviewTransitionController()
+    
+    func reloadData() {
+        tableView.reloadData()
+    }
 
     lazy var tableView: UITableView = {
         let tableView = UITableView()
@@ -162,6 +162,11 @@ extension UserTimelineViewController: IndicatorInfoProvider {
 //MARK: - UIScrollViewDelegate
 extension UserTimelineViewController: UIScrollViewDelegate {
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        Self.scrollViewDidScrollToEnd(scrollView) {
+            viewModel.stateMachine.enter(UserTimelineViewModel.State.Loading.self)
+        }
+    }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
         Self.scrollViewDidScrollToEnd(scrollView) {
             viewModel.stateMachine.enter(UserTimelineViewModel.State.Loading.self)
         }

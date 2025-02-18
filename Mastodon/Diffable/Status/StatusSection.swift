@@ -9,7 +9,6 @@ import Combine
 import CoreData
 import CoreDataStack
 import UIKit
-import AVKit
 import AlamofireImage
 import MastodonMeta
 import MastodonSDK
@@ -24,19 +23,16 @@ enum StatusSection: Equatable, Hashable {
 extension StatusSection {
 
     struct Configuration {
-        let context: AppContext
         let authenticationBox: MastodonAuthenticationBox
         weak var statusTableViewCellDelegate: StatusTableViewCellDelegate?
         weak var timelineMiddleLoaderTableViewCellDelegate: TimelineMiddleLoaderTableViewCellDelegate?
-        let filterContext: Mastodon.Entity.Filter.Context?
-        let activeFilters: Published<[Mastodon.Entity.Filter]>.Publisher?
+        let filterContext: Mastodon.Entity.FilterContext?
     }
 
     static func diffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         configuration: Configuration
-    ) -> UITableViewDiffableDataSource<StatusSection, StatusItem> {
+    ) -> UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier> {
         tableView.register(StatusTableViewCell.self, forCellReuseIdentifier: String(describing: StatusTableViewCell.self))
         tableView.register(TimelineMiddleLoaderTableViewCell.self, forCellReuseIdentifier: String(describing: TimelineMiddleLoaderTableViewCell.self))
         tableView.register(StatusThreadRootTableViewCell.self, forCellReuseIdentifier: String(describing: StatusThreadRootTableViewCell.self))
@@ -46,11 +42,12 @@ extension StatusSection {
             switch item {
             case .feed(let feed):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+                let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.feed(feed)
+                let contentConcealModel = StatusView.ContentConcealViewModel(status: feed.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.filterContext)
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
-                    viewModel: StatusTableViewCell.ViewModel(value: .feed(feed)),
+                    viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                     configuration: configuration
                 )
                 return cell
@@ -64,17 +61,17 @@ extension StatusSection {
                 return cell
             case .status(let status):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+                let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(status)
+                let contentConcealModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.filterContext)
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
-                    viewModel: StatusTableViewCell.ViewModel(value: .status(status)),
+                    viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                     configuration: configuration
                 )
                 return cell
             case .thread(let thread):
                 let cell = dequeueConfiguredReusableCell(
-                    context: context,
                     tableView: tableView,
                     indexPath: indexPath,
                     configuration: ThreadCellRegistrationConfiguration(
@@ -100,12 +97,11 @@ extension StatusSection {
 extension StatusSection {
     
     struct ThreadCellRegistrationConfiguration {
-        let thread: StatusItem.Thread
+        let thread: MastodonItemIdentifier.Thread
         let configuration: Configuration
     }
 
     static func dequeueConfiguredReusableCell(
-        context: AppContext,
         tableView: UITableView,
         indexPath: IndexPath,
         configuration: ThreadCellRegistrationConfiguration
@@ -113,22 +109,23 @@ extension StatusSection {
         switch configuration.thread {
         case .root(let threadContext):
             let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusThreadRootTableViewCell.self), for: indexPath) as! StatusThreadRootTableViewCell
+            let contentConcealModel = StatusView.ContentConcealViewModel(status: threadContext.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: .thread)
             StatusSection.configure(
-                context: context,
                 tableView: tableView,
                 cell: cell,
-                viewModel: StatusThreadRootTableViewCell.ViewModel(value: .status(threadContext.status)),
+                viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: .status(threadContext.status), contentConcealModel: contentConcealModel),
                 configuration: configuration.configuration
             )
             return cell
         case .reply(let threadContext),
              .leaf(let threadContext):
             let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+            let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(threadContext.status)
+            let contentConcealModel = StatusView.ContentConcealViewModel(status: threadContext.status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: configuration.configuration.filterContext)
+            assert(configuration.configuration.filterContext == .thread)
             StatusSection.configure(
-                context: context,
-                tableView: tableView,
-                cell: cell,
-                viewModel: StatusTableViewCell.ViewModel(value: .status(threadContext.status)),
+                tableView: tableView, cell: cell,
+                viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                 configuration: configuration.configuration
             )
             return cell
@@ -140,7 +137,6 @@ extension StatusSection {
 extension StatusSection {
     
     public static func setupStatusPollDataSource(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         statusView: StatusView
     ) {
@@ -148,6 +144,14 @@ extension StatusSection {
             switch item {
             case .history:
                 return nil
+            case .pollOption(let option):
+                // Fix cell reuse animation issue
+                let cell: PollOptionTableViewCell = {
+                    let _cell = tableView.dequeueReusableCell(withIdentifier: String(describing: PollOptionTableViewCell.self) + "@\(indexPath.row)#\(indexPath.section)") as? PollOptionTableViewCell
+                    _cell?.prepareForReuse()
+                    return _cell ?? PollOptionTableViewCell()
+                }()
+                return cell
             case .option(let record):
                 // Fix cell reuse animation issue
                 let cell: PollOptionTableViewCell = {
@@ -178,6 +182,8 @@ extension StatusSection {
     ) {
         statusView.pollTableViewDiffableDataSource = UITableViewDiffableDataSource<PollSection, PollItem>(tableView: statusView.pollTableView) { tableView, indexPath, item in
             switch item {
+            case .pollOption:
+                return nil
             case .option:
                 return nil
             case let .history(option):
@@ -199,19 +205,16 @@ extension StatusSection {
 extension StatusSection {
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: StatusTableViewCell,
-        viewModel: StatusTableViewCell.ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = configuration.context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
@@ -219,27 +222,19 @@ extension StatusSection {
             viewModel: viewModel,
             delegate: configuration.statusTableViewCellDelegate
         )
-        
-        cell.statusView.viewModel.filterContext = configuration.filterContext
-        configuration.activeFilters?
-            .assign(to: \.activeFilters, on: cell.statusView.viewModel)
-            .store(in: &cell.disposeBag)
     }
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: StatusThreadRootTableViewCell,
-        viewModel: StatusThreadRootTableViewCell.ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = configuration.context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(
@@ -247,11 +242,6 @@ extension StatusSection {
             viewModel: viewModel,
             delegate: configuration.statusTableViewCellDelegate
         )
-        
-        cell.statusView.viewModel.filterContext = configuration.filterContext
-        configuration.activeFilters?
-            .assign(to: \.activeFilters, on: cell.statusView.viewModel)
-            .store(in: &cell.disposeBag)
     }
     
     static func configure(

@@ -10,28 +10,24 @@ import Combine
 import MastodonCore
 import MastodonSDK
 
+@MainActor
 final class WelcomeViewModel {
  
     var disposeBag = Set<AnyCancellable>()
     private(set) var defaultServers: [Mastodon.Entity.DefaultServer]?
     var randomDefaultServer: Mastodon.Entity.Server?
-
-    // input
-    let context: AppContext
     
     // output
     @Published var needsShowDismissEntry = false
     
-    init(context: AppContext) {
-        self.context = context
-        
+    init() {
         AuthenticationServiceProvider.shared.$mastodonAuthenticationBoxes
             .map { !$0.isEmpty }
             .assign(to: &$needsShowDismissEntry)
     }
 
     func downloadDefaultServer(completion: (() -> Void)? = nil) {
-            context.apiService.defaultServers()
+        APIService.shared.defaultServers()
             .timeout(.milliseconds(500) , scheduler: DispatchQueue.main)
             .sink { [weak self] result in
 

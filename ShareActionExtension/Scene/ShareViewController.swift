@@ -85,7 +85,6 @@ extension ShareViewController {
             }
             viewModel.authenticationBox = authenticationBox
             let composeContentViewModel = ComposeContentViewModel(
-                context: context,
                 authenticationBox: authenticationBox,
                 composeContext: .composeStatus,
                 destination: .topLevel,
@@ -140,10 +139,10 @@ extension ShareViewController {
                     throw AppError.badRequest
                 }
                 
-                _ = try await statusPublisher.publish(api: context.apiService, authenticationBox: authenticationBox)
+                _ = try await statusPublisher.publish(api: APIService.shared, authenticationBox: authenticationBox)
                 
                 self.publishButton.setTitle(L10n.Common.Controls.Actions.done, for: .normal)
-                try await Task.sleep(nanoseconds: 1 * .second)
+                try await Task.sleep(nanoseconds: 1 * .nanosPerUnit)
                 
                 self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
 
@@ -160,10 +159,8 @@ extension ShareViewController {
 
 extension ShareViewController {
     private func setupAuthContext() throws -> MastodonAuthenticationBox? {
-        AuthenticationServiceProvider.shared.prepareForUse()
 
-        guard let authentication = AuthenticationServiceProvider.shared.authenticationSortedByActivation().first else { return nil }
-        return MastodonAuthenticationBox(authentication: authentication)
+        return AuthenticationServiceProvider.shared.currentActiveUser.value
     }
     
     private func setupHintLabel() {
@@ -255,7 +252,6 @@ extension ShareViewController {
 
         if let movieProvider = _movieProvider {
             let attachmentViewModel = AttachmentViewModel(
-                api: context.apiService,
                 authenticationBox: authenticationBox,
                 input: .itemProvider(movieProvider),
                 sizeLimit: .init(image: nil, video: nil),
@@ -265,7 +261,6 @@ extension ShareViewController {
         } else if !imageProviders.isEmpty {
             let attachmentViewModels = imageProviders.map { provider in
                 AttachmentViewModel(
-                    api: context.apiService,
                     authenticationBox: authenticationBox,
                     input: .itemProvider(provider),
                     sizeLimit: .init(image: nil, video: nil),

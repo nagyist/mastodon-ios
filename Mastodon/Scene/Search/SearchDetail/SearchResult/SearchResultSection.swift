@@ -30,7 +30,6 @@ extension SearchResultSection {
     
     static func tableViewDiffableDataSource(
         tableView: UITableView,
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         configuration: Configuration
     ) -> UITableViewDiffableDataSource<SearchResultSection, SearchResultItem> {
@@ -44,7 +43,7 @@ extension SearchResultSection {
                 case .account(let account, let relationship):
                     let cell = tableView.dequeueReusableCell(withIdentifier: UserTableViewCell.reuseIdentifier, for: indexPath) as! UserTableViewCell
 
-                    guard let me = authenticationBox.authentication.account() else { return cell }
+                    guard let me = authenticationBox.cachedAccount else { return cell }
 
                     cell.userView.setButtonState(.loading)
                     cell.configure(
@@ -57,11 +56,12 @@ extension SearchResultSection {
                 return cell
             case .status(let status):
                 let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: StatusTableViewCell.self), for: indexPath) as! StatusTableViewCell
+                let displayItem = StatusTableViewCell.StatusTableViewCellViewModel.DisplayItem.status(status)
+                let contentConcealModel = StatusView.ContentConcealViewModel(status: status, filterBox: StatusFilterService.shared.activeFilterBox, filterContext: nil) // no filters in search results
                 configure(
-                    context: context,
                     tableView: tableView,
                     cell: cell,
-                    viewModel: StatusTableViewCell.ViewModel(value: .status(status)),
+                    viewModel: StatusTableViewCell.StatusTableViewCellViewModel(displayItem: displayItem, contentConcealModel: contentConcealModel),
                     configuration: configuration
                 )
                 return cell
@@ -89,19 +89,16 @@ extension SearchResultSection {
 extension SearchResultSection {
     
     static func configure(
-        context: AppContext,
         tableView: UITableView,
         cell: StatusTableViewCell,
-        viewModel: StatusTableViewCell.ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         configuration: Configuration
     ) {
         StatusSection.setupStatusPollDataSource(
-            context: context,
             authenticationBox: configuration.authenticationBox,
             statusView: cell.statusView
         )
         
-        cell.statusView.viewModel.context = context
         cell.statusView.viewModel.authenticationBox = configuration.authenticationBox
         
         cell.configure(

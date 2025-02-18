@@ -13,21 +13,21 @@ import MastodonSDK
 import MastodonCore
 import MastodonLocalization
 
+@MainActor
 final class NotificationTimelineViewModel {
     
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let scope: Scope
     var notificationPolicy: Mastodon.Entity.NotificationPolicy?
-    let dataController: FeedDataController
+    let feedLoader: MastodonFeedLoader
     @Published var isLoadingLatest = false
     @Published var lastAutomaticFetchTimestamp: Date?
     
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<NotificationSection, NotificationItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<NotificationSection, NotificationListItem>?
     var didLoadLatest = PassthroughSubject<Void, Never>()
 
     // bottom loader
@@ -46,49 +46,14 @@ final class NotificationTimelineViewModel {
     
     @MainActor
     init(
-        context: AppContext,
         authenticationBox: MastodonAuthenticationBox,
         scope: Scope,
         notificationPolicy: Mastodon.Entity.NotificationPolicy? = nil
     ) {
-        self.context = context
         self.authenticationBox = authenticationBox
         self.scope = scope
-        self.dataController = FeedDataController(context: context, authenticationBox: authenticationBox)
+        self.feedLoader = MastodonFeedLoader(kind: scope.feedKind)
         self.notificationPolicy = notificationPolicy
-
-        switch scope {
-        case .everything:
-            self.dataController.records = (try? FileManager.default.cachedNotificationsAll(for: authenticationBox))?.map({ notification in
-                MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationAll)
-            }) ?? []
-        case .mentions:
-            self.dataController.records = (try? FileManager.default.cachedNotificationsMentions(for: authenticationBox))?.map({ notification in
-                MastodonFeed.fromNotification(notification, relationship: nil, kind: .notificationMentions)
-            }) ?? []
-        case .fromAccount(_):
-            self.dataController.records = []
-        }
-
-        self.dataController.$records
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink(receiveValue: { feeds in
-                let items: [Mastodon.Entity.Notification] = feeds.compactMap { feed -> Mastodon.Entity.Notification? in
-                    guard let status = feed.notification else { return nil }
-                    return status
-                }
-                switch self.scope {
-                case .everything:
-                    FileManager.default.cacheNotificationsAll(items: items, for: authenticationBox)
-                case .mentions:
-                    FileManager.default.cacheNotificationsMentions(items: items, for: authenticationBox)
-                case .fromAccount(_):
-                    //NOTE: we don't persist these
-                    break
-                }
-            })
-            .store(in: &disposeBag)
 
         NotificationCenter.default.addObserver(self, selector: #selector(Self.notificationFilteringChanged(_:)), name: .notificationFilteringChanged, object: nil)
     }
@@ -99,10 +64,25 @@ final class NotificationTimelineViewModel {
         Task { [weak self] in
             guard let self else { return }
 
-            let policy = try await self.context.apiService.notificationPolicy(authenticationBox: self.authenticationBox)
+            let policy = try await APIService.shared.notificationPolicy(authenticationBox: self.authenticationBox)
             self.notificationPolicy = policy.value
 
             await self.loadLatest()
+        }
+    }
+    
+    func didActOnFollowRequest(_ notification: MastodonNotification, approved: Bool) {
+        defer {
+            Task {
+                await loadLatest()
+            }
+        }
+        guard var currentSnapshot = diffableDataSource?.snapshot() else { return }
+        let identifier = NotificationListItem.notification(.notification(id: notification.id))
+        if currentSnapshot.itemIdentifiers.contains(identifier) {
+            if !approved {
+                currentSnapshot.deleteItems([identifier])
+            }
         }
     }
 }
@@ -123,37 +103,53 @@ extension NotificationTimelineViewModel {
                 return "Notifications from \(account.displayName)"
             }
         }
+        
+        var feedKind: MastodonFeedKind {
+            switch self {
+            case .everything:
+                return .notificationsAll
+            case .mentions:
+                return .notificationsMentionsOnly
+            case .fromAccount(let account):
+                return .notificationsWithAccount(account.id)
+            }
+        }
     }
 }
 
 extension NotificationTimelineViewModel {
     
+    func reloadData() {
+        guard let diffableDataSource else { return }
+        diffableDataSource.applySnapshotUsingReloadData(diffableDataSource.snapshot())
+    }
+    
     // load lastest
     func loadLatest() async {
         isLoadingLatest = true
         defer { isLoadingLatest = false }
-        
-        switch scope {
-        case .everything:
-            dataController.loadInitial(kind: .notificationAll)
-        case .mentions:
-            dataController.loadInitial(kind: .notificationMentions)
-        case .fromAccount(let account):
-            dataController.loadInitial(kind: .notificationAccount(account.id))
-        }
-
+        let currentFirst = diffableDataSource?.snapshot().itemIdentifiers.first
+        await loadMore(olderThan: nil, newerThan: currentFirst)
         didLoadLatest.send()
     }
     
-    // load timeline gap
-    func loadMore(item: NotificationItem) async {
-        switch scope {
-        case .everything:
-            dataController.loadNext(kind: .notificationAll)
-        case .mentions:
-            dataController.loadNext(kind: .notificationMentions)
-        case .fromAccount(let account):
-            dataController.loadNext(kind: .notificationAccount(account.id))
+    func loadMore(olderThan: NotificationListItem?, newerThan: NotificationListItem?) async {
+        
+        func fetchAnchor(for item: NotificationListItem?) -> MastodonFeedItemIdentifier? {
+            switch item {
+            case .notification:
+                return item?.fetchAnchor
+            case .bottomLoader:
+                return diffableDataSource?.snapshot().itemIdentifiers.last(where: { $0.fetchAnchor != nil })?.fetchAnchor
+            case .filteredNotificationsInfo:
+                return  diffableDataSource?.snapshot().itemIdentifiers.first(where: { $0.fetchAnchor != nil })?.fetchAnchor
+            case .groupedNotification(let viewModel):
+                return viewModel.identifier
+            case .none:
+                return nil
+            }
         }
+        
+        feedLoader.loadMore(olderThan: fetchAnchor(for: olderThan), newerThan: fetchAnchor(for: newerThan))
     }
 }

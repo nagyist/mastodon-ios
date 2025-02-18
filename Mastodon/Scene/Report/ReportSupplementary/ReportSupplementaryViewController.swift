@@ -17,13 +17,10 @@ protocol ReportSupplementaryViewControllerDelegate: AnyObject {
     func reportSupplementaryViewController(_ viewController: ReportSupplementaryViewController, nextButtonDidPressed button: UIButton)
 }
 
-final class ReportSupplementaryViewController: UIViewController, NeedsDependency, ReportViewControllerAppearance {
+final class ReportSupplementaryViewController: UIViewController, ReportViewControllerAppearance {
     
     var disposeBag = Set<AnyCancellable>()
     private var observations = Set<NSKeyValueObservation>()
-    
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var viewModel: ReportSupplementaryViewModel! { willSet { precondition(!isViewLoaded) } }
 

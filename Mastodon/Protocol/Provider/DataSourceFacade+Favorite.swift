@@ -18,13 +18,14 @@ extension DataSourceFacade {
     ) async throws {
         FeedbackGenerator.shared.generate(.selectionChanged)
 
-        let updatedStatus = try await provider.context.apiService.favorite(
+        let updatedStatus = try await APIService.shared.favorite(
             status: status,
             authenticationBox: provider.authenticationBox
         ).value
         
         let newStatus: MastodonStatus = .fromEntity(updatedStatus)
-        newStatus.isSensitiveToggled = status.isSensitiveToggled
+        newStatus.showDespiteContentWarning = status.showDespiteContentWarning
+        newStatus.showDespiteFilter = status.showDespiteFilter
         
         provider.update(status: newStatus, intent: .favorite(updatedStatus.favourited == true))
     }

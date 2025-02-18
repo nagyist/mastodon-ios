@@ -4,23 +4,51 @@ import Combine
 import MastodonSDK
 import os.log
 
+//@available(*, deprecated, message: "migrate to MastodonFeedLoader")
+@MainActor
 final public class FeedDataController {
     private let logger = Logger(subsystem: "FeedDataController", category: "Data")
     private static let entryNotFoundMessage = "Failed to find suitable record. Depending on the context this might result in errors (data not being updated) or can be discarded (e.g. when there are mixed data sources where an entry might or might not exist)."
 
-    @Published public var records: [MastodonFeed] = []
+    @Published public private(set) var records: [MastodonFeed] = []
     
-    private let context: AppContext
     private let authenticationBox: MastodonAuthenticationBox
-
-    public init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    private let kind: MastodonFeed.Kind
+    
+    private var subscriptions = Set<AnyCancellable>()
+    
+    public init(authenticationBox: MastodonAuthenticationBox, kind: MastodonFeed.Kind) {
         self.authenticationBox = authenticationBox
+        self.kind = kind
+        
+        StatusFilterService.shared.$activeFilterBox
+            .sink { filterBox in
+                if filterBox != nil {
+                    Task { [weak self] in
+                        guard let self else { return }
+                        await self.setRecordsAfterFiltering(self.records)
+                    }
+                }
+            }
+            .store(in: &subscriptions)
+    }
+    
+    public func setRecordsAfterFiltering(_ newRecords: [MastodonFeed]) async {
+        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records = newRecords; return }
+        let filtered = await self.filter(newRecords, forFeed: kind, with: filterBox)
+        self.records = filtered.removingDuplicates()
+    }
+    
+    public func appendRecordsAfterFiltering(_ additionalRecords: [MastodonFeed]) async {
+        guard let filterBox = StatusFilterService.shared.activeFilterBox else { self.records += additionalRecords; return }
+        let newRecords = await self.filter(additionalRecords, forFeed: kind, with: filterBox)
+        self.records = (self.records + newRecords).removingDuplicates()
     }
     
     public func loadInitial(kind: MastodonFeed.Kind) {
         Task {
-            records = try await load(kind: kind, maxID: nil)
+            let unfilteredRecords = try await load(kind: kind, maxID: nil)
+            await setRecordsAfterFiltering(unfilteredRecords)
         }
     }
     
@@ -30,8 +58,24 @@ final public class FeedDataController {
                 return loadInitial(kind: kind)
             }
 
-            records += try await load(kind: kind, maxID: lastId)
+            let unfiltered = try await load(kind: kind, maxID: lastId)
+            await self.appendRecordsAfterFiltering(unfiltered)
         }
+    }
+    
+    private func filter(_ records: [MastodonFeed], forFeed feedKind: MastodonFeed.Kind, with filterBox: Mastodon.Entity.FilterBox) async -> [MastodonFeed] {
+        
+        let filteredRecords = records.filter { feedRecord in
+            guard let status = feedRecord.status else { return true }
+            let filterResult = filterBox.apply(to: status, in: feedKind.filterContext)
+            switch filterResult {
+            case .hide:
+                return false
+            default:
+                return true
+            }
+        }
+        return filteredRecords
     }
     
     @MainActor
@@ -166,38 +210,42 @@ final public class FeedDataController {
 }
 
 private extension FeedDataController {
-  func load(kind: MastodonFeed.Kind, maxID: MastodonStatus.ID?) async throws -> [MastodonFeed] {
+
+    func load(kind: MastodonFeed.Kind, maxID: MastodonStatus.ID?) async throws -> [MastodonFeed] {
         switch kind {
         case .home(let timeline):
-            await AuthenticationServiceProvider.shared.fetchAccounts(apiService: context.apiService)
+            await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
             let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
 
             switch timeline {
             case .home:
-                response = try await context.apiService.homeTimeline(
+                response = try await APIService.shared.homeTimeline(
                     maxID: maxID,
                     authenticationBox: authenticationBox
                 )
             case .public:
-                response = try await context.apiService.publicTimeline(
+                response = try await APIService.shared.publicTimeline(
                     query: .init(local: true, maxID: maxID),
                     authenticationBox: authenticationBox
                 )
             case let .list(id):
-                response = try await context.apiService.listTimeline(
+                response = try await APIService.shared.listTimeline(
                     id: id,
                     query: .init(maxID: maxID),
                     authenticationBox: authenticationBox
                 )
             case let .hashtag(tag):
-                response = try await context.apiService.hashtagTimeline(
+                response = try await APIService.shared.hashtagTimeline(
                     hashtag: tag,
                     authenticationBox: authenticationBox
                 )
             }
 
-            return response.value.map { .fromStatus(.fromEntity($0), kind: .home) }
+            return response.value.compactMap { entity in
+                let status = MastodonStatus.fromEntity(entity)
+                return .fromStatus(status, kind: .home)
+            }
         case .notificationAll:
             return try await getFeeds(with: .everything)
         case .notificationMentions:
@@ -209,10 +257,10 @@ private extension FeedDataController {
 
     private func getFeeds(with scope: APIService.MastodonNotificationScope?, accountID: String? = nil) async throws -> [MastodonFeed] {
 
-        let notifications = try await context.apiService.notifications(maxID: nil, accountID: accountID, scope: scope, authenticationBox: authenticationBox).value
+        let notifications = try await APIService.shared.notifications(olderThan: nil, fromAccount: accountID, scope: scope, authenticationBox: authenticationBox).value
 
         let accounts = notifications.map { $0.account }
-        let relationships = try await context.apiService.relationship(forAccounts: accounts, authenticationBox: authenticationBox).value
+        let relationships = try await APIService.shared.relationship(forAccounts: accounts, authenticationBox: authenticationBox).value
 
         let notificationsWithRelationship: [(notification: Mastodon.Entity.Notification, relationship: Mastodon.Entity.Relationship?)] = notifications.compactMap { notification in
             guard let relationship = relationships.first(where: {$0.id == notification.account.id }) else { return (notification: notification, relationship: nil)}
@@ -226,6 +274,15 @@ private extension FeedDataController {
 
         return feeds
     }
-
 }
 
+extension MastodonFeed.Kind {
+    var filterContext: Mastodon.Entity.FilterContext {
+        switch self {
+        case .home(let timeline): // TODO: take timeline into account. See iOS-333.
+            return .home
+        case .notificationAccount, .notificationAll, .notificationMentions:
+            return .notifications
+        }
+    }
+}

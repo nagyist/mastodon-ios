@@ -18,8 +18,9 @@ public class AvatarImageView: FLAnimatedImageView {
 extension AvatarImageView {
     
     public func prepareForReuse() {
-        cancelTask()
-        af.cancelImageRequest()
+        cancelTask() // should cancel any gif loading task
+        af.cancelImageRequest() // should cancel any normal image loading task
+        self.image = Self.placeholder // because loading a gif doesn't offer a placeholder option and we want to make sure we don't continue showing an avatar from another account while a gif avatar loads
     }
 
     override public func layoutSubviews() {
@@ -81,6 +82,7 @@ extension AvatarImageView {
             
             af.setImage(
                 withURL: url,
+                placeholderImage: Self.placeholder,
                 filter: filter
             )
         }

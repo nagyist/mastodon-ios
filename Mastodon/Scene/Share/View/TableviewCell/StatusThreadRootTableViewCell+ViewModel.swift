@@ -9,52 +9,22 @@ import UIKit
 import MastodonSDK
 
 extension StatusThreadRootTableViewCell {
-    final class ViewModel {
-        let value: Value
-
-        init(value: Value) {
-            self.value = value
-        }
-        
-        enum Value {
-            case status(MastodonStatus)
-        }
-    }
-}
-
-extension StatusThreadRootTableViewCell {
 
     func configure(
         tableView: UITableView,
-        viewModel: ViewModel,
+        viewModel: StatusTableViewCell.StatusTableViewCellViewModel,
         delegate: StatusTableViewCellDelegate?
     ) {
+        guard let status = viewModel.statusItem.status else { return }
+        
         if statusView.frame == .zero {
             // set status view width
             statusView.frame.size.width = tableView.frame.width - containerViewHorizontalMargin
         }
 
-        switch viewModel.value {
-        case .status(let status):
-            statusView.configure(status: status)
-        }
+        statusView.configure(status: status, contentDisplayMode: viewModel.contentConcealModel.effectiveDisplayMode)
         
         self.delegate = delegate
-        
-        statusView.viewModel.$isContentReveal
-            .removeDuplicates()
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak tableView, weak self] isContentReveal in
-                guard let tableView = tableView else { return }
-                guard let self = self else { return }
-                
-                guard self.contentView.window != nil else { return }
-                
-                tableView.beginUpdates()
-                tableView.endUpdates()
-            }
-            .store(in: &disposeBag)
     }
     
 }

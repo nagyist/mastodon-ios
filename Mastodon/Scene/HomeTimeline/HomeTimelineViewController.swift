@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import AVKit
 import Combine
 import CoreData
 import CoreDataStack
@@ -19,10 +18,7 @@ import MastodonCore
 import MastodonUI
 import MastodonLocalization
 
-final class HomeTimelineViewController: UIViewController, NeedsDependency, MediaPreviewableViewController {
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
+final class HomeTimelineViewController: UIViewController, MediaPreviewableViewController {
     
     var disposeBag = Set<AnyCancellable>()
     var viewModel: HomeTimelineViewModel?
@@ -115,18 +111,21 @@ final class HomeTimelineViewController: UIViewController, NeedsDependency, Media
         let showFollowingAction = UIAction(title: L10n.Scene.HomeTimeline.TimelineMenu.following, image: .init(systemName: "house")) { [weak self] _ in
             guard let self, let viewModel = self.viewModel else { return }
 
-            viewModel.timelineContext = .home
-            viewModel.dataController.records = []
-
-            viewModel.loadLatestStateMachine.enter(HomeTimelineViewModel.LoadLatestState.ContextSwitch.self)
-            timelineSelectorButton.setAttributedTitle(
-                .init(string: L10n.Scene.HomeTimeline.TimelineMenu.following, attributes: [
-                    .font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 20, weight: .semibold))
-                ]),
-                for: .normal)
-
-            timelineSelectorButton.sizeToFit()
-            timelineSelectorButton.menu = generateTimelineSelectorMenu()
+            Task { [weak self] in
+                guard let self else { return }
+                viewModel.timelineContext = .home
+                await viewModel.dataController.setRecordsAfterFiltering([])
+                
+                viewModel.loadLatestStateMachine.enter(HomeTimelineViewModel.LoadLatestState.ContextSwitch.self)
+                self.timelineSelectorButton.setAttributedTitle(
+                    .init(string: L10n.Scene.HomeTimeline.TimelineMenu.following, attributes: [
+                        .font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .systemFont(ofSize: 20, weight: .semibold))
+                    ]),
+                    for: .normal)
+                
+                self.timelineSelectorButton.sizeToFit()
+                self.timelineSelectorButton.menu = self.generateTimelineSelectorMenu()
+            }
         }
 
         let showLocalTimelineAction = UIAction(title: L10n.Scene.HomeTimeline.TimelineMenu.localCommunity, image: .init(systemName: "building.2")) { [weak self] action in
@@ -292,6 +291,7 @@ extension HomeTimelineViewController {
         tableView.delegate = self
         viewModel?.setupDiffableDataSource(
             tableView: tableView,
+            filterContext: filterContext,
             statusTableViewCellDelegate: self,
             timelineMiddleLoaderTableViewCellDelegate: self
         )
@@ -308,14 +308,14 @@ extension HomeTimelineViewController {
             }
             .store(in: &disposeBag)
         
-        context.publisherService.statusPublishResult.receive(on: DispatchQueue.main).sink { result in
+        PublisherService.shared.statusPublishResult.receive(on: DispatchQueue.main).sink { result in
             if case .success(.edit(let status)) = result {
                 self.viewModel?.hasPendingStatusEditReload = true
                 self.viewModel?.dataController.update(status: .fromEntity(status.value), intent: .edit)
             }
         }.store(in: &disposeBag)
         
-        context.publisherService.$currentPublishProgress
+        PublisherService.shared.$currentPublishProgress
             .receive(on: DispatchQueue.main)
             .sink { [weak self] progress in
                 guard let self = self else { return }
@@ -355,7 +355,7 @@ extension HomeTimelineViewController {
 
                 let userDoesntFollowPeople: Bool
                 if let authenticationBox = self?.authenticationBox,
-                   let me = authenticationBox.authentication.account() {
+                   let me = authenticationBox.cachedAccount {
                     userDoesntFollowPeople = me.followersCount == 0
                 } else {
                     userDoesntFollowPeople = true
@@ -434,7 +434,7 @@ extension HomeTimelineViewController {
             })
             .store(in: &disposeBag)
 
-        context.publisherService.statusPublishResult.prepend(.failure(AppError.badRequest))
+        PublisherService.shared.statusPublishResult
         .receive(on: DispatchQueue.main)
         .sink { [weak self] publishResult in
             guard let self else { return }
@@ -442,8 +442,13 @@ extension HomeTimelineViewController {
             case .success:
                 self.timelinePill.update(with: .postSent)
                 self.showTimelinePill()
-            case .failure:
+                self.viewModel?.loadLatestStateMachine.enter(HomeTimelineViewModel.LoadLatestState.Loading.self)
+            case .failure(let error):
                 self.hideTimelinePill()
+                if tabBarController?.presentingViewController == nil {
+                    let alertController = UIAlertController.standardAlert(of: error)
+                    self.present(alertController, animated: true)
+                }
             }
         }
         .store(in: &disposeBag)
@@ -481,6 +486,13 @@ extension HomeTimelineViewController {
             .sink(receiveValue: { [weak self] campaign in
                 self?.showDonationCampaignBanner(campaign)
             })
+            .store(in: &disposeBag)
+        
+        StatusFilterService.shared.$activeFilterBox
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.tableView.reloadData()
+            }
             .store(in: &disposeBag)
     }
 
@@ -608,9 +620,9 @@ extension HomeTimelineViewController {
     @objc private func findPeopleButtonPressed(_ sender: Any?) {
         guard let authenticationBox = viewModel?.authenticationBox else { return }
 
-        let suggestionAccountViewModel = SuggestionAccountViewModel(context: context, authenticationBox: authenticationBox)
+        let suggestionAccountViewModel = SuggestionAccountViewModel(authenticationBox: authenticationBox)
         suggestionAccountViewModel.delegate = viewModel
-        _ = coordinator.present(
+        _ = self.sceneCoordinator?.present(
             scene: .suggestionAccount(viewModel: suggestionAccountViewModel),
             from: self,
             transition: .modal(animated: true, completion: nil)
@@ -618,16 +630,13 @@ extension HomeTimelineViewController {
     }
     
     @objc private func manuallySearchButtonPressed(_ sender: UIButton) {
-        guard let authenticationBox = viewModel?.authenticationBox else { return }
-
-        let searchDetailViewModel = SearchDetailViewModel(authenticationBox: authenticationBox)
-        _ = coordinator.present(scene: .searchDetail(viewModel: searchDetailViewModel), from: self, transition: .modal(animated: true, completion: nil))
+        self.sceneCoordinator?.switchToTabBar(tab: .search)
     }
     
     @objc private func settingBarButtonItemPressed(_ sender: UIBarButtonItem) {
-        guard let setting = context.settingService.currentSetting.value else { return }
+        guard let setting = SettingService.shared.currentSetting.value else { return }
 
-        _ = coordinator.present(scene: .settings(setting: setting), from: self, transition: .none)
+        _ = self.sceneCoordinator?.present(scene: .settings(setting: setting), from: self, transition: .none)
     }
 
     @objc private func refreshControlValueChanged(_ sender: RefreshControl) {
@@ -638,7 +647,6 @@ extension HomeTimelineViewController {
     }
     
     @objc func signOutAction(_ sender: UIAction) {
-        guard let authContext = viewModel?.authenticationBox else { return }
 
         Task { @MainActor in
             try await AuthenticationServiceProvider.shared.signOutMastodonUser(authentication: authenticationBox.authentication)
@@ -646,7 +654,7 @@ extension HomeTimelineViewController {
             FileManager.default.invalidateHomeTimelineCache(for: userIdentifier)
             FileManager.default.invalidateNotificationsAll(for: userIdentifier)
             FileManager.default.invalidateNotificationsMentions(for: userIdentifier)
-            self.coordinator.setup()
+            self.sceneCoordinator?.setup()
         }
     }
 
@@ -737,7 +745,8 @@ extension HomeTimelineViewController {
     
     private func showDonationCampaign(_ campaign: Mastodon.Entity.DonationCampaign) {
         hideDonationCampaignBanner()
-        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, appContext: context, authenticationBox: authenticationBox, sceneCoordinator: coordinator)
+        guard let coordinator = self.sceneCoordinator else { return }
+        navigationFlow = NewDonationNavigationFlow(flowPresenter: self, campaign: campaign, authenticationBox: authenticationBox, sceneCoordinator: coordinator)
         navigationFlow?.presentFlow { [weak self] in
             self?.navigationFlow = nil
         }

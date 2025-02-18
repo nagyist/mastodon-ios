@@ -21,14 +21,11 @@ final class CustomSearchController: UISearchController {
 
 // Fake search bar not works on iPad with UISplitViewController
 // check device and fallback to standard UISearchController
-final class SearchDetailViewController: UIViewController, NeedsDependency {
+final class SearchDetailViewController: UIViewController {
 
     var disposeBag = Set<AnyCancellable>()
     var observations = Set<NSKeyValueObservation>()
     let searchResultOverviewCoordinator: SearchResultOverviewCoordinator
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
 
     let isPhoneDevice: Bool = {
         return UIDevice.current.userInterfaceIdiom == .phone
@@ -81,15 +78,11 @@ final class SearchDetailViewController: UIViewController, NeedsDependency {
 
     //MARK: - init
 
-    init(appContext: AppContext, sceneCoordinator: SceneCoordinator, authenticationBox: MastodonAuthenticationBox) {
-        self.context = appContext
-        self.coordinator = sceneCoordinator
+    init(authenticationBox: MastodonAuthenticationBox) {
 
-        self.searchResultOverviewCoordinator = SearchResultOverviewCoordinator(appContext: appContext, authenticationBox: authenticationBox, sceneCoordinator: sceneCoordinator)
+        self.searchResultOverviewCoordinator = SearchResultOverviewCoordinator(authenticationBox: authenticationBox)
         self.searchHistoryViewController = SearchHistoryViewController()
-        searchHistoryViewController.context = appContext
-        searchHistoryViewController.coordinator = sceneCoordinator
-        searchHistoryViewController.viewModel = SearchHistoryViewModel(context: appContext, authenticationBox: authenticationBox)
+        searchHistoryViewController.viewModel = SearchHistoryViewModel(authenticationBox: authenticationBox)
 
         super.init(nibName: nil, bundle: nil)
 
@@ -262,8 +255,8 @@ extension SearchDetailViewController: UISearchBarDelegate {
 
         searchBar.resignFirstResponder()
 
-        let searchResultViewModel = SearchResultViewModel(context: context, authenticationBox: viewModel.authenticationBox, searchScope: .all, searchText: searchText)
-        coordinator.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
+        let searchResultViewModel = SearchResultViewModel(authenticationBox: viewModel.authenticationBox, searchScope: .all, searchText: searchText)
+        self.sceneCoordinator?.present(scene: .searchResult(viewModel: searchResultViewModel), transition: .show)
     }
 
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {

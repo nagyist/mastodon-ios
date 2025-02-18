@@ -80,10 +80,8 @@ private extension LatestFollowersWidgetProvider {
     func loadCurrentEntry(for configuration: LatestFollowersIntent, in context: Context, completion: @escaping (LatestFollowersEntry) -> Void) {
         Task { @MainActor in
 
-            AuthenticationServiceProvider.shared.prepareForUse()
-
             guard
-                let authBox = AuthenticationServiceProvider.shared.activeAuthentication
+                let authBox = AuthenticationServiceProvider.shared.currentActiveUser.value
             else {
                 guard !context.isPreview else {
                     return completion(.placeholder)
@@ -93,8 +91,7 @@ private extension LatestFollowersWidgetProvider {
 
             var accounts = [LatestFollowersEntryAccountable]()
 
-            let followers = try await AppContext.shared
-                .apiService
+            let followers = try await APIService.shared
                 .followers(userID: authBox.userID, maxID: nil, authenticationBox: authBox)
                 .value
                 .prefix(2) // X most recent followers

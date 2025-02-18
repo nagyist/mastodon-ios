@@ -18,7 +18,6 @@ extension ProfileAboutViewModel {
     ) {
         let diffableDataSource = ProfileFieldSection.diffableDataSource(
             collectionView: collectionView,
-            context: context,
             configuration: ProfileFieldSection.Configuration(
                 profileFieldCollectionViewCellDelegate: profileFieldCollectionViewCellDelegate,
                 profileFieldEditCollectionViewCellDelegate: profileFieldEditCollectionViewCellDelegate

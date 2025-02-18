@@ -12,13 +12,10 @@ import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 
-final class ReportResultViewController: UIViewController, NeedsDependency, ReportViewControllerAppearance {
+final class ReportResultViewController: UIViewController, ReportViewControllerAppearance {
     
     var disposeBag = Set<AnyCancellable>()
     private var observations = Set<NSKeyValueObservation>()
-
-    weak var context: AppContext! { willSet { precondition(!isViewLoaded) } }
-    weak var coordinator: SceneCoordinator! { willSet { precondition(!isViewLoaded) } }
     
     var viewModel: ReportResultViewModel!
     private(set) lazy var reportResultView = ReportResultView(viewModel: viewModel)

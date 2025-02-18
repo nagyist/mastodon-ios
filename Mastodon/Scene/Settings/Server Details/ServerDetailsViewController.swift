@@ -47,7 +47,7 @@ class ServerDetailsViewController: UIViewController {
         containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
 
-        aboutInstanceViewController = AboutInstanceViewController(context: appContext, authenticationBox: authenticationBox, coordinator: sceneCoordinator)
+        aboutInstanceViewController = AboutInstanceViewController(authenticationBox: authenticationBox)
         instanceRulesViewController = InstanceRulesViewController()
 
         pageController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)

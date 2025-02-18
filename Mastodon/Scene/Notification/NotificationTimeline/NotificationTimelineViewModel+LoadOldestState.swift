@@ -30,10 +30,11 @@ extension NotificationTimelineViewModel {
 }
 
 extension NotificationTimelineViewModel.LoadOldestState {
+    @MainActor
     class Initial: NotificationTimelineViewModel.LoadOldestState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             guard let viewModel = viewModel else { return false }
-            guard !viewModel.dataController.records.isEmpty else { return false }
+            guard !viewModel.feedLoader.records.isEmpty else { return false }
             return stateClass == Loading.self
         }
     }
@@ -43,12 +44,13 @@ extension NotificationTimelineViewModel.LoadOldestState {
             stateClass == Fail.self || stateClass == Idle.self || stateClass == NoMore.self
         }
         
+        @MainActor
         override func didEnter(from previousState: GKState?) {
             super.didEnter(from: previousState)
             
             guard let viewModel = viewModel, let stateMachine = stateMachine else { return }
             
-            guard let lastFeedRecord = viewModel.dataController.records.last else {
+            guard let lastFeedRecord = viewModel.feedLoader.records.last else {
                 stateMachine.enter(Fail.self)
                 return
             }
@@ -69,17 +71,17 @@ extension NotificationTimelineViewModel.LoadOldestState {
             }
 
             Task {
-                let _maxID: Mastodon.Entity.Notification.ID? = lastFeedRecord.notification?.id
+                let _maxID: Mastodon.Entity.Notification.ID? = lastFeedRecord.id
                 
                 guard let maxID = _maxID else {
-                    await self.enter(state: Fail.self)
+                    self.enter(state: Fail.self)
                     return
                 }
                 
                 do {
-                    let response = try await viewModel.context.apiService.notifications(
-                        maxID: maxID,
-                        accountID: accountID,
+                    let response = try await APIService.shared.notifications(
+                        olderThan: maxID,
+                        fromAccount: accountID,
                         scope: scope,
                         authenticationBox: viewModel.authenticationBox
                     )
@@ -87,13 +89,13 @@ extension NotificationTimelineViewModel.LoadOldestState {
                     let notifications = response.value
                     // enter no more state when no new statuses
                     if notifications.isEmpty || (notifications.count == 1 && notifications[0].id == maxID) {
-                        await self.enter(state: NoMore.self)
+                        self.enter(state: NoMore.self)
                     } else {
-                        await self.enter(state: Idle.self)
+                        self.enter(state: Idle.self)
                     }
                     
                 } catch {
-                    await self.enter(state: Fail.self)
+                    self.enter(state: Fail.self)
                 }
             }   // end Task
         }
@@ -119,11 +121,11 @@ extension NotificationTimelineViewModel.LoadOldestState {
         
         override func didEnter(from previousState: GKState?) {
             guard let viewModel = viewModel else { return }
-            guard let diffableDataSource = viewModel.diffableDataSource else {
-                assertionFailure()
-                return
-            }
             DispatchQueue.main.async {
+                guard let diffableDataSource = viewModel.diffableDataSource else {
+                    assertionFailure()
+                    return
+                }
                 var snapshot = diffableDataSource.snapshot()
                 snapshot.deleteItems([.bottomLoader])
                 diffableDataSource.apply(snapshot)

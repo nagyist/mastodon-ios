@@ -19,7 +19,7 @@ class DonationViewController: UIHostingController<DonationView> {
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .done, primaryAction: UIAction(handler: { _ in
             completion(nil)
         }))
-        self.navigationItem.title = L10n.Scene.Donation.title
+        self.navigationItem.title = L10n.Scene.Settings.Donation.title
     }
 
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {
@@ -178,7 +178,7 @@ struct DonationView: View {
         }) {
             HStack {
                 Spacer()
-                Text(L10n.Scene.Donation.donateButtonTitle)
+                Text(L10n.Scene.Donation.donatebuttontitle)
                 Spacer()
             }
             .frame(maxWidth: .infinity)
@@ -233,7 +233,7 @@ struct DonationButtonStyle: ButtonStyle {
 struct DefaultDonationViewModel: DonationCampaignViewModel {
     var id: String = "default"
     var paymentBaseURL: URL? {
-        if Mastodon.API.isTestingDonations {
+        if UserDefaults.standard.useStagingForDonations {
             URL(string: "https://sponsor.staging.joinmastodon.org/donation/new")
         } else {
             URL(string: "https://sponsor.joinmastodon.org/donation/new")

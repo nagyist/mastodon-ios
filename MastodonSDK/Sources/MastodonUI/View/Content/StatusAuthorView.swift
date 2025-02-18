@@ -41,8 +41,7 @@ public class StatusAuthorView: UIStackView {
     public let dateLabel = MetaLabel(style: .statusUsername)
 
     public let menuButton: UIButton = {
-        let button = HitTestExpandedButton(type: .system)
-        button.expandEdgeInsets = UIEdgeInsets(top: -20, left: -10, bottom: -10, right: -10)
+        let button = MinimumHitTargetButton(type: .system)
         button.tintColor = Asset.Colors.Label.secondary.color
         let image = UIImage(systemName: "ellipsis", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: 15)))
         button.setImage(image, for: .normal)
@@ -51,8 +50,7 @@ public class StatusAuthorView: UIStackView {
     }()
 
     public let contentSensitiveeToggleButton: UIButton = {
-        let button = HitTestExpandedButton(type: .system)
-        button.expandEdgeInsets = UIEdgeInsets(top: -20, left: -10, bottom: -10, right: -10)
+        let button = MinimumHitTargetButton(type: .system)
         button.tintColor = Asset.Colors.Label.secondary.color
         button.imageView?.contentMode = .scaleAspectFit
         let image = UIImage(systemName: "eye.slash.fill")
@@ -114,6 +112,23 @@ public class StatusAuthorView: UIStackView {
 }
 
 extension StatusAuthorView {
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let superHit = super.hitTest(point, with: event)
+        if superHit == avatarButton {
+            return avatarButton
+        } else {
+            if menuButton.point(inside: convert(point, to: menuButton), with: event) {
+                return menuButton
+            }
+            if contentSensitiveeToggleButton.point(inside: convert(point, to: contentSensitiveeToggleButton), with: event) {
+                return contentSensitiveeToggleButton
+            }
+            return self
+        }
+    }
+}
+
+extension StatusAuthorView {
     func _init() {
         axis = .horizontal
         spacing = 12
@@ -128,7 +143,7 @@ extension StatusAuthorView {
 
         // avatar button
         avatarButton.addTarget(self, action: #selector(StatusAuthorView.authorAvatarButtonDidPressed(_:)), for: .touchUpInside)
-        authorNameLabel.isUserInteractionEnabled = false
+        authorNameLabel.isUserInteractionEnabled = true
         authorUsernameLabel.isUserInteractionEnabled = false
 
         // contentSensitiveeToggleButton
@@ -136,6 +151,7 @@ extension StatusAuthorView {
 
         // dateLabel
         dateLabel.isUserInteractionEnabled = false
+        self.addTapGestureToSelf()
     }
 }
 
@@ -215,10 +231,20 @@ extension StatusAuthorView {
         return (menu, accessibilityActions)
     }
 
+    private func addTapGestureToSelf() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(StatusAuthorView.authorNameDidPressed(_:)))
+        addGestureRecognizer(tapGesture)
+    }
 }
 
 extension StatusAuthorView {
     @objc private func authorAvatarButtonDidPressed(_ sender: UIButton) {
+        guard let statusView = statusView else { return }
+
+        statusView.delegate?.statusView(statusView, authorAvatarButtonDidPressed: avatarButton)
+    }
+
+    @objc private func authorNameDidPressed(_ sender: UIButton) {
         guard let statusView = statusView else { return }
 
         statusView.delegate?.statusView(statusView, authorAvatarButtonDidPressed: avatarButton)
@@ -234,6 +260,7 @@ extension StatusAuthorView {
 extension StatusAuthorView {
     // author container: H - [ avatarButton | authorMetaContainer ]
     private func layoutBase() {
+        assert(arrangedSubviews.count == 0)
         // avatarButton
         avatarButton.size = CGSize.authorAvatarButtonSize
         avatarButton.avatarImageView.imageViewSize = CGSize.authorAvatarButtonSize

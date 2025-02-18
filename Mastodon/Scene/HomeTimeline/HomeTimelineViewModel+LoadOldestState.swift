@@ -29,6 +29,7 @@ extension HomeTimelineViewModel {
 }
 
 extension HomeTimelineViewModel.LoadOldestState {
+    @MainActor
     class Initial: HomeTimelineViewModel.LoadOldestState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             guard let viewModel = viewModel else { return false }
@@ -37,6 +38,7 @@ extension HomeTimelineViewModel.LoadOldestState {
         }
     }
     
+    @MainActor
     class Loading: HomeTimelineViewModel.LoadOldestState {
         override func isValidNextState(_ stateClass: AnyClass) -> Bool {
             return stateClass == Fail.self || stateClass == Idle.self || stateClass == NoMore.self
@@ -59,29 +61,29 @@ extension HomeTimelineViewModel.LoadOldestState {
                 }
 
                 do {
-                    await AuthenticationServiceProvider.shared.fetchAccounts(apiService: viewModel.context.apiService)
+                    await AuthenticationServiceProvider.shared.fetchAccounts(onlyIfItHasBeenAwhile: true)
 
                     let response: Mastodon.Response.Content<[Mastodon.Entity.Status]>
 
                     switch viewModel.timelineContext {
                     case .home:
-                        response = try await viewModel.context.apiService.homeTimeline(
+                        response = try await APIService.shared.homeTimeline(
                             maxID: maxID,
                             authenticationBox: viewModel.authenticationBox
                         )
                     case .public:
-                        response = try await viewModel.context.apiService.publicTimeline(
+                        response = try await APIService.shared.publicTimeline(
                             query: .init(local: true, maxID: maxID),
                             authenticationBox: viewModel.authenticationBox
                         )
                     case let .list(id):
-                        response = try await viewModel.context.apiService.listTimeline(
-                            id: id, 
+                        response = try await APIService.shared.listTimeline(
+                            id: id,
                             query: .init(local: true, maxID: maxID),
                             authenticationBox: viewModel.authenticationBox
                         )
                     case let .hashtag(tag):
-                        response = try await viewModel.context.apiService.hashtagTimeline(
+                        response = try await APIService.shared.hashtagTimeline(
                             hashtag: tag,
                             authenticationBox: viewModel.authenticationBox
                         )
@@ -125,11 +127,11 @@ extension HomeTimelineViewModel.LoadOldestState {
         
         override func didEnter(from previousState: GKState?) {
             guard let viewModel = viewModel else { return }
-            guard let diffableDataSource = viewModel.diffableDataSource else {
-                assertionFailure()
-                return
-            }
             DispatchQueue.main.async {
+                guard let diffableDataSource = viewModel.diffableDataSource else {
+                    assertionFailure()
+                    return
+                }
                 var snapshot = diffableDataSource.snapshot()
                 snapshot.deleteItems([.bottomLoader])
                 diffableDataSource.apply(snapshot)

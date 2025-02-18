@@ -17,12 +17,11 @@ final class FavoriteViewModel {
     var disposeBag = Set<AnyCancellable>()
     
     // input
-    let context: AppContext
     let authenticationBox: MastodonAuthenticationBox
     let dataController: StatusDataController
 
     // output
-    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, StatusItem>?
+    var diffableDataSource: UITableViewDiffableDataSource<StatusSection, MastodonItemIdentifier>?
     private(set) lazy var stateMachine: GKStateMachine = {
         let stateMachine = GKStateMachine(states: [
             State.Initial(viewModel: self),
@@ -37,8 +36,7 @@ final class FavoriteViewModel {
     }()
     
     @MainActor
-    init(context: AppContext, authenticationBox: MastodonAuthenticationBox) {
-        self.context = context
+    init(authenticationBox: MastodonAuthenticationBox) {
         self.authenticationBox = authenticationBox
         self.dataController = StatusDataController()
     }

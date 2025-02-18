@@ -9,12 +9,46 @@ import Combine
 import Foundation
 
 extension Mastodon.API.Notifications {
-    internal static func notificationsEndpointURL(domain: String) -> URL {
-        Mastodon.API.endpointURL(domain: domain).appendingPathComponent("notifications")
+    internal static func notificationsEndpointURL(domain: String, grouped: Bool = false) -> URL {
+        if grouped {
+            Mastodon.API.endpointV2URL(domain: domain).appendingPathComponent("notifications")
+        } else {
+            Mastodon.API.endpointURL(domain: domain).appendingPathComponent("notifications")
+        }
     }
 
     internal static func getNotificationEndpointURL(domain: String, notificationID: String) -> URL {
         notificationsEndpointURL(domain: domain).appendingPathComponent(notificationID)
+    }
+    
+    /// Get all grouped notifications
+    ///
+    /// - Since: 4.3.0
+    /// - Version: 4.3.0
+    /// # Last Update
+    ///   2025/01/8
+    /// # Reference
+    ///   [Document](https://docs.joinmastodon.org/methods/grouped_notifications/)
+    /// - Parameters:
+    ///   - session: `URLSession`
+    ///   - domain: Mastodon instance domain. e.g. "example.com"
+    ///   - query: `GroupedNotificationsQuery` with query parameters
+    ///   - authorization: User token
+    /// - Returns: `AnyPublisher` contains `Token` nested in the response
+    public static func getGroupedNotifications(
+        session: URLSession,
+        domain: String,
+        query: Mastodon.API.Notifications.GroupedQuery,
+        authorization: Mastodon.API.OAuth.Authorization
+    ) async throws -> Mastodon.Entity.GroupedNotificationsResults {
+        let request = Mastodon.API.get(
+            url: notificationsEndpointURL(domain: domain, grouped: true),
+            query: query,
+            authorization: authorization
+        )
+        let (data, response) = try await session.data(for: request)
+        let value = try Mastodon.API.decode(type: Mastodon.Entity.GroupedNotificationsResults.self, from: data, response: response)
+        return value
     }
     
     /// Get all notifications
@@ -38,7 +72,7 @@ extension Mastodon.API.Notifications {
         authorization: Mastodon.API.OAuth.Authorization
     ) -> AnyPublisher<Mastodon.Response.Content<[Mastodon.Entity.Notification]>, Error> {
         let request = Mastodon.API.get(
-            url: notificationsEndpointURL(domain: domain),
+            url: notificationsEndpointURL(domain: domain, grouped: false),
             query: query,
             authorization: authorization
         )
@@ -90,8 +124,8 @@ extension Mastodon.API.Notifications {
         public let sinceID: Mastodon.Entity.Status.ID?
         public let minID: Mastodon.Entity.Status.ID?
         public let limit: Int?
-        public let types: [Mastodon.Entity.Notification.NotificationType]?
-        public let excludeTypes: [Mastodon.Entity.Notification.NotificationType]?
+        public let types: [Mastodon.Entity.NotificationType]?
+        public let excludeTypes: [Mastodon.Entity.NotificationType]?
         public let accountID: String?
     
         public init(
@@ -99,8 +133,8 @@ extension Mastodon.API.Notifications {
             sinceID: Mastodon.Entity.Status.ID? = nil,
             minID: Mastodon.Entity.Status.ID? = nil,
             limit: Int? = nil,
-            types: [Mastodon.Entity.Notification.NotificationType]? = nil,
-            excludeTypes: [Mastodon.Entity.Notification.NotificationType]? = nil,
+            types: [Mastodon.Entity.NotificationType]? = nil,
+            excludeTypes: [Mastodon.Entity.NotificationType]? = nil,
             accountID: String? = nil
         ) {
             self.maxID = maxID
@@ -129,6 +163,66 @@ extension Mastodon.API.Notifications {
                 }
             }
             accountID.flatMap { items.append(URLQueryItem(name: "account_id", value: $0)) }
+            guard !items.isEmpty else { return nil }
+            return items
+        }
+    }
+    
+    public struct GroupedQuery: PagedQueryType, GetQuery {
+        public let maxID: Mastodon.Entity.Status.ID?
+        public let sinceID: Mastodon.Entity.Status.ID?
+        public let minID: Mastodon.Entity.Status.ID?
+        public let limit: Int?
+        public let types: [Mastodon.Entity.NotificationType]?
+        public let excludeTypes: [Mastodon.Entity.NotificationType]?
+        public let accountID: String?
+        public let groupedTypes: [String]?
+        public let expandAccounts: Bool
+        
+        public init(
+            maxID: Mastodon.Entity.Status.ID? = nil,
+            sinceID: Mastodon.Entity.Status.ID? = nil,
+            minID: Mastodon.Entity.Status.ID? = nil,
+            limit: Int? = nil,
+            types: [Mastodon.Entity.NotificationType]? = nil,
+            excludeTypes: [Mastodon.Entity.NotificationType]? = nil,
+            accountID: String? = nil,
+            groupedTypes: [String]? = ["favourite", "follow", "reblog"],
+            expandAccounts: Bool = false
+        ) {
+            self.maxID = maxID
+            self.sinceID = sinceID
+            self.minID = minID
+            self.limit = limit
+            self.types = types
+            self.excludeTypes = excludeTypes
+            self.accountID = accountID
+            self.groupedTypes = groupedTypes
+            self.expandAccounts = expandAccounts
+        }
+        
+        var queryItems: [URLQueryItem]? {
+            var items: [URLQueryItem] = []
+            maxID.flatMap { items.append(URLQueryItem(name: "max_id", value: $0)) }
+            sinceID.flatMap { items.append(URLQueryItem(name: "since_id", value: $0)) }
+            minID.flatMap { items.append(URLQueryItem(name: "min_id", value: $0)) }
+            limit.flatMap { items.append(URLQueryItem(name: "limit", value: String($0))) }
+            if let types = types {
+                types.forEach {
+                    items.append(URLQueryItem(name: "types[]", value: $0.rawValue))
+                }
+            }
+            if let excludeTypes = excludeTypes {
+                excludeTypes.forEach {
+                    items.append(URLQueryItem(name: "exclude_types[]", value: $0.rawValue))
+                }
+            }
+            accountID.flatMap { items.append(URLQueryItem(name: "account_id", value: $0)) }
+            // TODO: implement groupedTypes
+//            if let groupedTypes {
+//                items.append(URLQueryItem(name: "grouped_types", value: groupedTypes))
+//            }
+            items.append(URLQueryItem(name: "expand_accounts", value: expandAccounts ? "full" : "partial_avatars"))
             guard !items.isEmpty else { return nil }
             return items
         }

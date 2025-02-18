@@ -13,25 +13,27 @@ import MastodonSDK
 import AlamofireImage
 // import AlamofireNetworkActivityIndicator
 
+@MainActor
 public final class APIService {
     
+    @MainActor
+    public static let shared = { APIService(backgroundContext: PersistenceManager.shared.backgroundManagedObjectContext) }()
+    
     public static let callbackURLScheme = "mastodon"
-    public static let oauthCallbackURL = "mastodon://joinmastodon.org/oauth"
+    nonisolated public static let oauthCallbackURL = "mastodon://joinmastodon.org/oauth"
         
     var disposeBag = Set<AnyCancellable>()
     
     // internal
     let session: URLSession
     
-    // input
     public let backgroundManagedObjectContext: NSManagedObjectContext
 
     // output
     public let error = PassthroughSubject<APIError, Never>()
     
-    public init(backgroundManagedObjectContext: NSManagedObjectContext) {
-        self.backgroundManagedObjectContext = backgroundManagedObjectContext
-
+    private init(backgroundContext: NSManagedObjectContext) {
+        backgroundManagedObjectContext = backgroundContext
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
         let configuration = URLSessionConfiguration.default
         configuration.httpAdditionalHeaders = ["User-Agent" : "mastodon-ios/" + appVersion]
@@ -48,6 +50,10 @@ public final class APIService {
         UIImageView.af.sharedImageDownloader = ImageDownloader(downloadPrioritization: .lifo)
     }
     
+    public static func isolatedService() -> APIService {
+        let taskContext = PersistenceManager.shared.newTaskContext()
+        return APIService(backgroundContext: taskContext)
+    }
 }
 
 extension APIService {
