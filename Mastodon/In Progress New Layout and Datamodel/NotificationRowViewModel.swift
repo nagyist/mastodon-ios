@@ -11,11 +11,13 @@ class NotificationRowViewModel: ObservableObject {
     let oldestID: String?
     let newestID: String?
     let type: GroupedNotificationType
+    let author: AccountInfo?
     let navigateToScene:
         (SceneCoordinator.Scene, SceneCoordinator.Transition) -> Void
     let presentError: (Error) -> Void
     let defaultNavigation: (() -> Void)?
-    public let iconInfo: NotificationIconInfo?
+    public let iconStyle: GroupedNotificationType.MainIconStyle?
+    
     @Published public var headerComponents: [NotificationViewComponent] = []
     public var contentComponents: [NotificationViewComponent] = []
 
@@ -48,10 +50,8 @@ class NotificationRowViewModel: ObservableObject {
         self.oldestID = notificationInfo.oldestNotificationID
         self.newestID = notificationInfo.newestNotificationID
         self.type = notificationInfo.groupedNotificationType
-        self.iconInfo = NotificationIconInfo(
-            notificationType: notificationInfo.groupedNotificationType,
-            isGrouped: notificationInfo.sourceAccounts.totalActorCount > 1,
-            visibility: notificationInfo.statusViewModel?.visibility)
+        self.author = notificationInfo.sourceAccounts.primaryAuthorAccount
+        self.iconStyle = notificationInfo.groupedNotificationType.mainIconStyle(grouped: notificationInfo.sourceAccounts.totalActorCount > 1)
         self.navigateToScene = navigateToScene
         self.presentError = presentError
         self.defaultNavigation = notificationInfo.defaultNavigation
@@ -88,9 +88,6 @@ class NotificationRowViewModel: ObservableObject {
             if let statusViewModel =
                 notificationInfo.statusViewModel
             {
-                avatarRow = .avatarRow(
-                    notificationInfo.sourceAccounts,
-                    .noneNeeded)
                 headerTextComponents = [
                     .text(
                         notificationInfo.groupedNotificationType

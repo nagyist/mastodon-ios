@@ -12,71 +12,6 @@ import SwiftUI
 
 extension Mastodon.Entity.NotificationType {
 
-    func shouldShowIcon(
-        grouped: Bool, visibility: Mastodon.Entity.Status.Visibility?
-    ) -> Bool {
-        return iconSystemName(grouped: grouped, visibility: visibility) != nil
-    }
-
-    func iconSystemName(
-        grouped: Bool = false, visibility: Mastodon.Entity.Status.Visibility?
-    ) -> String? {
-        switch self {
-        case .favourite:
-            return "star.fill"
-        case .reblog:
-            return "arrow.2.squarepath"
-        case .follow:
-            if grouped {
-                return "person.2.badge.plus.fill"
-            } else {
-                return "person.fill.badge.plus"
-            }
-        case .poll:
-            return "chart.bar.yaxis"
-        case .adminReport:
-            return "info.circle"
-        case .severedRelationships:
-            return "person.badge.minus"
-        case .moderationWarning:
-            return "exclamationmark.shield.fill"
-        case ._other:
-            return "questionmark.square.dashed"
-        case .mention:
-            // TODO: make this nil when full status view is available
-            switch visibility {
-            case .direct:
-                return "at.circle.fill"
-            default:
-                return "at"
-            }
-        case .status:
-            // TODO: make this nil when full status view is available
-            return "bell.fill"
-        case .followRequest:
-            return "person.fill.badge.plus"
-        case .update:
-            return "pencil"
-        case .adminSignUp:
-            return nil
-        }
-    }
-
-    var iconColor: Color {
-        switch self {
-        case .favourite:
-            return .orange
-        case .reblog:
-            return .green
-        case .follow, .followRequest, .status, .mention, .update:
-            return Color(asset: Asset.Colors.accent)
-        case .poll, .severedRelationships, .moderationWarning, .adminReport,
-            .adminSignUp:
-            return .secondary
-        case ._other:
-            return .gray
-        }
-    }
 
     func actionSummaryLabel(firstAuthor: AuthorName, totalAuthorCount: Int)
         -> AttributedString
@@ -171,14 +106,28 @@ enum AuthorName {
 }
 
 extension GroupedNotificationType {
-    func shouldShowIcon(
-        grouped: Bool, visibility: Mastodon.Entity.Status.Visibility?
-    ) -> Bool {
-        return iconSystemName(grouped: grouped, visibility: visibility) != nil
+    
+    enum MainIconStyle {
+        case icon(name: String, color: Color)
+        case avatar
+    }
+    
+    func mainIconStyle(
+        grouped: Bool
+    ) -> MainIconStyle? {
+        switch self {
+        case .mention, .status:
+            return .avatar
+        default:
+            if let iconName = iconSystemName(grouped: grouped) {
+                return .icon(name: iconName, color: iconColor)
+            }
+        }
+        return nil
     }
 
     func iconSystemName(
-        grouped: Bool = false, visibility: Mastodon.Entity.Status.Visibility?
+        grouped: Bool = false
     ) -> String? {
         switch self {
         case .favourite:
@@ -202,16 +151,9 @@ extension GroupedNotificationType {
         case ._other:
             return "questionmark.square.dashed"
         case .mention:
-            // TODO: make this nil when full status view is available
-            switch visibility {
-            case .direct:
-                return "at.circle.fill"
-            default:
-                return "at"
-            }
+            return nil  // should show avatar
         case .status:
-            // TODO: make this nil when full status view is available
-            return "bell.fill"
+            return nil  // should show avatar
         case .followRequest:
             return "person.fill.badge.plus"
         case .update:
@@ -376,18 +318,72 @@ extension Mastodon.Entity.RelationshipSeveranceEvent {
     }
 }
 
+private let avatarShape = RoundedRectangle(cornerRadius: 8)
+
+
+struct AvatarView: View {
+    
+    @State var isNavigating: Bool = false
+    
+    let author: AccountInfo
+    let goToProfile: ((AccountInfo) async throws -> ())?
+    
+    var body: some View {
+        ZStack {
+            AsyncImage(
+                url: author.avatarURL,
+                content: { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .clipShape(avatarShape)
+                        .overlay {
+                            avatarShape.stroke(.separator)
+                        }
+                },
+                placeholder: {
+                    avatarShape
+                        .foregroundStyle(
+                            Color(UIColor.secondarySystemFill))
+                }
+            )
+            
+            if isNavigating {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .frame(width: 30)
+            }
+        }
+        .onTapGesture {
+            if let goToProfile, !isNavigating {
+                Task {
+                    do {
+                        isNavigating = true
+                        try await goToProfile(author)
+                    } catch {
+                    }
+                    isNavigating = false
+                }
+            }
+        }
+    }
+}
+
+private let iconViewSize: CGFloat = 44
+
 @ViewBuilder
-func NotificationIconView(_ info: NotificationIconInfo) -> some View {
+func NotificationIconView(_ style: GroupedNotificationType.MainIconStyle) -> some View {
     HStack {
-        Image(
-            systemName: info.notificationType.iconSystemName(
-                grouped: info.isGrouped, visibility: info.visibility)
-                ?? "questionmark.square.dashed"
-        )
-        .foregroundStyle(info.notificationType.iconColor)
+        switch style {
+        case .icon(let name, let color):
+            Image(systemName: name)
+                .foregroundStyle(color)
+        case .avatar:
+            Image(systemName: "xmark")
+                .foregroundStyle(.red)
+        }
     }
     .font(.system(size: 25))
-    .frame(width: 44)
+    .frame(width: iconViewSize)
     .fontWeight(.semibold)
 }
 
@@ -400,7 +396,7 @@ func NotificationIconView(systemName: String) -> some View {
         .foregroundStyle(.secondary)
     }
     .font(.system(size: 25))
-    .frame(width: 44)
+    .frame(width: iconViewSize)
     .fontWeight(.semibold)
 }
 
@@ -523,11 +519,6 @@ extension Mastodon.Entity.Relationship {
     }
 }
 
-struct NotificationIconInfo {
-    let notificationType: GroupedNotificationType
-    let isGrouped: Bool
-    let visibility: Mastodon.Entity.Status.Visibility?
-}
 
 struct NotificationSourceAccounts {
     let accounts: [AccountInfo]
@@ -638,11 +629,19 @@ struct NotificationRowView: View {
 
     var body: some View {
         HStack {
-            if let iconInfo = viewModel.iconInfo {
-                // LEFT GUTTER WITH TOP-ALIGNED ICON
+            if let iconStyle = viewModel.iconStyle {
+                // LEFT GUTTER WITH TOP-ALIGNED ICON or AVATAR
                 VStack {
                     Spacer()
-                    NotificationIconView(iconInfo)
+                    switch iconStyle {
+                    case .icon:
+                        NotificationIconView(iconStyle)
+                    case .avatar:
+                        if let author = viewModel.author {
+                            AvatarView(author: author, goToProfile: viewModel.navigateToProfile(_:))
+                                .frame(width: iconViewSize, height: iconViewSize)
+                        }
+                    }
                     Spacer().frame(maxHeight: .infinity)
                 }
             }
@@ -702,7 +701,6 @@ struct NotificationRowView: View {
 
     @ScaledMetric private var smallAvatarSize: CGFloat = 32
     private let avatarSpacing: CGFloat = 8
-    private let avatarShape = RoundedRectangle(cornerRadius: 8)
 
     @ViewBuilder
     func avatarRow(
@@ -718,22 +716,7 @@ struct NotificationRowView: View {
                 ForEach(
                     accountInfo.accounts.prefix(maxAvatarCount), id: \.self.id
                 ) { account in
-                    AsyncImage(
-                        url: account.avatarURL,
-                        content: { image in
-                            image.resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .clipShape(avatarShape)
-                                .overlay {
-                                    avatarShape.stroke(.separator)
-                                }
-                        },
-                        placeholder: {
-                            avatarShape
-                                .foregroundStyle(
-                                    Color(UIColor.secondarySystemFill))
-                        }
-                    )
+                    AvatarView(author: account, goToProfile: viewModel.navigateToProfile(_:))
                     .frame(width: smallAvatarSize, height: smallAvatarSize)
                     .onTapGesture {
                         Task {
