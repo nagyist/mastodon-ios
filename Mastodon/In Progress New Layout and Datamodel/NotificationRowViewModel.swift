@@ -673,7 +673,7 @@ extension GroupedNotificationType {
         case .mention:
             self = .mention(notification.status)
         case .reblog:
-            self = .mention(notification.status)
+            self = .reblog(notification.status)
         case .favourite:
             self = .favourite(notification.status)
         case .poll:
@@ -713,7 +713,7 @@ extension GroupedNotificationType {
         case .mention:
             self = .mention(status)
         case .reblog:
-            self = .mention(status)
+            self = .reblog(status)
         case .favourite:
             self = .favourite(status)
         case .poll:
