@@ -156,6 +156,10 @@
                 }
             },
             "status": {
+                "reply": "Reply",
+                "private_reply": "Private reply",
+                "mention": "Mention",
+                "private_mention": "Private mention",
                 "user_reblogged": "%s boosted",
                 "user_replied_to": "Replied to %s",
                 "show_post": "Show Post",

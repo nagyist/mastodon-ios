@@ -2,9 +2,11 @@
 
 import Combine
 import Foundation
+import MastodonAsset
 import MastodonCore
 import MastodonLocalization
 import MastodonSDK
+import SwiftUICore
 
 class NotificationRowViewModel: ObservableObject {
     let identifier: MastodonFeedItemIdentifier
@@ -16,7 +18,8 @@ class NotificationRowViewModel: ObservableObject {
         (SceneCoordinator.Scene, SceneCoordinator.Transition) -> Void
     let presentError: (Error) -> Void
     let defaultNavigation: (() -> Void)?
-    public let iconStyle: GroupedNotificationType.MainIconStyle?
+    let iconStyle: GroupedNotificationType.MainIconStyle?
+    let actionSuperheader: (iconName: String, text: String, color: Color)?
     
     @Published public var headerComponents: [NotificationViewComponent] = []
     public var contentComponents: [NotificationViewComponent] = []
@@ -59,9 +62,10 @@ class NotificationRowViewModel: ObservableObject {
         switch notificationInfo.groupedNotificationType {
 
         case .follow, .followRequest:
+            actionSuperheader = nil
             let avatarRowAdditionalElement: RelationshipElement
-            if let account = notificationInfo.sourceAccounts
-                .primaryAuthorAccount
+            if notificationInfo.sourceAccounts
+                .primaryAuthorAccount != nil
             {
                 avatarRowAdditionalElement = .unfetched(
                     notificationInfo.groupedNotificationType)
@@ -71,9 +75,9 @@ class NotificationRowViewModel: ObservableObject {
             avatarRow = .avatarRow(
                 notificationInfo.sourceAccounts,
                 avatarRowAdditionalElement)
-            if let accountName = notificationInfo.sourceAccounts
+            if (notificationInfo.sourceAccounts
                 .primaryAuthorAccount?
-                .displayNameWithFallback
+                .displayNameWithFallback) != nil
             {
                 headerTextComponents = [
                     .text(
@@ -84,10 +88,10 @@ class NotificationRowViewModel: ObservableObject {
             }
         case .mention, .status:
             // TODO: eventually make this full status style, not inline
-            // TODO: distinguish mentions from replies
             if let statusViewModel =
                 notificationInfo.statusViewModel
             {
+                actionSuperheader = NotificationRowViewModel.actionSuperheader(notificationInfo.groupedNotificationType, isReply: statusViewModel.isReply, isPrivateStatus: statusViewModel.visibility == .direct)
                 headerTextComponents = [
                     .text(
                         notificationInfo.groupedNotificationType
@@ -96,9 +100,11 @@ class NotificationRowViewModel: ObservableObject {
                 ]
                 contentComponents = [.status(statusViewModel)]
             } else {
+                actionSuperheader = nil
                 headerTextComponents = [._other("POST BY UNKNOWN ACCOUNT")]
             }
         case .reblog, .favourite:
+            actionSuperheader = nil
             if let statusViewModel = notificationInfo.statusViewModel {
                 avatarRow = .avatarRow(
                     notificationInfo.sourceAccounts,
@@ -116,6 +122,7 @@ class NotificationRowViewModel: ObservableObject {
                 ]
             }
         case .poll, .update:
+            actionSuperheader = nil
             if let statusViewModel =
                 notificationInfo.statusViewModel
             {
@@ -132,6 +139,7 @@ class NotificationRowViewModel: ObservableObject {
                 ]
             }
         case .adminSignUp:
+            actionSuperheader = nil
             avatarRow = .avatarRow(
                 notificationInfo.sourceAccounts,
                 .noneNeeded)
@@ -141,6 +149,7 @@ class NotificationRowViewModel: ObservableObject {
                         notificationInfo.sourceAccounts) ?? "")
             ]
         case .adminReport(let report):
+            actionSuperheader = nil
             if let summary = report?.summary {
                 headerTextComponents = [.text(summary)]
             }
@@ -150,6 +159,7 @@ class NotificationRowViewModel: ObservableObject {
                 contentComponents = [.text(comment)]
             }
         case .severedRelationships(let severanceEvent):
+            actionSuperheader = nil
             if let summary = severanceEvent?.summary(myDomain: myAccountDomain)
             {
                 headerTextComponents = [.text(summary)]
@@ -168,6 +178,7 @@ class NotificationRowViewModel: ObservableObject {
                         notificationID: notificationInfo.newestNotificationID))
             ]
         case .moderationWarning(let accountWarning):
+            actionSuperheader = nil
             headerTextComponents = [
                 .weightedText(
                     (accountWarning?.action ?? .none).actionDescription,
@@ -192,11 +203,31 @@ class NotificationRowViewModel: ObservableObject {
             }
 
         case ._other(let text):
+            actionSuperheader = nil
             headerTextComponents = [
                 ._other("UNEXPECTED NOTIFICATION TYPE: \(text)")
             ]
         }
         resetHeaderComponents()
+    }
+    
+    static func actionSuperheader(_ notificationType: GroupedNotificationType, isReply: Bool, isPrivateStatus: Bool?) -> (iconName: String, text: String, color: Color)? {
+        guard let isPrivateStatus else { return nil }
+        switch notificationType {
+        case .mention:
+            switch (isReply, isPrivateStatus) {
+            case (true, false):
+                return (iconName: "arrow.turn.up.left", text: L10n.Common.Controls.Status.reply, color: .gray)
+            case (true, true):
+                return (iconName: "arrow.turn.up.left", text: L10n.Common.Controls.Status.privateReply, color: Asset.Colors.accent.swiftUIColor)
+            case (false, false):
+                return (iconName: "at", text: L10n.Common.Controls.Status.mention, color: .gray)
+            case (false, true):
+                return (iconName: "at", text: L10n.Common.Controls.Status.privateMention, color: Asset.Colors.accent.swiftUIColor)
+            }
+        default:
+            return nil
+        }
     }
 
     public func prepareForDisplay() {

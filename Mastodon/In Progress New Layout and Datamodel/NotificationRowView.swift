@@ -633,15 +633,27 @@ struct FilteredNotificationsRowView: View {
     }
 }
 
+let actionSuperheaderHeight: CGFloat = 20
+
 struct NotificationRowView: View {
     @ObservedObject var viewModel: NotificationRowViewModel
 
     var body: some View {
-        HStack {
+        HStack(alignment: .top) {
             if let iconStyle = viewModel.iconStyle {
                 // LEFT GUTTER WITH TOP-ALIGNED ICON or AVATAR
-                VStack {
-                    Spacer()
+                VStack(spacing: 4) {
+                    if let actionSuperheader = viewModel.actionSuperheader {
+                        HStack {
+                            Spacer()
+                            Image(systemName: actionSuperheader.iconName)
+                                .font(.subheadline)
+                                .bold()
+                                .foregroundStyle(actionSuperheader.color)
+                                .frame(height: actionSuperheaderHeight)
+                        }
+                    }
+                    
                     switch iconStyle {
                     case .icon:
                         NotificationIconView(iconStyle)
@@ -653,10 +665,18 @@ struct NotificationRowView: View {
                     }
                     Spacer().frame(maxHeight: .infinity)
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
 
             // VSTACK OF HEADER AND CONTENT COMPONENT VIEWS
             VStack(spacing: 4) {
+                if let actionSuperheader = viewModel.actionSuperheader {
+                    componentView(.weightedText(actionSuperheader.text, .bold))
+                        .font(.subheadline)
+                        .foregroundColor(actionSuperheader.color)
+                        .frame(height: actionSuperheaderHeight)
+                }
+                
                 ForEach(viewModel.headerComponents) {
                     componentView($0)
                 }
